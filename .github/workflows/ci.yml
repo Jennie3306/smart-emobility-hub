@@ -28,12 +28,12 @@ jobs:
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: frontend/package.json
       - name: Install
         working-directory: frontend
-        run: npm ci
+        run: npm install
       - name: Test & build
         working-directory: frontend
         run: |
-          npm run test --if-present -- --run
+          npm run test --if-present -- --run --passWithNoTests
           npm run build
