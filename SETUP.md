@@ -1,36 +1,49 @@
-# Hướng dẫn khởi động repo (TV3 làm tuần 1, cả nhóm đọc)
+# Hướng dẫn khởi động repo
 
-## A. TV3 — dựng repo
+## A. TV1 — dựng repo
 
 1. Tạo repo GitHub `smart-emobility-hub`, đẩy toàn bộ khung này lên nhánh `main`.
 2. Settings → Collaborators: mời 7 thành viên còn lại.
-3. Settings → Branches → Add rule cho `main`:
-   - Require a pull request before merging (1 approval)
-   - Require status checks to pass → chọn `backend` và `frontend`
-   - Do not allow bypassing
-4. Sửa `.github/CODEOWNERS`: thay `@tv1 … @tv8` bằng username GitHub thật.
-5. Thêm Maven wrapper (để CI và máy chưa cài Maven vẫn chạy được):
-   ```bash
-   cd backend && mvn -N wrapper:wrapper
-   ```
-6. Tạo `frontend/package-lock.json`:
+3. Tạo `frontend/package-lock.json` rồi commit:
    ```bash
    cd frontend && npm install
+   git add package-lock.json && git commit -m "chore: them package-lock.json"
    ```
-   rồi commit file lock (CI dùng `npm ci` nên bắt buộc có).
-7. Chạy thử toàn bộ theo mục B, rồi nhờ một người khác chạy lại trên máy họ.
+4. Chạy thử toàn bộ theo mục B, rồi nhờ một người khác chạy lại trên máy họ.
+5. **Tuần 1 chưa cần đặt ruleset** — đang làm một mình, đặt luật chỉ tự chặn chính mình.
+   Sang tuần 2, khi cả nhóm đã vào repo, mới tạo theo mục A3.
 
 ## A2. Những chỗ BẮT BUỘC phải điền trước khi dùng
 
 | Chỗ | Điền gì | Ai |
 |---|---|---|
-| `.github/CODEOWNERS` | Thay `@tv1 … @tv8` bằng username GitHub thật | TV3 |
+| `.github/CODEOWNERS` | Thay `@tv1 … @tv8` bằng username GitHub thật (tuần 2, khi bật ruleset) | TV1 |
 | `README.md`, bảng module | Thay TV1 … TV8 bằng tên thật nếu muốn | TV1 |
-| `SETUP.md` mục B, `git clone <url-repo>` | Đường dẫn repo thật sau khi tạo | TV3 |
+| `SETUP.md` mục B, `git clone <url-repo>` | Đường dẫn repo thật sau khi tạo | TV1 |
 | `.env` | Copy từ `.env.example`; đổi mật khẩu CSDL nếu muốn | Mỗi người |
 
 Ngoài bốn chỗ trên, **không có giá trị giả nào khác trong repo**: mật khẩu tài khoản demo
 được mã hóa lúc chạy bởi `shared/auth/DemoUserInitializer`, không có chuỗi hash đặt cứng.
+
+## A3. Ruleset bảo vệ nhánh `main` (làm ở tuần 2)
+
+Settings → Rules → Rulesets → New branch ruleset:
+
+- **Ruleset Name:** `main-protection`, **Enforcement status:** Active
+- **Bypass list:** Add bypass → Roles → **Repository admin**
+  *(làm bước này trước, để chủ repo không tự khóa chính mình khi gấp)*
+- **Target branches:** Add target → Include default branch
+- **Rules** — tick 4 mục:
+  - Restrict deletions
+  - Block force pushes
+  - Require a pull request before merging → Required approvals = **1**, tick Require review from Code Owners
+  - Require status checks to pass → chọn `backend` và `frontend`
+
+Hai lưu ý: `backend` và `frontend` chỉ hiện trong danh sách **sau khi CI đã chạy ít nhất một lần**;
+và Code Owners chỉ có tác dụng khi `.github/CODEOWNERS` đã điền username thật.
+
+Các mục còn lại (linear history, signed commits, code scanning, code quality, code coverage)
+không cần cho bài tập lớn.
 
 ## B. Mọi thành viên — chạy lần đầu
 
@@ -40,14 +53,16 @@ cp .env.example .env
 
 docker compose up -d db            # PostgreSQL 16 tại cổng 5432
 
-cd backend && ./mvnw spring-boot:run
+cd backend && mvn spring-boot:run
 # http://localhost:8080/swagger-ui.html  → xem toàn bộ API
+# Không có lệnh mvn? Mở thư mục backend bằng IntelliJ rồi bấm ▶ ở EmobilityApplication.java
 
 cd ../frontend && npm install && npm run dev
 # http://localhost:5173   → đăng nhập student1 / 123456
 ```
 
-Kiểm tra nhanh: `java -version` (21), `node -v` (20), `docker -v`, `mvn -version` (3.9).
+Kiểm tra nhanh: `java -version` (21), `node -v` (20), `docker -v`.
+Chưa cài được gì thì xem [INSTALL.md](INSTALL.md).
 
 ## C. Quy trình làm việc hằng ngày
 
@@ -57,12 +72,13 @@ git checkout -b feature/m5-charging-queue
 
 # ... code trong package/thư mục của mình ...
 
-cd backend && mvn test              # test phải xanh trước khi push
+# Chạy test trước khi push: IntelliJ → chuột phải src/test → Run Tests
+# hoặc: cd backend && mvn test
 git add . && git commit -m "[M5] them hang doi uu tien sac"
 git push -u origin feature/m5-charging-queue
 ```
 
-Mở pull request, điền checklist, chờ TV3 duyệt và CI xanh rồi merge.
+Mở pull request, điền checklist, chờ TV1 duyệt và CI xanh rồi merge.
 
 ## D. Thêm một module mới — làm theo M3
 

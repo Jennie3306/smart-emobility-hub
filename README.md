@@ -35,12 +35,16 @@ tại các Mobility Hub trong Khu đô thị ĐHQG-HCM, kèm chức năng What-i
 
 ```bash
 cp .env.example .env
-docker compose up -d db          # 1. CSDL
+docker compose up -d db                    # 1. CSDL (PostgreSQL)
 
-cd backend && ./mvnw spring-boot:run     # 2. Backend: http://localhost:8080, Swagger /swagger-ui.html
+cd backend && mvn spring-boot:run          # 2. Backend: http://localhost:8080
+                                           #    Swagger: http://localhost:8080/swagger-ui.html
 
 cd frontend && npm install && npm run dev  # 3. Frontend: http://localhost:5173
 ```
+
+Không có lệnh `mvn` trong terminal cũng không sao — mở thư mục `backend` bằng IntelliJ IDEA
+rồi bấm ▶ ở `EmobilityApplication.java`. Chi tiết cài đặt xem [INSTALL.md](INSTALL.md).
 
 Tài khoản demo: `student1 / 123456` (STUDENT), `operator1 / 123456` (OPERATOR).
 
@@ -54,6 +58,8 @@ Tài khoản demo: `student1 / 123456` (STUDENT), `operator1 / 123456` (OPERATOR
   trừ M4 gọi interface public `ReservationCore` của M2
 - Migration: chỉ TV4 tạo file `V<so>__<mo_ta>.sql`
 
-## Tài liệu nhóm
+## Tài liệu
 
-Tổng quan đề tài & Quy định chung · Mô tả chi tiết công việc · Template_M1 … M8 · Tech stack
+Trong repo: [INSTALL.md](INSTALL.md) — cài môi trường · [SETUP.md](SETUP.md) — dựng repo và quy trình làm việc
+
+Của nhóm: Tổng quan đề tài & Quy định chung · Mô tả chi tiết công việc · Template_M1 … M8 · Tech stack
