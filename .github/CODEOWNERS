@@ -1,0 +1,18 @@
+# BAT BUOC: thay @tv1 ... @tv8 bang username GitHub that cua tung thanh vien,
+# neu khong GitHub se bo qua dong do va khong tu gan reviewer.
+#
+#   TV1 = @________   TV2 = @________   TV3 = @________   TV4 = @________
+#   TV5 = @________   TV6 = @________   TV7 = @________   TV8 = @________
+
+/backend/src/main/java/com/hcmut/emobility/shared/          @tv3
+/backend/src/main/resources/db/migration/                   @tv4
+/backend/src/main/java/com/hcmut/emobility/m1monitoring/    @tv1
+/backend/src/main/java/com/hcmut/emobility/m2reservation/   @tv2
+/backend/src/main/java/com/hcmut/emobility/m3vehicle/       @tv3
+/backend/src/main/java/com/hcmut/emobility/m4parking/       @tv4
+/backend/src/main/java/com/hcmut/emobility/m5charging/      @tv5
+/backend/src/main/java/com/hcmut/emobility/m6simulator/     @tv6
+/backend/src/main/java/com/hcmut/emobility/m7dispatch/      @tv7
+/backend/src/main/java/com/hcmut/emobility/m8simulation/    @tv8
+/frontend/src/shared/                                       @tv6
+/frontend/src/design-system/                                @tv5

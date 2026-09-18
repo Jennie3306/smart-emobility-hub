@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: smart-emobility-hub
+  datasource:
+    url: jdbc:postgresql://localhost:5432/emobility
+    username: emobility
+    password: emobility
+  jpa:
+    hibernate:
+      ddl-auto: validate      # KHONG dung update - schema do Flyway quan ly (TV4)
+    open-in-view: false
+    properties:
+      hibernate.format_sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false   # ngay gio dang ISO-8601
+
+server:
+  port: 8080
+
+app:
+  demo-users:
+    enabled: true      # tao student1 / operator1 khi bang app_user rong; tat khi trien khai that
+  cors:
+    allowed-origin: http://localhost:5173
+  reservation:
+    hold-minutes: 15          # BR-M2-02
+  charging:
+    low-battery-threshold: 20 # BR-M5-01 (%)
+  monitoring:
+    capacity-alert-threshold: 90  # BR-M1-01 (%)
+
+logging:
+  level:
+    com.hcmut.emobility: DEBUG
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
