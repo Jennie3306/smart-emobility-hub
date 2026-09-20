@@ -141,6 +141,7 @@ và frontend bằng `npm run dev`.
 | `Schema validation: missing table` | Chưa chạy migration | Xóa container CSDL rồi tạo lại: `docker compose down -v && docker compose up -d db` |
 | `401 Unauthorized` sau khi đăng nhập | Thiếu cookie phiên | Kiểm tra `withCredentials: true` trong `frontend/src/shared/api/client.ts` |
 | Mở Swagger bị đá về trang "Please sign in" | `/swagger-ui.html` chưa được cho qua Security | Kiểm tra `SecurityConfig` có dòng `.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()` |
+| Lỗi 401/403 trả về trang HTML "Whitelabel Error Page" thay vì JSON | Lỗi từ bộ lọc Security không đi qua `GlobalExceptionHandler` | Kiểm tra `SecurityConfig` có khối `.exceptionHandling(...)` ghi JSON |
 | Chạy bằng nút ▶ không thấy log, chạy bằng Maven thì có | IntelliJ đẩy log sang cửa sổ Services | `Alt + 8` mở Services, bấm vào **dòng con** `EmobilityApplication` (không phải dòng cha `Application`). Hoặc **Window → Restore Default Layout** rồi chạy lại |
 | `npm install` lỗi quyền trên Windows | Chạy trong thư mục OneDrive | Chuyển repo ra ngoài OneDrive, ví dụ `D:\261\CNPM\` |
 | IntelliJ không nhận JDK 21 | Chưa chọn SDK | File → Project Structure → Project → SDK → chọn 21 |
