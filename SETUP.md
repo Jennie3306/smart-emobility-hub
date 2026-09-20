@@ -99,6 +99,31 @@ M3 (`m3vehicle`) là module mẫu hoàn chỉnh. Copy cấu trúc của nó:
 Thêm route mới vào `frontend/src/shared/router.tsx` và mục menu trong `AppLayout.tsx`
 — chỉ thêm dòng của mình, không sửa dòng của người khác.
 
+## D2. Dockerfile và môi trường demo (tuần 8+, TV6 lo)
+
+Repo có 3 file chỉ dùng cho môi trường demo, **không liên quan tới việc code hằng ngày**:
+
+| File | Dùng khi nào |
+|---|---|
+| `backend/Dockerfile` | Đóng gói backend thành image để chạy trong container |
+| `frontend/Dockerfile` + `frontend/nginx.conf` | Build React ra file tĩnh, phục vụ bằng nginx |
+| `docker-compose.demo.yml` | Chạy cả CSDL + backend + frontend bằng một lệnh |
+
+Chạy môi trường demo:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+# http://localhost          → frontend
+# http://localhost:8080/swagger-ui.html → API
+docker compose -f docker-compose.yml -f docker-compose.demo.yml down   # dừng
+```
+
+Lần build đầu mất 5–10 phút. Dùng nó để **quay video demo** và để thầy chạy thử,
+vì chỉ cần một lệnh là lên cả hệ thống với dữ liệu mẫu.
+
+**Lúc code hằng ngày thì bỏ qua ba file này** — chỉ cần `docker compose up -d db`
+rồi chạy backend bằng IntelliJ và frontend bằng `npm run dev`. Cách đó nạp lại code
+ngay khi sửa, còn container thì phải build lại mỗi lần.
+
 ## E. Ba quy tắc không được phá
 
 1. **Không import service của module khác.** Cần module khác phản ứng thì phát sự kiện

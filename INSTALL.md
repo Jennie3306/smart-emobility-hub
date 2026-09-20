@@ -123,6 +123,10 @@ npm run dev
 ```
 Mở http://localhost:5173, đăng nhập `student1` / `123456`.
 
+**Về `backend/Dockerfile` và `frontend/Dockerfile`:** hai file này chỉ dùng cho môi trường demo
+ở cuối kỳ (xem SETUP.md mục D2). Lúc đang code thì không đụng tới, cứ chạy backend bằng IntelliJ
+và frontend bằng `npm run dev`.
+
 ---
 
 ## Lỗi hay gặp
@@ -131,10 +135,13 @@ Mở http://localhost:5173, đăng nhập `student1` / `123456`.
 |---|---|---|
 | `mvn : The term 'mvn' is not recognized` | Chưa cài Maven | Chạy backend bằng IntelliJ, hoặc `winget install Apache.Maven` rồi mở lại terminal |
 | `Connection refused: localhost:5432` | CSDL chưa chạy | Mở Docker Desktop, rồi `docker compose up -d db` |
+| `FATAL: invalid value for parameter "TimeZone": "Asia/Saigon"` | Windows tiếng Việt đặt múi giờ JVM là tên cũ, PostgreSQL không nhận | Đã xử lý sẵn trong `EmobilityApplication.main()`. Nếu vẫn gặp, kiểm tra dòng `TimeZone.setDefault(...)` còn nguyên không |
 | `Port 8080 is already in use` | Cổng đang bị chiếm | Tắt tiến trình cũ, hoặc đổi `server.port` trong `application.yml` |
 | `Port 5432 is already in use` | Máy đã cài sẵn PostgreSQL | Đổi cổng trong `.env` (`POSTGRES_PORT=5433`) và trong `application.yml` |
 | `Schema validation: missing table` | Chưa chạy migration | Xóa container CSDL rồi tạo lại: `docker compose down -v && docker compose up -d db` |
 | `401 Unauthorized` sau khi đăng nhập | Thiếu cookie phiên | Kiểm tra `withCredentials: true` trong `frontend/src/shared/api/client.ts` |
+| Mở Swagger bị đá về trang "Please sign in" | `/swagger-ui.html` chưa được cho qua Security | Kiểm tra `SecurityConfig` có dòng `.requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()` |
+| Chạy bằng nút ▶ không thấy log, chạy bằng Maven thì có | IntelliJ đẩy log sang cửa sổ Services | `Alt + 8` mở Services, bấm vào **dòng con** `EmobilityApplication` (không phải dòng cha `Application`). Hoặc **Window → Restore Default Layout** rồi chạy lại |
 | `npm install` lỗi quyền trên Windows | Chạy trong thư mục OneDrive | Chuyển repo ra ngoài OneDrive, ví dụ `D:\261\CNPM\` |
 | IntelliJ không nhận JDK 21 | Chưa chọn SDK | File → Project Structure → Project → SDK → chọn 21 |
 | Docker Desktop không khởi động (Windows) | Chưa bật WSL 2 | PowerShell (Admin): `wsl --install`, khởi động lại máy |

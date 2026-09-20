@@ -30,7 +30,8 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .csrf(csrf -> csrf.disable())   // ban demo; bat lai thi FE phai gui CSRF token
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/swagger-ui/**", "/v3/api-docs/**", "/ws/**").permitAll()
+                .requestMatchers("/api/auth/**", "/ws/**").permitAll()
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/m7/**", "/api/m8/**").hasRole("OPERATOR")
                 .requestMatchers("/api/m1/dashboard/**", "/api/m6/incidents/**").hasRole("OPERATOR")
                 .anyRequest().authenticated())

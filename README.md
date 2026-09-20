@@ -48,6 +48,12 @@ rồi bấm ▶ ở `EmobilityApplication.java`. Chi tiết cài đặt xem [INS
 
 Tài khoản demo: `student1 / 123456` (STUDENT), `operator1 / 123456` (OPERATOR).
 
+Chạy cả hệ thống bằng một lệnh (dùng để quay video demo, xem SETUP.md mục D2):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+```
+
 ## Quy ước
 
 - Nhánh: `feature/m<so>-<mo-ta>`, ví dụ `feature/m5-charging-queue`

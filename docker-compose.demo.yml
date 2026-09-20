@@ -1,0 +1,29 @@
+# MOI TRUONG DEMO - chay ca he thong bang 1 lenh, dung de quay video va cho thay xem.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
+#
+# Truy cap: http://localhost  (frontend)  |  http://localhost:8080/swagger-ui.html  (API)
+# Dung lai:  docker compose -f docker-compose.yml -f docker-compose.demo.yml down
+#
+# LUC CODE HANG NGAY KHONG DUNG FILE NAY - chi can `docker compose up -d db`.
+
+services:
+  backend:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-emobility}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-emobility}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-emobility}
+      APP_CORS_ALLOWED-ORIGIN: http://localhost
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
