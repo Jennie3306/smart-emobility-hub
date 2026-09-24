@@ -33,12 +33,6 @@ public class RentalVehicle {
 
     protected RentalVehicle() { }
 
-    /**
-     * Doi trang thai xe, chi cho phep cac chuyen hop le trong state machine.
-     * Tien dieu kien: trang thai moi khac null.
-     * Hau dieu kien: state = newState neu hop le.
-     * Ngoai le: BusinessException INVALID_STATE_TRANSITION.
-     */
     public void changeState(VehicleState newState) {
         if (!this.state.canMoveTo(newState)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",

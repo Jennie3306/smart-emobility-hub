@@ -4,8 +4,8 @@ import com.hcmut.emobility.m3vehicle.dto.ReturnVehicleRequest;
 import com.hcmut.emobility.m3vehicle.dto.VehicleResponse;
 import com.hcmut.emobility.m3vehicle.repository.RentalVehicleRepository;
 import com.hcmut.emobility.m3vehicle.service.VehicleService;
+import com.hcmut.emobility.shared.common.ApiResponse;
 import jakarta.validation.Valid;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,20 +24,24 @@ public class VehicleController {
     }
 
     @GetMapping
-    public List<VehicleResponse> list() {
-        return repository.findAll().stream().map(VehicleResponse::from).toList();
+    public ApiResponse<List<VehicleResponse>> list() {
+        List<VehicleResponse> vehicles = repository.findAll().stream()
+                .map(VehicleResponse::from)
+                .toList();
+        return ApiResponse.success(vehicles, "Lay danh sach xe thanh cong");
     }
 
     @PostMapping("/{id}/pick-up")
-    public ResponseEntity<Void> pickUp(@PathVariable Long id) {
+    public ApiResponse<Void> pickUp(@PathVariable Long id) {
         service.pickUp(id);
-        return ResponseEntity.noContent().build();
+        // Trả về data null kèm thông báo thành công
+        return ApiResponse.success(null, "Nhan xe thanh cong");
     }
 
     @PostMapping("/{id}/return")
-    public ResponseEntity<Void> returnVehicle(@PathVariable Long id,
-                                              @Valid @RequestBody ReturnVehicleRequest request) {
+    public ApiResponse<Void> returnVehicle(@PathVariable Long id,
+                                           @Valid @RequestBody ReturnVehicleRequest request) {
         service.returnVehicle(id, request.hubId(), request.batteryLevel());
-        return ResponseEntity.noContent().build();
+        return ApiResponse.success(null, "Tra xe thanh cong");
     }
 }
