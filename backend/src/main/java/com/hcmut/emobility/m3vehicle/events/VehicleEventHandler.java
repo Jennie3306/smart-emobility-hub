@@ -50,6 +50,7 @@ public class VehicleEventHandler {
             RentalVehicle vehicle = repository.findById(event.getResourceId()).orElse(null);
             if (vehicle != null && vehicle.getState() == VehicleState.RESERVED) {
                 vehicle.changeState(VehicleState.AVAILABLE);
+                vehicle.clearReservation();
             }
         } catch (Exception ex) {
             log.error("[M3] Xu ly ReservationExpired that bai: {}", ex.getMessage(), ex);

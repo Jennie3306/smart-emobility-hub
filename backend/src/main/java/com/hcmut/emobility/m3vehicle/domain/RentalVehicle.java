@@ -28,6 +28,9 @@ public class RentalVehicle {
     @Column(name = "current_hub_id")
     private Long currentHubId;
 
+    @Column(name = "reserved_by_user_id")
+    private Long reservedByUserId;
+
     @Version
     private Long version;   // optimistic lock - chong cap nhat dong thoi
 
@@ -45,6 +48,15 @@ public class RentalVehicle {
         this.batteryLevel = Math.max(0, Math.min(100, level));
     }
 
+    public void reserve(Long userId) {
+        changeState(VehicleState.RESERVED);
+        this.reservedByUserId = userId;
+    }
+
+    public void clearReservation() {
+        this.reservedByUserId = null;
+    }
+
     public Long getId() { return id; }
     public String getCode() { return code; }
     public VehicleType getType() { return type; }
@@ -52,4 +64,6 @@ public class RentalVehicle {
     public VehicleState getState() { return state; }
     public Long getCurrentHubId() { return currentHubId; }
     public void setCurrentHubId(Long hubId) { this.currentHubId = hubId; }
+    public Long getReservedByUserId() {return reservedByUserId; }
+    public void setReservedByUserId(Long userId) { this.reservedByUserId = userId; }
 }

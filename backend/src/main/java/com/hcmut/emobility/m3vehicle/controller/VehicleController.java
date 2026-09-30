@@ -32,8 +32,8 @@ public class VehicleController {
     }
 
     @PostMapping("/{id}/pick-up")
-    public ApiResponse<Void> pickUp(@PathVariable Long id) {
-        service.pickUp(id);
+    public ApiResponse<Void> pickUp(@PathVariable Long id, @RequestHeader("X-User-Id") Long userId) {
+        service.pickUp(id, userId);
         // Trả về data null kèm thông báo thành công
         return ApiResponse.success(null, "Nhan xe thanh cong");
     }
