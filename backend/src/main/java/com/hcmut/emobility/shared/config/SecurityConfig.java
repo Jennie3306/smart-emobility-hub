@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/ws/**").permitAll()
                 // Swagger: can du 3 duong dan - "/swagger-ui.html" chuyen huong sang "/swagger-ui/index.html"
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/api/m7/**", "/api/m8/**", "/api/m6/simulator/**").hasRole("OPERATOR")
+                .requestMatchers("/api/m7/**", "/api/m8/**").hasRole("OPERATOR")
                 .requestMatchers("/api/m1/dashboard/**", "/api/m6/incidents/**").hasRole("OPERATOR")
                 .anyRequest().authenticated())
             // Loi 401/403 do bo loc Security nem ra KHONG di qua GlobalExceptionHandler,
