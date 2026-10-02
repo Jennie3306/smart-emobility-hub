@@ -32,6 +32,8 @@ app:
     low-battery-threshold: 20 # BR-M5-01 (%)
   monitoring:
     capacity-alert-threshold: 90  # BR-M1-01 (%)
+  simulator:
+    scheduler-enabled: false
 
 logging:
   level:
