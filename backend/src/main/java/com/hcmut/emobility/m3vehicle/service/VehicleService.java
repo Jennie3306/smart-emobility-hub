@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.hcmut.emobility.m3vehicle.dto.CurrentTripResponse;
 
 @Service
 public class VehicleService {
@@ -26,11 +27,16 @@ public class VehicleService {
 
     @Value("${app.charging.low-battery-threshold}")
     private int lowBatteryThreshold;
+    private final HubServiceClient hubServiceClient;
 
-    public VehicleService(RentalVehicleRepository repository, RentalSessionRepository sessionRepository, EventPublisher publisher) {
+    public VehicleService(RentalVehicleRepository repository,
+                          RentalSessionRepository sessionRepository,
+                          EventPublisher publisher,
+                          HubServiceClient hubServiceClient) {
         this.repository = repository;
         this.sessionRepository = sessionRepository;
         this.publisher = publisher;
+        this.hubServiceClient = hubServiceClient;
     }
 
     /**
@@ -78,8 +84,6 @@ public class VehicleService {
                     HttpStatus.BAD_REQUEST
             );
         }
-
-        /*
         // BR-M3-03: Hub đích còn chỗ
         if (!hubServiceClient.hasAvailableSpace(hubId)) {
             throw new BusinessException(
@@ -88,8 +92,6 @@ public class VehicleService {
                     HttpStatus.CONFLICT
             );
         }
-        chưa làm logic kiểm tra còn chỗ trống ở HUB không
-        */
 
         vehicle.updateBattery(batteryLevel);
         vehicle.setCurrentHubId(hubId);
@@ -116,5 +118,19 @@ public class VehicleService {
     private RentalVehicle findOrThrow(Long id) {
         return repository.findById(id).orElseThrow(() ->
                 new BusinessException("VEHICLE_NOT_FOUND", "Khong tim thay xe " + id, HttpStatus.NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public CurrentTripResponse getCurrentTrip(Long userId) {
+        RentalSession session = sessionRepository
+                .findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException(
+                        "NO_ACTIVE_TRIP",
+                        "Ban khong co chuyen di dang dien ra",
+                        HttpStatus.NOT_FOUND
+                ));
+
+        RentalVehicle vehicle = findOrThrow(session.getVehicleId());
+        return CurrentTripResponse.from(session, vehicle);
     }
 }
