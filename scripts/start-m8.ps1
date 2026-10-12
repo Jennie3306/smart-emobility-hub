@@ -27,7 +27,24 @@ try {
     }
     $taskJar = Join-Path $taskRoot 'backend/target/emobility-0.0.1-SNAPSHOT.jar'
     if (-not (Test-Path $taskJar)) { throw 'Backend JAR missing; run without -SkipBuild.' }
-    $taskBackend = Start-Process -FilePath (Get-Command java).Source -ArgumentList @('-jar',('"' + $taskJar + '"'),'--server.address=127.0.0.1') -WorkingDirectory (Join-Path $taskRoot 'backend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskLogDir 'backend.log') -RedirectStandardError (Join-Path $taskLogDir 'backend-error.log') -PassThru
+    $taskSavedKey = $env:M8_LLM_KEY
+    $taskSavedUrl = $env:M8_LLM_URL
+    $taskSavedModel = $env:M8_LLM_MODEL
+    try {
+        $taskKeyFile = Join-Path $taskLogDir 'm8-openai-key.dpapi'
+        if (-not $env:M8_LLM_KEY -and (Test-Path -LiteralPath $taskKeyFile)) {
+            $taskSecureKey = (Get-Content -LiteralPath $taskKeyFile -Raw).Trim() | ConvertTo-SecureString
+            $env:M8_LLM_KEY = [System.Net.NetworkCredential]::new('', $taskSecureKey).Password
+            if (-not $env:M8_LLM_URL) { $env:M8_LLM_URL = 'https://api.openai.com/v1/chat/completions' }
+            if (-not $env:M8_LLM_MODEL) { $env:M8_LLM_MODEL = 'gpt-4.1-mini' }
+        }
+        $taskBackend = Start-Process -FilePath (Get-Command java).Source -ArgumentList @('-jar',('"' + $taskJar + '"'),'--server.address=127.0.0.1') -WorkingDirectory (Join-Path $taskRoot 'backend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskLogDir 'backend.log') -RedirectStandardError (Join-Path $taskLogDir 'backend-error.log') -PassThru
+    } finally {
+        $env:M8_LLM_KEY = $taskSavedKey
+        $env:M8_LLM_URL = $taskSavedUrl
+        $env:M8_LLM_MODEL = $taskSavedModel
+        $taskSecureKey = $null
+    }
     $taskFrontend = Start-Process -FilePath (Get-Command node).Source -ArgumentList @(('"' + (Join-Path $taskRoot 'frontend/node_modules/vite/bin/vite.js') + '"'),'--host','127.0.0.1','--port','5173','--strictPort') -WorkingDirectory (Join-Path $taskRoot 'frontend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskLogDir 'frontend.log') -RedirectStandardError (Join-Path $taskLogDir 'frontend-error.log') -PassThru
     @(@{id=$taskBackend.Id;startTime=$taskBackend.StartTime.ToUniversalTime().ToString('o');kind='backend'},@{id=$taskFrontend.Id;startTime=$taskFrontend.StartTime.ToUniversalTime().ToString('o');kind='frontend'}) | ConvertTo-Json | Set-Content (Join-Path $taskLogDir 'processes.json')
     Write-Output 'M8 starting: http://localhost:5173/m8/simulation — operator1 / 123456'
