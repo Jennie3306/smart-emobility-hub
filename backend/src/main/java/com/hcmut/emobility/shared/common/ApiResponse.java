@@ -9,7 +9,7 @@ import java.time.OffsetDateTime;
 public record ApiResponse<T>(String code, String message, T data, OffsetDateTime timestamp) {
     
     public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>("SUCCESS", "Thao tac thanh cong", data, OffsetDateTime.now());
+        return new ApiResponse<>("SUCCESS", "Operation successful", data, OffsetDateTime.now());
     }
 
     public static <T> ApiResponse<T> success(T data, String message) {

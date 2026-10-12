@@ -50,17 +50,17 @@ public class VehicleService {
         RentalVehicle vehicle = findOrThrow(vehicleId);
         if (vehicle.getState() != VehicleState.RESERVED) {
             throw new BusinessException("VEHICLE_NOT_AVAIL",
-                    "Xe khong o trang thai RESERVED", HttpStatus.BAD_REQUEST);
+                    "Vehicle is not reserved", HttpStatus.BAD_REQUEST);
         }
         if (vehicle.getBatteryLevel() < lowBatteryThreshold) {
             throw new BusinessException("BATTERY_TOO_LOW",
-                    "Pin khong du dieu kien cho thue (< " + lowBatteryThreshold + "%)",
+                    "Battery is below the rental threshold (< " + lowBatteryThreshold + "%)",
                     HttpStatus.BAD_REQUEST);
         }
         if (vehicle.getReservedByUserId() == null
                 || !vehicle.getReservedByUserId().equals(userId)) {
             throw new BusinessException("RESERVATION_MISMATCH",
-                    "Xe nay khong thuoc ve ban", HttpStatus.FORBIDDEN);
+                    "This reservation does not belong to you", HttpStatus.FORBIDDEN);
         }
 
         vehicle.changeState(VehicleState.IN_USE);
@@ -79,14 +79,14 @@ public class VehicleService {
         RentalVehicle vehicle = findOrThrow(vehicleId);
         RentalSession activeSession = sessionRepository
                 .findByVehicleIdAndStatus(vehicleId, SessionStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessException("SESSION_NOT_FOUND", "Khong tim thay chuyen di", HttpStatus.NOT_FOUND));
+                .orElseThrow(() -> new BusinessException("SESSION_NOT_FOUND", "Trip not found", HttpStatus.NOT_FOUND));
         if (!activeSession.getUserId().equals(userId)) {
-            throw new BusinessException("TRIP_OWNER_MISMATCH", "Chuyen di khong thuoc ve ban", HttpStatus.FORBIDDEN);
+            throw new BusinessException("TRIP_OWNER_MISMATCH", "This trip does not belong to you", HttpStatus.FORBIDDEN);
         }
         if (vehicle.getState() != VehicleState.IN_USE) {
             throw new BusinessException(
                     "INVALID_STATE",
-                    "Xe chua duoc thue",
+                    "Vehicle is not currently rented",
                     HttpStatus.BAD_REQUEST
             );
         }
@@ -94,7 +94,7 @@ public class VehicleService {
         if (!hubServiceClient.hasAvailableSpace(hubId)) {
             throw new BusinessException(
                     "HUB_FULL",
-                    "Hub dich da het cho do, vui long di chuyen den Hub lan can",
+                    "Destination hub is full. Choose another hub.",
                     HttpStatus.CONFLICT
             );
         }
@@ -116,7 +116,7 @@ public class VehicleService {
 
     private RentalVehicle findOrThrow(Long id) {
         return repository.findById(id).orElseThrow(() ->
-                new BusinessException("VEHICLE_NOT_FOUND", "Khong tim thay xe " + id, HttpStatus.NOT_FOUND));
+                new BusinessException("VEHICLE_NOT_FOUND", "Vehicle not found: " + id, HttpStatus.NOT_FOUND));
     }
 
     @Transactional(readOnly = true)
@@ -125,7 +125,7 @@ public class VehicleService {
                 .findByUserIdAndStatus(userId, SessionStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessException(
                         "NO_ACTIVE_TRIP",
-                        "Ban khong co chuyen di dang dien ra",
+                        "You have no active trip",
                         HttpStatus.NOT_FOUND
                 ));
 

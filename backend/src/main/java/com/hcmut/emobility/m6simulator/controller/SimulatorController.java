@@ -54,12 +54,12 @@ public class SimulatorController {
     public ResponseEntity<ApiError> invalidScenario(MethodArgumentTypeMismatchException exception) {
         var scenarios = Arrays.stream(SimulatorScenario.values()).map(Enum::name).toList();
         return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_FAILED",
-                "Scenario không hợp lệ", Map.of("scenario", scenarios)));
+                "Invalid simulator scenario", Map.of("scenario", scenarios)));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> invalidRequestBody(HttpMessageNotReadableException exception) {
         return ResponseEntity.badRequest().body(ApiError.of("VALIDATION_FAILED",
-                "JSON body thiếu hoặc không hợp lệ", Map.of("request", "JSON body is missing or malformed")));
+                "JSON body is missing or malformed", Map.of("request", "JSON body is missing or malformed")));
     }
 }

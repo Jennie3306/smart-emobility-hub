@@ -27,10 +27,20 @@ public class JdbcSnapshotProvider implements SnapshotProvider {
     @Transactional(readOnly=true, isolation=Isolation.REPEATABLE_READ)
     public Snapshot capture() {
         var hubs = jdbc.query("select id,name,parking_slots,charging_points from hub order by id",
-            (rs,n) -> new Hub(rs.getLong(1),rs.getString(2),rs.getInt(3),rs.getInt(4)));
+            (rs,n) -> new Hub(rs.getLong(1),displayName(rs.getString(2)),rs.getInt(3),rs.getInt(4)));
         var vehicles = jdbc.query("select id,current_hub_id,battery_level,state from rental_vehicle order by id",
             (rs,n) -> new Vehicle(rs.getLong(1),rs.getObject(2,Long.class),rs.getInt(3),rs.getString(4)));
         return new Snapshot(UUID.randomUUID().toString(),Instant.now(),hubs,vehicles,deviceCopy(),
                 "MANUAL_SCENARIO — M2 demand feed not connected");
+    }
+    private String displayName(String name) {
+        return switch(name) {
+            case "Hub Ga Metro" -> "Metro Hub";
+            case "Hub KTX Khu A" -> "Dormitory A Hub";
+            case "Hub KTX Khu B" -> "Dormitory B Hub";
+            case "Hub BK" -> "Bach Khoa Hub";
+            case "Hub KHTN" -> "Science Hub";
+            default -> name;
+        };
     }
 }

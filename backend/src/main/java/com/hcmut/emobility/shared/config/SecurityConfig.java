@@ -33,7 +33,7 @@ public class SecurityConfig {
     /** Chua dang nhap ma goi API -> tra JSON 401 (frontend tu chuyen sang trang dang nhap). */
     private final AuthenticationEntryPoint apiEntryPoint = (req, res, e) ->
             writeJsonError(res, HttpServletResponse.SC_UNAUTHORIZED,
-                    "UNAUTHENTICATED", "Ban chua dang nhap");
+                    "UNAUTHENTICATED", "Sign in to continue");
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,13 +54,15 @@ public class SecurityConfig {
                 .defaultAuthenticationEntryPointFor(apiEntryPoint, new AntPathRequestMatcher("/api/**"))
                 .accessDeniedHandler((req, res, e) ->
                         writeJsonError(res, HttpServletResponse.SC_FORBIDDEN,
-                                "ACCESS_DENIED", "Ban khong co quyen thuc hien thao tac nay")))
+                                "ACCESS_DENIED", req.getRequestURI().startsWith("/api/m8/")
+                                    ? "What-if Studio requires an Operator account. Sign in with operator1 for the demo."
+                                    : "You do not have permission to perform this action")))
             .formLogin(form -> form
                 .loginProcessingUrl("/api/auth/login")
                 .successHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
                 .failureHandler((req, res, ex) ->
                         writeJsonError(res, HttpServletResponse.SC_UNAUTHORIZED,
-                                "LOGIN_FAILED", "Sai tai khoan hoac mat khau")))
+                                "LOGIN_FAILED", "Invalid username or password")))
             .logout(out -> out
                 .logoutUrl("/api/auth/logout")
                 .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK)));

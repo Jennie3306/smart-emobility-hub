@@ -39,7 +39,7 @@ public class RentalVehicle {
     public void changeState(VehicleState newState) {
         if (!this.state.canMoveTo(newState)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Khong the chuyen xe tu " + state + " sang " + newState);
+                    "Cannot transition vehicle from " + state + " to " + newState);
         }
         this.state = newState;
     }

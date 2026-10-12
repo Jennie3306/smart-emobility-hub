@@ -33,7 +33,7 @@ public class SimulationService {
     public synchronized Run discard(String runId,String recommendationId) throws IOException {
         Run r=store.get(runId);
         Recommendation item=r.recommendations().stream().filter(a -> a.id().equals(recommendationId)).findFirst().orElseThrow();
-        if(!item.status().equals("PENDING")) throw new BusinessException("ALREADY_RESOLVED","Đề xuất đã được xử lý");
+        if(!item.status().equals("PENDING")) throw new BusinessException("ALREADY_RESOLVED","This proposal has already been resolved");
         var items=r.recommendations().stream().map(a -> a.id().equals(recommendationId)?new Recommendation(a.id(),a.action(),a.fromHubId(),a.toHubId(),a.amount(),a.reason(),"DISCARDED",a.projectedFailurePercent()):a).toList();
         Run updated=new Run(r.id(),r.createdAt(),r.scenario(),r.snapshot(),r.kpi(),r.baseline(),r.timeline(),items,r.recommendationSource(),r.warnings());
         store.save(updated); return updated;
@@ -41,7 +41,7 @@ public class SimulationService {
     public void apply(String runId,String recommendationId) {
         Run r=store.get(runId);
         r.recommendations().stream().filter(a -> a.id().equals(recommendationId)).findFirst().orElseThrow();
-        throw new BusinessException("DISPATCH_NOT_CONNECTED","M7 chưa có bộ thực thi và kiểm tra trạng thái hiện tại. Đề xuất chưa được áp dụng.",HttpStatus.CONFLICT);
+        throw new BusinessException("DISPATCH_NOT_CONNECTED","M7 execution and live-state revalidation are not connected. The proposal has not been applied.",HttpStatus.CONFLICT);
     }
     public ParseResult parse(String text) { return assistant.parse(text,snapshots.capture()); }
     public boolean aiConfigured() { return assistant.configured(); }

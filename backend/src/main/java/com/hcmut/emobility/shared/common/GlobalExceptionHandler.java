@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of(ex.getCode(), ex.getMessage(), Map.of()));
     }
 
-    /** Du lieu dau vao khong hop le (@NotNull, @Min...) -> 400 */
+    /** Invalid request parameters (@NotNull, @Min...) -> 400 */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, Object> details = new HashMap<>();
@@ -40,21 +40,21 @@ public class GlobalExceptionHandler {
             details.put(fe.getField(), fe.getDefaultMessage());
         }
         return ResponseEntity.badRequest()
-                .body(ApiError.of("VALIDATION_FAILED", "Du lieu dau vao khong hop le", details));
+                .body(ApiError.of("VALIDATION_FAILED", "Invalid request parameters", details));
     }
 
     /** Duong dan khong ton tai -> 404 (truoc day bi bat nham thanh 500) */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NoResourceFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(ApiError.of("NOT_FOUND", "Khong tim thay duong dan: " + ex.getResourcePath(), Map.of()));
+                .body(ApiError.of("NOT_FOUND", "Route not found: " + ex.getResourcePath(), Map.of()));
     }
 
     /** Khong du quyen -> 403 */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiError.of("ACCESS_DENIED", "Ban khong co quyen thuc hien thao tac nay", Map.of()));
+                .body(ApiError.of("ACCESS_DENIED", "You do not have permission to perform this action", Map.of()));
     }
 
     /** Moi loi con lai -> 500, co ghi log day du de con debug */
@@ -62,6 +62,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleOther(Exception ex) {
         log.error("Loi khong xu ly duoc: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiError.of("INTERNAL_ERROR", "Loi he thong, xem log de biet chi tiet", Map.of()));
+                .body(ApiError.of("INTERNAL_ERROR", "An internal error occurred. Check the server logs.", Map.of()));
     }
 }
