@@ -103,8 +103,11 @@ public class ScenarioAssistant {
         if(kpi.failed()>0 && !scenario.reroute()) {
             Scenario alternative=new Scenario(scenario.name(),scenario.hubId(),scenario.disabled(),scenario.injectedRequests(),scenario.durationMins(),scenario.arrivalWindowMins(),scenario.tripMins(),true,scenario.seed());
             Kpi projected=engine.simulate(snapshot,alternative).kpi();
-            if(projected.failed()<kpi.failed()) accepted.add(new Recommendation(UUID.randomUUID().toString(),"reroute",scenario.hubId(),0,0,
+            if(projected.failed()<kpi.failed()) {
+                source=accepted.isEmpty()?"LOCAL_RULES":source.equals("LLM")?"LLM_AND_LOCAL_RULES":source;
+                accepted.add(new Recommendation(UUID.randomUUID().toString(),"reroute",scenario.hubId(),0,0,
                     "Cho phép khách tìm xe tại Hub khác. Mô hình chưa tính thời gian di chuyển giữa các Hub.","PENDING",projected.failurePercent()));
+            }
         }
         if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Try reopening the hub or enabling rerouting.");
         return new Proposals(List.copyOf(accepted),source,List.copyOf(warnings));
