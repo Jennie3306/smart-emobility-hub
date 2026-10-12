@@ -5,7 +5,7 @@ if (-not (Test-Path $taskPidFile)) { Write-Output 'No recorded M8 processes.'; r
 $taskRecords = Get-Content $taskPidFile -Raw | ConvertFrom-Json
 foreach ($taskRecord in $taskRecords) {
     $taskProcess = Get-Process -Id $taskRecord.id -ErrorAction SilentlyContinue
-    if ($taskProcess -and $taskProcess.StartTime.ToUniversalTime().ToString('o') -eq $taskRecord.startTime) {
+    if ($taskProcess -and $taskProcess.StartTime.ToUniversalTime().Ticks -eq ([DateTime]$taskRecord.startTime).ToUniversalTime().Ticks) {
         Stop-Process -Id $taskRecord.id
         Write-Output "Stopped M8 $($taskRecord.kind)."
     }
