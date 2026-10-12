@@ -4,6 +4,7 @@ const nav = [
   { to: "/m1/dashboard", label: "Dashboard (M1)" },
   { to: "/m3/vehicles",  label: "Xe thue (M3)" },
   // moi module tu them muc cua minh
+  { to: "/m8/simulation", label: "What-if Studio (M8)" },
 ];
 
 export function AppLayout() {

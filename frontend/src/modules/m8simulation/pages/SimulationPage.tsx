@@ -1,0 +1,83 @@
+import { useEffect, useState } from "react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
+import { simulationApi as api, type Scenario, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
+import "./simulation.css";
+
+const defaults:Scenario={name:"Đóng trạm giờ cao điểm",hubId:1,disabled:true,injectedRequests:100,durationMins:120,arrivalWindowMins:60,tripMins:30,reroute:false,seed:42};
+const number=(n:number)=>n.toLocaleString("vi-VN",{maximumFractionDigits:1});
+const time=(date:string)=>new Date(date).toLocaleString("vi-VN",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
+function message(error:unknown) { return (error as {response?:{data?:{message?:string}}}).response?.data?.message || "Không kết nối được hệ thống. Thử lại sau."; }
+
+export default function SimulationPage() {
+  const [tab,setTab]=useState<"studio"|"history"|"network">("studio");
+  const [snapshot,setSnapshot]=useState<Snapshot>(); const [monitor,setMonitor]=useState<Monitor>();
+  const [runs,setRuns]=useState<Run[]>([]); const [active,setActive]=useState<Run>();
+  const [scenario,setScenario]=useState(defaults); const [text,setText]=useState("Mưa ngập Hub Ga Metro, khoảng 100 sinh viên kẹt lại trong 120 phút.");
+  const [busy,setBusy]=useState(false); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
+  const [compare,setCompare]=useState<string[]>([]); const [reuse,setReuse]=useState<string>("");
+  async function refresh() {
+    const [s,m,r]=await Promise.all([api.snapshot(),api.status(),api.list()]);setSnapshot(s);setMonitor(m);setRuns(r);
+  }
+  useEffect(()=>{refresh().catch(e=>setError(message(e)));},[]);
+  async function task(action:()=>Promise<void>) {setBusy(true);setError("");setNotice("");try {await action();} catch(e){setError(message(e));} finally{setBusy(false);} }
+  function update(key:keyof Scenario,value:Scenario[keyof Scenario]) {setScenario(s=>({...s,[key]:value}));}
+  function load(run:Run) {setActive(run);setScenario(run.scenario);setReuse(run.id);setTab("studio");setNotice("Đang dùng lại snapshot cũ để so sánh công bằng. Bạn có thể chọn snapshot mới.");}
+  const selected=runs.filter(r=>compare.includes(r.id));
+  const hubs=active?.snapshot.hubs || snapshot?.hubs || [];
+  const hubName=(id:number)=>hubs.find(h=>h.id===id)?.name || `Hub ${id}`;
+  return <div className="m8-app">
+    <aside className="m8-sidebar">
+      <div className="m8-logo"><span>↗</span><div>MOBILITY LAB<small>Vận hành · What-if Studio</small></div></div>
+      <div className="m8-nav-label">KHÔNG GIAN LÀM VIỆC</div>
+      <button className={tab==="studio"?"active":""} onClick={()=>setTab("studio")}><span>◈</span> Mô phỏng what-if</button>
+      <button className={tab==="history"?"active":""} onClick={()=>setTab("history")}><span>▤</span> Lịch sử & so sánh <b>{runs.length}</b></button>
+      <button className={tab==="network"?"active":""} onClick={()=>setTab("network")}><span>◎</span> Snapshot mạng lưới</button>
+      <div className="m8-side-note"><span className="m8-dot"/> M3 + M6 đã kết nối<p>Mô phỏng chạy trên bản sao. Xe và dữ liệu vận hành không bị thay đổi.</p></div>
+      <div className="m8-operator"><span>OP</span><div>Operator workspace<small>M8 · Simulation & Recommendation</small></div></div>
+    </aside>
+    <div className="m8-main">
+      <header className="m8-top"><span>Smart E-Mobility Hub <i>/</i> M8</span><span className="m8-chip">● Môi trường local</span></header>
+      <div className="m8-content">
+        <div className="m8-title"><div><div className="m8-eyebrow">PLAN BEFORE YOU ACT</div><h1>{tab==="studio"?"Nếu mạng lưới thay đổi?":tab==="history"?"Mỗi phương án, một góc nhìn.":"Mạng lưới ở thời điểm này."}</h1><p>{tab==="studio"?"Thử kịch bản, đo tác động và chọn phương án trước khi vận hành.":tab==="history"?"Chọn hai lần chạy để đối chiếu KPI; dùng cùng snapshot và seed khi cần so sánh tác động.":"Dữ liệu Hub và xe từ M3, kèm quan sát thiết bị demo từ M6."}</p></div><button className="m8-button secondary" disabled={busy} onClick={()=>task(refresh)}>↻ Làm mới</button></div>
+        {error && <div className="m8-alert error" role="alert">{error}</div>}
+        {notice && <div className="m8-alert" role="status">{notice}</div>}
+        {!snapshot && !error && <div className="m8-panel">Đang đọc mạng lưới…</div>}
+        {snapshot && tab==="studio" && <>
+          <div className="m8-work-grid">
+            <section className="m8-panel m8-form">
+              <div className="m8-section-head"><span className="m8-step">01</span><div><h2>Thiết kế kịch bản</h2><p>Bạn quyết định bộ thông số cuối cùng.</p></div></div>
+              <div className="m8-assistant"><div><strong>✧ Điền form từ mô tả</strong><span className="m8-chip">{monitor?.aiConfigured?"LLM đã kết nối":"Quy tắc local"}</span></div><textarea aria-label="Mô tả kịch bản" value={text} onChange={e=>setText(e.target.value)}/><button className="m8-button secondary" disabled={busy||!text.trim()} onClick={()=>task(async()=>{const result=await api.parse(text);setScenario(result.scenario);setNotice(`${result.source==="LLM"?"AI":"Bộ quy tắc local"} đã điền form. Kiểm tra trước khi chạy. ${result.warnings.join(" ")}`);})}>✧ Trích xuất thông số</button></div>
+              <label>Tên kịch bản<input maxLength={100} value={scenario.name} onChange={e=>update("name",e.target.value)}/></label>
+              <label>Trạm chịu tác động<select value={scenario.hubId} onChange={e=>update("hubId",Number(e.target.value))}>{snapshot.hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
+              <div className="m8-field-grid">{([['injectedRequests','Yêu cầu thuê',0,10000],['durationMins','Thời gian mô phỏng (phút)',1,1440],['arrivalWindowMins','Cửa sổ khách đến (phút)',1,1440],['tripMins','Thời lượng chuyến (phút)',1,240],['seed','Seed tái lập',0,2147483647]] as const).map(([key,label,min,max])=><label key={key}>{label}<input type="number" min={min} max={max} value={scenario[key]} onChange={e=>update(key,Number(e.target.value))}/></label>)}</div>
+              <label className="m8-toggle"><input type="checkbox" checked={scenario.disabled} onChange={e=>update("disabled",e.target.checked)}/><span><strong>Đóng trạm trong thời gian mô phỏng</strong><small>Chỉ thay đổi trong bản sao dữ liệu.</small></span></label>
+              <label className="m8-toggle"><input type="checkbox" checked={scenario.reroute} onChange={e=>update("reroute",e.target.checked)}/><span><strong>Cho phép chuyển khách sang trạm khác</strong><small>Chọn Hub còn xe theo thứ tự ID; chưa tính thời gian di chuyển.</small></span></label>
+              <label>Nguồn snapshot<select value={reuse} onChange={e=>setReuse(e.target.value)}><option value="">Chụp mới từ mạng lưới</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>
+              <button className="m8-button primary m8-run" disabled={busy||!scenario.name.trim()||scenario.arrivalWindowMins>scenario.durationMins} onClick={()=>task(async()=>{const run=await api.run(scenario,reuse||undefined);setActive(run);setRuns(await api.list());setNotice("Đã lưu kết quả. Dữ liệu xe vận hành không bị thay đổi.");})}>{busy?"Đang xử lý…":"▶ Lưu & chạy mô phỏng"}</button>
+            </section>
+            <section className="m8-results">
+              <div className="m8-panel m8-preview"><div className="m8-section-head"><span className="m8-step">02</span><div><h2>Tác động dự kiến</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Kết quả sẽ xuất hiện sau khi chạy mô phỏng."}</p></div><span className="m8-chip">{active?"Đã lưu":"Sẵn sàng"}</span></div>
+                {active?<><div className="m8-kpis"><Metric label="Đáp ứng thành công" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Tỷ lệ không đáp ứng" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Chờ trung bình" value={number(active.kpi.meanWaitMins)} unit="phút"/><Metric label="Hàng đợi lớn nhất" value={number(active.kpi.peakQueue)} unit="khách"/></div>
+                  <div className="m8-baseline">So với cùng mạng lưới khi trạm mở: <strong>{number(active.baseline.failurePercent)}% không đáp ứng</strong><span>Chênh lệch {number(active.kpi.failurePercent-active.baseline.failurePercent)} điểm %</span></div>
+                  <div className="m8-chart"><ResponsiveContainer width="100%" height={240}><LineChart data={active.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="minute" tick={{fontSize:11}} minTickGap={30} unit="′"/><YAxis tick={{fontSize:11}}/><Tooltip/><Legend/><Line name="Đã phục vụ" type="monotone" dataKey="served" stroke="#1F4E79" strokeWidth={2.5} dot={false}/><Line name="Đang chờ" type="monotone" dataKey="waiting" stroke="#f59e0b" strokeWidth={2.5} dot={false}/></LineChart></ResponsiveContainer></div>
+                  <p className="m8-footnote">Thời gian chờ chỉ tính khách được phục vụ. Khách còn chờ ở cuối kỳ được tính không đáp ứng.</p>
+                  <div className="m8-table-wrap"><table><thead><tr><th>Trạm phục vụ</th><th>Thành công</th><th>Không đáp ứng</th><th>Xe sẵn sàng cuối kỳ</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
+                </>:<div className="m8-empty"><div className="m8-orbit">◎</div><h3>Thử trước. Quyết định sau.</h3><p>Đóng một trạm hoặc tăng nhu cầu để xem mạng lưới phản ứng thế nào.</p><div className="m8-mini-network">{snapshot.hubs.map(h=><span key={h.id}>{h.name}<b>{snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length} xe sẵn sàng</b></span>)}</div></div>}
+              </div>
+              <div className="m8-panel"><div className="m8-section-head"><span className="m8-step">03</span><div><h2>Phương án đề xuất</h2><p>Mỗi phương án được mô phỏng lại để kiểm tra hiệu quả.</p></div></div>
+                {active?.recommendations.length?active.recommendations.map(r=><div className="m8-recommendation" key={r.id}><div className="m8-rec-icon">⇄</div><div><h3>{r.action==="reroute"?"Chuyển khách sang Hub còn xe":`Điều chuyển ${r.amount} xe`}</h3>{r.action==="dispatch"&&<p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}<p className="m8-footnote">{r.reason}</p><strong className="m8-benefit">Tỷ lệ không đáp ứng dự kiến: {number(r.projectedFailurePercent)}%</strong><div className="m8-actions">{r.action==="reroute"?<button className="m8-button primary" disabled={busy||r.status!=="PENDING"} onClick={()=>{setScenario({...active.scenario,name:active.scenario.name+" · chuyển khách",reroute:true});setReuse(active.id);setNotice("Đã điền phương án chuyển khách. Bấm Lưu & chạy để kiểm chứng trên cùng snapshot; chưa thay đổi vận hành.");}}>Thử phương án</button>:<button className="m8-button primary" disabled={busy||r.status!=="PENDING"||!monitor?.applyEnabled} onClick={()=>task(async()=>{await api.apply(active.id,r.id);await refresh();})}>Duyệt & thực thi</button>}<button className="m8-button secondary" disabled={busy||r.status!=="PENDING"} onClick={()=>task(async()=>{setActive(await api.discard(active.id,r.id));setRuns(await api.list());})}>{r.status==="DISCARDED"?"Đã bỏ qua":"Bỏ qua"}</button></div></div></div>):<p className="m8-muted">{active?"Không có phương án điều chuyển khả thi giúp giảm số khách không được phục vụ. Thử mở trạm hoặc bật chuyển khách.":"Chạy kịch bản để tìm phương án phù hợp với nguồn lực hiện có."}</p>}
+                <div className="m8-integration-note">M7 chưa có bộ thực thi. Bạn có thể xem hoặc bỏ qua đề xuất; nút duyệt sẽ mở khi tích hợp hoàn tất.</div>
+              </div>
+              {active && <details className="m8-panel"><summary>Giả định & giới hạn mô hình</summary><ul>{active.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul><p>Nguồn đề xuất: {active.recommendationSource==="LLM"?"LLM":"Quy tắc local"}. Xe AVAILABLE, pin ≥20%; chuyến trở về Hub xuất phát. Không mô phỏng sạc hoặc tiêu hao pin.</p></details>}
+            </section>
+          </div>
+        </>}
+        {tab==="history" && <><section className="m8-panel"><div className="m8-section-head"><h2>Các lần chạy đã lưu</h2><span className="m8-chip">{compare.length}/2 chọn so sánh</span></div>{runs.length===0?<p className="m8-muted">Chưa có lần chạy. Tạo kịch bản đầu tiên trong What-if Studio.</p>:<div className="m8-table-wrap"><table><thead><tr><th>Chọn</th><th>Kịch bản</th><th>Thời điểm</th><th>Đáp ứng</th><th>Không đáp ứng</th><th>Chờ TB</th><th/></tr></thead><tbody>{runs.map(r=><tr key={r.id}><td><input aria-label={`So sánh ${r.scenario.name}`} type="checkbox" checked={compare.includes(r.id)} disabled={!compare.includes(r.id)&&compare.length===2} onChange={e=>setCompare(e.target.checked?[...compare,r.id]:compare.filter(id=>id!==r.id))}/></td><td><strong>{r.scenario.name}</strong><small>{r.scenario.injectedRequests} request · seed {r.scenario.seed}</small></td><td>{time(r.createdAt)}</td><td>{r.kpi.served}</td><td>{number(r.kpi.failurePercent)}%</td><td>{number(r.kpi.meanWaitMins)}′</td><td><button className="m8-button secondary" onClick={()=>load(r)}>Xem & chỉnh sửa</button></td></tr>)}</tbody></table></div>}</section>{selected.length===2&&<section className="m8-panel m8-comparison"><h2>Đối chiếu KPI</h2>{selected[0].snapshot.id!==selected[1].snapshot.id&&<div className="m8-alert">Hai lần chạy dùng snapshot khác nhau; chênh lệch có thể đến từ thay đổi mạng lưới.</div>}{selected[0].scenario.seed!==selected[1].scenario.seed&&<div className="m8-alert">Seed khác nhau; lịch khách đến không giống nhau.</div>}<table><thead><tr><th>Chỉ số</th>{selected.map(r=><th key={r.id}>{r.scenario.name}</th>)}</tr></thead><tbody>{([['requests','Yêu cầu'],['served','Được phục vụ'],['failed','Không đáp ứng'],['failurePercent','Tỷ lệ không đáp ứng (%)'],['meanWaitMins','Chờ trung bình (phút)'],['peakQueue','Hàng đợi lớn nhất']] as [keyof Kpi,string][]).map(([key,label])=><tr key={key}><td>{label}</td>{selected.map(r=><td key={r.id}>{number(r.kpi[key] as number)}</td>)}</tr>)}</tbody></table></section>}</>}
+        {tab==="network"&&snapshot&&<><div className="m8-network-head"><span className="m8-chip">Snapshot · {time(snapshot.capturedAt)}</span><button className="m8-button secondary" disabled={busy} onClick={()=>task(async()=>{await api.iot();await refresh();setNotice("Đã nhận quan sát IoT demo M6. Các quan sát được hiển thị riêng với dữ liệu xe PostgreSQL.");})}>↻ Nhận quan sát IoT demo</button></div><div className="m8-hub-grid">{snapshot.hubs.map(h=>{const vehicles=snapshot.vehicles.filter(v=>v.hubId===h.id);return <section className="m8-panel" key={h.id}><span className="m8-chip">HUB {String(h.id).padStart(2,'0')}</span><h2>{h.name}</h2><div className="m8-hub-count">{vehicles.filter(v=>v.state==="AVAILABLE"&&v.battery>=20).length}<small> xe sẵn sàng</small></div><div className="m8-capacity"><span style={{width:`${Math.min(100,vehicles.length/Math.max(1,h.capacity)*100)}%`}}/></div><p className="m8-footnote">{vehicles.length}/{h.capacity} chỗ đỗ · {h.chargingPoints} cổng sạc</p>{vehicles.map(v=><div className="m8-vehicle" key={v.id}><span>Xe #{v.id}</span><span>{v.battery}% · {v.state}</span></div>)}</section>;})}</div><section className="m8-panel"><h2>Quan sát thiết bị M6</h2>{snapshot.deviceStates.length?<div className="m8-table-wrap"><table><thead><tr><th>Tài nguyên</th><th>Hub</th><th>Trạng thái</th><th>Nhận lúc</th></tr></thead><tbody>{snapshot.deviceStates.map(d=><tr key={`${d.type}:${d.resourceId}`}><td>{d.type} #{d.resourceId}</td><td>{hubName(d.hubId)}</td><td>{d.state}</td><td>{time(d.observedAt)}</td></tr>)}</tbody></table></div>:<p className="m8-muted">Chưa nhận sự kiện M6 trong phiên backend này.</p>}</section></>}
+        {tab==="network"&&monitor&&<section className="m8-panel"><h2>Kiểm tra định kỳ</h2>{monitor.warnings.map((warning,i)=><p className="m8-muted" key={i}>{warning}</p>)}</section>}
+        <footer className="m8-footer"><span>◎ Kiểm tra mạng lưới mỗi 30 phút {monitor?.lastChecked&&`· Lần cuối ${time(monitor.lastChecked)}`}</span><span>Demand M2 chưa kết nối · Không tự thực thi đề xuất</span></footer>
+      </div>
+    </div>
+  </div>;
+}
+function Metric({label,value,unit,danger=false}:{label:string;value:string;unit:string;danger?:boolean}) {return <div className={`m8-metric ${danger?'danger':''}`}><span>{label}</span><strong>{value}<small>{unit}</small></strong></div>;}
