@@ -3,6 +3,7 @@ package com.hcmut.emobility.m3vehicle.events;
 import com.hcmut.emobility.m3vehicle.domain.RentalVehicle;
 import com.hcmut.emobility.m3vehicle.domain.VehicleState;
 import com.hcmut.emobility.m3vehicle.repository.RentalVehicleRepository;
+import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
@@ -12,10 +13,6 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * MAU cho moi module: module tu xu ly su kien cua nguoi khac TRONG package cua minh.
- * Ben phat (M6, M2) khong duoc dong vao code cua M3.
- */
 @Component
 public class VehicleEventHandler {
 
@@ -32,10 +29,13 @@ public class VehicleEventHandler {
     @EventListener
     @Transactional
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;   // chong xu ly trung
+        if (!processed.markIfNew(event.getEventId())) return;
         try {
-            repository.findById(event.getVehicleId()).ifPresent(v ->
-                    v.changeState(VehicleState.MAINTENANCE));
+            repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
+                vehicle.changeState(VehicleState.MAINTENANCE);
+                vehicle.clearReservation();
+                log.info("[M3] VehicleFailed: vehicle={} -> MAINTENANCE", event.getVehicleId());
+            });
         } catch (Exception ex) {
             log.error("[M3] Xu ly VehicleFailed that bai: {}", ex.getMessage(), ex);
         }
@@ -50,9 +50,29 @@ public class VehicleEventHandler {
             RentalVehicle vehicle = repository.findById(event.getResourceId()).orElse(null);
             if (vehicle != null && vehicle.getState() == VehicleState.RESERVED) {
                 vehicle.changeState(VehicleState.AVAILABLE);
+                vehicle.clearReservation();
+                log.info("[M3] ReservationExpired: vehicle={} -> AVAILABLE", event.getResourceId());
             }
         } catch (Exception ex) {
             log.error("[M3] Xu ly ReservationExpired that bai: {}", ex.getMessage(), ex);
+        }
+    }
+
+    @EventListener
+    @Transactional
+    public void onDispatchCompleted(DispatchCompletedEvent event) {
+        if (!processed.markIfNew(event.getEventId())) return;
+        try {
+            repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
+                vehicle.setCurrentHubId(event.getToHubId());
+                if (vehicle.getState() == VehicleState.IN_TRANSIT) {
+                    vehicle.changeState(VehicleState.AVAILABLE);
+                }
+                log.info("[M3] DispatchCompleted: vehicle={} hub {} -> {}",
+                        event.getVehicleId(), event.getFromHubId(), event.getToHubId());
+            });
+        } catch (Exception ex) {
+            log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
         }
     }
 }
