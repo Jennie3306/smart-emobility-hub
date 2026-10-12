@@ -75,8 +75,14 @@ public class VehicleService {
      * Phat VehicleReturnedEvent de M5 xet dua vao hang doi sac va M2 dong dat cho.
      */
     @Transactional
-    public void returnVehicle(Long vehicleId, Long hubId, int batteryLevel) {
+    public void returnVehicle(Long vehicleId, Long hubId, int batteryLevel, Long userId) {
         RentalVehicle vehicle = findOrThrow(vehicleId);
+        RentalSession activeSession = sessionRepository
+                .findByVehicleIdAndStatus(vehicleId, SessionStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessException("SESSION_NOT_FOUND", "Khong tim thay chuyen di", HttpStatus.NOT_FOUND));
+        if (!activeSession.getUserId().equals(userId)) {
+            throw new BusinessException("TRIP_OWNER_MISMATCH", "Chuyen di khong thuoc ve ban", HttpStatus.FORBIDDEN);
+        }
         if (vehicle.getState() != VehicleState.IN_USE) {
             throw new BusinessException(
                     "INVALID_STATE",
@@ -100,13 +106,6 @@ public class VehicleService {
                 : VehicleState.AVAILABLE);
 
 
-        RentalSession activeSession = sessionRepository
-                .findByVehicleIdAndStatus(vehicleId, SessionStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessException(
-                        "SESSION_NOT_FOUND",
-                        "Khong tim thay chuyen di dang dien ra",
-                        HttpStatus.NOT_FOUND
-                ));
         activeSession.complete();
 
         publisher.publish(new VehicleReturnedEvent(vehicleId, hubId, batteryLevel));

@@ -10,6 +10,8 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.security.Principal;
+import com.hcmut.emobility.shared.auth.AppUserRepository;
 
 /** Quy uoc duong dan: /api/m<so>/<tai-nguyen> */
 @RestController
@@ -17,11 +19,13 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService service;
+    private final AppUserRepository users;
     private final RentalVehicleRepository repository;
 
-    public VehicleController(VehicleService service, RentalVehicleRepository repository) {
+    public VehicleController(VehicleService service, RentalVehicleRepository repository, AppUserRepository users) {
         this.service = service;
         this.repository = repository;
+        this.users = users;
     }
 
     /** Danh sach tat ca xe */
@@ -36,24 +40,27 @@ public class VehicleController {
     /** FR-M3-03: Xem chuyen di hien tai cua user dang dang nhap */
     @GetMapping("/current-trip")
     public ApiResponse<CurrentTripResponse> currentTrip(
-            @RequestHeader("X-User-Id") Long userId) {
-        CurrentTripResponse trip = service.getCurrentTrip(userId);
+            Principal principal) {
+        CurrentTripResponse trip = service.getCurrentTrip(userId(principal));
         return ApiResponse.success(trip, "Lay thong tin chuyen di thanh cong");
     }
 
     /** FR-M3-01: Nhan xe (RESERVED -> IN_USE) */
     @PostMapping("/{id}/pick-up")
     public ApiResponse<Void> pickUp(@PathVariable Long id,
-                                    @RequestHeader("X-User-Id") Long userId) {
-        service.pickUp(id, userId);
+                                    Principal principal) {
+        service.pickUp(id, userId(principal));
         return ApiResponse.success(null, "Nhan xe thanh cong");
     }
 
     /** FR-M3-02: Tra xe tai Hub */
     @PostMapping("/{id}/return")
     public ApiResponse<Void> returnVehicle(@PathVariable Long id,
-                                           @Valid @RequestBody ReturnVehicleRequest request) {
-        service.returnVehicle(id, request.hubId(), request.batteryLevel());
+                                           @Valid @RequestBody ReturnVehicleRequest request, Principal principal) {
+        service.returnVehicle(id, request.hubId(), request.batteryLevel(), userId(principal));
         return ApiResponse.success(null, "Tra xe thanh cong");
+    }
+    private Long userId(Principal principal) {
+        return users.findByUsername(principal.getName()).orElseThrow().getId();
     }
 }
