@@ -66,6 +66,12 @@ docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d --build
 
 ## Tài liệu
 
-Trong repo: [INSTALL.md](INSTALL.md) — cài môi trường · [SETUP.md](SETUP.md) — dựng repo và quy trình làm việc
-
-Của nhóm: Tổng quan đề tài & Quy định chung · Mô tả chi tiết công việc · Template_M1 … M8 · Tech stack
+- [INSTALL.md](INSTALL.md) — cài đặt môi trường.
+- [SETUP.md](SETUP.md) — dựng repository và quy trình làm việc ban đầu.
+- [Template M6](DESCRIPTION/Template_report/Template_M6.md) — báo cáo phân tích,
+  thiết kế, bộ giả lập IoT và entity handoff của M6.
+- [M6 DevOps & Tích hợp](docs/product/m6-devops-integration.md) — phạm vi và
+  trách nhiệm của TV6.
+- [CI và demo](docs/runbooks/ci-and-demo.md) — kiểm thử, chạy tích hợp và demo.
+- [Các quyết định mở của M6](docs/proposals/m6-open-decisions.md) — các nội dung
+  còn chờ chủ sở hữu module liên quan phê duyệt.

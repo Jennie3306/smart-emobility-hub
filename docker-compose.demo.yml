@@ -17,7 +17,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-emobility}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-emobility}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-emobility}
-      APP_CORS_ALLOWED-ORIGIN: http://localhost
+      APP_CORS_ALLOWEDORIGIN: http://localhost
     ports:
       - "8080:8080"
 
