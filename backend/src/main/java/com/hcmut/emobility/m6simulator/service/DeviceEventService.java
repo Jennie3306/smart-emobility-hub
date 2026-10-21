@@ -2,6 +2,7 @@ package com.hcmut.emobility.m6simulator.service;
 
 import com.hcmut.emobility.m6simulator.domain.DeviceReading;
 import com.hcmut.emobility.m6simulator.domain.DeviceStateSnapshot;
+import com.hcmut.emobility.m6simulator.domain.FailureReasonCodes;
 import com.hcmut.emobility.m6simulator.domain.ProcessingResult;
 import com.hcmut.emobility.m6simulator.domain.ResourceType;
 import com.hcmut.emobility.shared.events.ChargerFailedEvent;
@@ -122,7 +123,8 @@ public class DeviceEventService {
         if (reading.failureReason() != null && reading.failureReason().isBlank()) {
             return "INVALID_DEVICE_PAYLOAD";
         }
-        if (reading.failureReason() != null && reading.resourceType() == ResourceType.PARKING_SPACE) {
+        if (reading.failureReason() != null
+                && !FailureReasonCodes.allows(reading.resourceType(), reading.failureReason())) {
             return "INVALID_DEVICE_PAYLOAD";
         }
         return null;

@@ -1,6 +1,7 @@
 package com.hcmut.emobility.m6simulator.service;
 
 import com.hcmut.emobility.m6simulator.domain.DeviceReading;
+import com.hcmut.emobility.m6simulator.domain.DeviceStateSnapshot;
 import com.hcmut.emobility.m6simulator.domain.ProcessingResult;
 import com.hcmut.emobility.m6simulator.domain.ResourceType;
 import com.hcmut.emobility.m6simulator.domain.SimulatorScenario;
@@ -9,6 +10,7 @@ import com.hcmut.emobility.shared.events.DomainEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
+import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -94,6 +96,32 @@ class DeviceEventServiceTest {
     }
 
     @Test
+    void lowBatteryReadingUpdatesM6StateWithoutPublishingVehicleLowBattery() {
+        DeviceReading reading = reading(ResourceType.VEHICLE, 1L, "AVAILABLE", 10, null, 7);
+
+        ProcessingResult result = service.processReading(reading);
+
+        ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
+        verify(publisher).publish(captor.capture());
+        assertTrue(captor.getValue() instanceof ResourceStateUpdatedEvent);
+        assertFalse(captor.getValue() instanceof VehicleFailedEvent);
+        assertFalse(captor.getValue() instanceof VehicleLowBatteryEvent);
+        assertEquals(10, stateStore.snapshot().values().iterator().next().batteryLevel());
+        assertEquals(ProcessingResult.Status.PROCESSED, result.status());
+    }
+
+    @Test
+    void latestStateUpsertReplacesSnapshotWithoutKeepingHistory() {
+        service.processReading(reading(ResourceType.VEHICLE, 1L, "AVAILABLE", 75, null, 8));
+        service.processReading(reading(ResourceType.VEHICLE, 1L, "IN_USE", 60, null, 9));
+
+        assertEquals(1, stateStore.snapshot().size());
+        DeviceStateSnapshot latest = stateStore.snapshot().values().iterator().next();
+        assertEquals("IN_USE", latest.state());
+        assertEquals(60, latest.batteryLevel());
+    }
+
+    @Test
     void chargerFailurePublishesFaultyStateAndChargerFailed() {
         DeviceReading reading = reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, "OFFLINE", 3);
 
@@ -107,6 +135,41 @@ class DeviceEventServiceTest {
         assertTrue(events.get(1) instanceof ChargerFailedEvent);
         assertEquals("OFFLINE", ((ChargerFailedEvent) events.get(1)).getReason());
         assertEquals(2, result.outboundEvents().size());
+    }
+
+    @Test
+    void acceptsOnlyTheSelectedUppercaseReasonCodesForEachResourceType() {
+        List<String> vehicleReasons = List.of("MECHANICAL", "SENSOR_OFFLINE", "MANUAL_REPORT");
+        List<String> chargerReasons = List.of("OFFLINE", "OVERHEAT", "POWER_FAULT", "MANUAL_REPORT");
+        long id = 10;
+
+        for (String reason : vehicleReasons) {
+            assertEquals(ProcessingResult.Status.PROCESSED,
+                    service.processReading(reading(ResourceType.VEHICLE, 1L, "FAULTY", 0, reason, id++))
+                            .status(), reason);
+        }
+        for (String reason : chargerReasons) {
+            assertEquals(ProcessingResult.Status.PROCESSED,
+                    service.processReading(reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, reason, id++))
+                            .status(), reason);
+        }
+    }
+
+    @Test
+    void rejectsLowercaseAndWrongResourceReasonCodes() {
+        List<DeviceReading> invalidReadings = List.of(
+                reading(ResourceType.VEHICLE, 1L, "FAULTY", 0, "mechanical", 20),
+                reading(ResourceType.VEHICLE, 1L, "FAULTY", 0, "OFFLINE", 21),
+                reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, "MECHANICAL", 22),
+                reading(ResourceType.PARKING_SPACE, 1L, "FAULTY", null, "MANUAL_REPORT", 23));
+
+        for (DeviceReading invalid : invalidReadings) {
+            ProcessingResult result = service.processReading(invalid);
+            assertEquals(ProcessingResult.Status.REJECTED, result.status());
+            assertEquals("INVALID_DEVICE_PAYLOAD", result.reasonCode());
+        }
+        assertTrue(stateStore.snapshot().isEmpty());
+        verifyNoInteractions(publisher);
     }
 
     @Test

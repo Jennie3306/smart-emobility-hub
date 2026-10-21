@@ -121,13 +121,19 @@ demo data if that state change should not remain. Check the M3 view with:
 curl -i -b /tmp/m6-operator.cookies http://localhost:8080/api/m3/vehicles
 ```
 
-The scheduler is off by default. If a group-approved interval is available,
-enable it explicitly with `app.simulator.scheduler-enabled=true`,
-`app.simulator.interval-ms=<approved milliseconds>`, and
-`app.simulator.seed=<demo seed>`. It only runs `NORMAL_TICK`. Do not set a
-cadence until M6-D02 is approved. State/dedupe are process-local and are cleared
-by a backend restart. Current M4/M5/M8 runtime reactions are not implied by an
-event appearing in M6's response/log.
+The scheduler is off by default. TV2 approved the 5,000 ms demo interval under
+M6-D02, and `app.simulator.interval-ms=5000` is configured. To enable the
+scheduler, explicitly set `app.simulator.scheduler-enabled=true` and provide
+`app.simulator.seed=<demo seed>`; it only runs `NORMAL_TICK`. Keep it disabled
+unless the demo run intends to produce continuous updates. State/dedupe are
+process-local and are cleared by a backend restart. Current M4/M5/M8 runtime
+reactions are not implied by an event appearing in M6's response/log.
+
+Vehicle and ChargingPoint failure readings accept only the uppercase reason
+codes recorded under M6-D04/D12. The current scenarios use `MECHANICAL` and
+`OFFLINE`. They publish the existing failure events; Incident persistence/API
+is not yet enabled because TV2's severity and duplicate-Incident decisions and
+TV4's latest-state schema/migration are outstanding.
 
 Look for `M6_SIMULATION_STARTED`, `M6_DEVICE_EVENT_PUBLISHED`,
 `M6_DEVICE_READING_DUPLICATE`, `M6_DEVICE_READING_REJECTED`, and

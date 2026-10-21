@@ -7,6 +7,7 @@ import com.hcmut.emobility.m6simulator.dto.SimulatorStatusView;
 import com.hcmut.emobility.m6simulator.service.DeviceSimulatorService;
 import com.hcmut.emobility.m6simulator.service.SimulationAlreadyRunningException;
 import com.hcmut.emobility.shared.config.SecurityConfig;
+import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -35,6 +36,9 @@ class SimulatorControllerSecurityTest {
 
     @MockBean
     private DeviceSimulatorService service;
+
+    @MockBean
+    private JpaMetamodelMappingContext jpaMetamodelMappingContext;
 
     @Test
     void simulatorApiRequiresAuthentication() throws Exception {
