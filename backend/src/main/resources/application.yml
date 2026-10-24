@@ -23,15 +23,28 @@ server:
 
 app:
   demo-users:
-    enabled: true      # tao student1 / operator1 khi bang app_user rong; tat khi trien khai that
+    enabled: true      # tao student1 / operator1 khi bang app_user rong
   cors:
     allowed-origin: http://localhost:5173
   reservation:
     hold-minutes: 15          # BR-M2-02
   charging:
     low-battery-threshold: 20 # BR-M5-01 (%)
+
+  # --- M1: nguong canh bao (BR-M1-03, BR-M1-04, BR-M1-05, BR-M1-07) ---
   monitoring:
-    capacity-alert-threshold: 90  # BR-M1-01 (%)
+    capacity-raise-threshold: 80     # bat canh bao khi ty le cho do >= 80%
+    capacity-clear-threshold: 75     # tat canh bao khi xuong duoi 75%
+    low-vehicle-threshold: 2         # bat canh bao khi con <= 2 xe kha dung
+    low-vehicle-clear-threshold: 4   # tat canh bao khi >= 4 xe
+    evaluation-interval-ms: 30000    # chu ky danh gia
+    initial-delay-ms: 10000          # cho app khoi dong xong moi chay lan dau
+
+  # --- M6: simulator thiet bi ---
+  simulator:
+    scheduler-enabled: false   # bat len khi quay demo
+    interval-ms: 5000
+    seed: 42                   # BAT BUOC: SimulatorScheduler doc bang getRequiredProperty
 
 logging:
   level:
