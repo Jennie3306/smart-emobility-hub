@@ -2,6 +2,8 @@ import { NavLink, Outlet } from "react-router-dom";
 
 const nav = [
   { to: "/m1/dashboard", label: "Dashboard (M1)" },
+  { to: "/m2/search", label: "Tim & dat xe (M2)" },
+  { to: "/m2/my-reservation", label: "Dat cho cua toi (M2)" },
   { to: "/m3/vehicles",  label: "Xe thue (M3)" },
   // moi module tu them muc cua minh
 ];
