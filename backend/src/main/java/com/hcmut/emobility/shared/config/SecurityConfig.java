@@ -45,7 +45,7 @@ public class SecurityConfig {
                 // Swagger: can du 3 duong dan - "/swagger-ui.html" chuyen huong sang "/swagger-ui/index.html"
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/m7/**", "/api/m8/**", "/api/m6/simulator/**").hasRole("OPERATOR")
-                .requestMatchers("/api/m1/dashboard/**", "/api/m6/incidents/**").hasRole("OPERATOR")
+                .requestMatchers("/api/m1/dashboard/**", "/api/m1/alerts/**", "/api/m6/incidents/**").hasRole("OPERATOR")
                 .anyRequest().authenticated())
             // Loi 401/403 do bo loc Security nem ra KHONG di qua GlobalExceptionHandler,
             // nen phai tu ghi JSON o day - neu khong Spring tra ve trang HTML "Whitelabel Error Page".
