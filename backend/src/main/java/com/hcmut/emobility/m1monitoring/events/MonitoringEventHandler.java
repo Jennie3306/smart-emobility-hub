@@ -65,6 +65,8 @@ public class MonitoringEventHandler {
         }
 
         String type = event.getResourceType();
+        String normalizedState=MonitoringService.CHARGING.equals(type) && "AVAILABLE".equals(event.getNewState())
+                ? "FREE" : event.getNewState();
         if (!MonitoringService.PARKING.equals(type) && !MonitoringService.CHARGING.equals(type)) {
             // VEHICLE do M3 giu; M1 chi dem lai so xe kha dung.
             pushHub(event.getHubId());
@@ -76,11 +78,11 @@ public class MonitoringEventHandler {
                     resources.findByResourceTypeAndResourceId(type, event.getResourceId());
 
             if (existing.isPresent()) {
-                existing.get().applyState(event.getNewState());
+                existing.get().applyState(normalizedState);
             } else {
                 // Tai nguyen moi do M6 sinh them: ghi nhan de lan sau dem dung.
                 resources.save(new ResourceState(type, event.getResourceId(),
-                        event.getHubId(), event.getNewState()));
+                        event.getHubId(), normalizedState));
                 log.info("[M1] Ghi nhan tai nguyen moi {} {} o hub {}",
                         type, event.getResourceId(), event.getHubId());
             }
