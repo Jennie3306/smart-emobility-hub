@@ -7,6 +7,8 @@ import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
+import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
+import com.hcmut.emobility.shared.events.ReservationCancelledEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -73,6 +75,48 @@ public class VehicleEventHandler {
             });
         } catch (Exception ex) {
             log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
+        }
+    }
+
+    @EventListener
+    @Transactional
+    public void onReservationConfirmed(ReservationConfirmedEvent event) {
+        if (!processed.markIfNew(event.getEventId())) return;
+        if (!"VEHICLE".equals(event.getResourceType())) return;
+
+        try {
+            repository.findById(event.getResourceId()).ifPresent(vehicle -> {
+                if (vehicle.getState() == VehicleState.AVAILABLE) {
+                    vehicle.reserve(event.getUserId());
+                    log.info("[M3] ReservationConfirmed: vehicle={} user={} -> RESERVED",
+                            event.getResourceId(), event.getUserId());
+                } else {
+                    log.warn("[M3] ReservationConfirmed bo qua: vehicle={} state={}",
+                            event.getResourceId(), vehicle.getState());
+                }
+            });
+        } catch (Exception ex) {
+            log.error("[M3] Xu ly ReservationConfirmed that bai: {}", ex.getMessage(), ex);
+        }
+    }
+
+    @EventListener
+    @Transactional
+    public void onReservationCancelled(ReservationCancelledEvent event) {
+        if (!processed.markIfNew(event.getEventId())) return;
+        if (!"VEHICLE".equals(event.getResourceType())) return;
+
+        try {
+            repository.findById(event.getResourceId()).ifPresent(vehicle -> {
+                if (vehicle.getState() == VehicleState.RESERVED) {
+                    vehicle.changeState(VehicleState.AVAILABLE);
+                    vehicle.clearReservation();
+                    log.info("[M3] ReservationCancelled: vehicle={} -> AVAILABLE",
+                            event.getResourceId());
+                }
+            });
+        } catch (Exception ex) {
+            log.error("[M3] Xu ly ReservationCancelled that bai: {}", ex.getMessage(), ex);
         }
     }
 }
