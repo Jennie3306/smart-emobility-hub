@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Min;
 public record VehicleSearchQuery(
         Long hubId,
         VehicleType type,
-        @Min(value = 0, message = "Pin toi thieu phai tu 0 den 100")
-        @Max(value = 100, message = "Pin toi thieu phai tu 0 den 100") Integer minBattery
+        @Min(value = 0, message = "Battery toi thieu phai tu 0 den 100")
+        @Max(value = 100, message = "Battery toi thieu phai tu 0 den 100") Integer minBattery
 ) {
     public int minBatteryOrZero() {
         return minBattery == null ? 0 : minBattery;

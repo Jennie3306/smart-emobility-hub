@@ -9,9 +9,17 @@ public final class SimulationModels {
     public record Hub(long id, String name, int capacity, int chargingPoints) {}
     public record Vehicle(long id, Long hubId, int battery, String state) {}
     public record DeviceState(long hubId, String type, long resourceId, String state, Instant observedAt) {}
+    public record HubDemand(long hubId, int bookings, int activeHolds) {}
+    public record BookingWindow(Instant from,Instant to,int windowMins,List<HubDemand> hubs) {
+        public BookingWindow { hubs=List.copyOf(hubs); }
+    }
+    public record CapacityState(long hubId,int totalSlots,int usedSlots,int freeSlots,int operationalChargers,int busyChargers) {}
     public record Snapshot(String id, Instant capturedAt, List<Hub> hubs, List<Vehicle> vehicles,
-                           List<DeviceState> deviceStates, String demandSource) {
-        public Snapshot { hubs = List.copyOf(hubs); vehicles = List.copyOf(vehicles); deviceStates = List.copyOf(deviceStates); }
+                           List<DeviceState> deviceStates, String demandSource,BookingWindow bookingWindow,List<CapacityState> capacities) {
+        public Snapshot(String id,Instant capturedAt,List<Hub> hubs,List<Vehicle> vehicles,List<DeviceState> devices,String source) {
+            this(id,capturedAt,hubs,vehicles,devices,source,null,List.of());
+        }
+        public Snapshot { hubs = List.copyOf(hubs); vehicles = List.copyOf(vehicles); deviceStates = List.copyOf(deviceStates); capacities=capacities==null?List.of():List.copyOf(capacities); }
     }
     public record Scenario(@NotBlank @Size(max=100) String name, @Positive long hubId, boolean disabled,
                            @Min(0) @Max(10000) int injectedRequests,

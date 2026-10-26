@@ -4,6 +4,7 @@ import com.hcmut.emobility.m2reservation.domain.ResourceType;
 import com.hcmut.emobility.m2reservation.service.ReservationService;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
+import com.hcmut.emobility.shared.events.VehiclePickedUpEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Component
 public class ReservationEventHandler {
+    @EventListener @Transactional
+    public void onVehiclePickedUp(VehiclePickedUpEvent e) { service.pickedUp(e.getVehicleId(),e.getUserId()); }
 
     private static final Logger log = LoggerFactory.getLogger(ReservationEventHandler.class);
 

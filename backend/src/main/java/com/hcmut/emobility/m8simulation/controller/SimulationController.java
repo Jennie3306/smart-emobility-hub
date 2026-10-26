@@ -16,7 +16,8 @@ public class SimulationController {
     @GetMapping("/status") public Map<String,Object> status() { return monitor.status(service.aiConfigured()); }
     @PostMapping("/parse") public ParseResult parse(@Valid @RequestBody ParseRequest request) { return service.parse(request.text()); }
     @GetMapping("/runs") public List<Run> runs() { return service.list(); }
-    @PostMapping("/runs") public Run run(@Valid @RequestBody Scenario scenario,@RequestParam(required=false) String snapshotRunId) throws IOException { return service.run(scenario,snapshotRunId); }
+    @PostMapping("/runs") public Run run(@Valid @RequestBody Scenario scenario,@RequestParam(required=false) String snapshotRunId,@RequestParam(defaultValue="false") boolean repeatRecentBookings) throws IOException { return service.run(scenario,snapshotRunId,repeatRecentBookings); }
+    @PostMapping("/monitor/check") public Map<String,Object> check() { monitor.check();return monitor.status(service.aiConfigured()); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/discard")
     public Run discard(@PathVariable String id,@PathVariable String recommendationId) throws IOException { return service.discard(id,recommendationId); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/apply")

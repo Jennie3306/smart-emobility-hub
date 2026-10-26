@@ -29,7 +29,7 @@ public class VehicleEventHandler {
     @EventListener
     @Transactional
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M3",event.getEventId())) return;
         try {
             repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
                 vehicle.changeState(VehicleState.MAINTENANCE);
@@ -44,7 +44,7 @@ public class VehicleEventHandler {
     @EventListener
     @Transactional
     public void onReservationExpired(ReservationExpiredEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M3",event.getEventId())) return;
         if (!"VEHICLE".equals(event.getResourceType())) return;
         try {
             RentalVehicle vehicle = repository.findById(event.getResourceId()).orElse(null);
@@ -61,7 +61,7 @@ public class VehicleEventHandler {
     @EventListener
     @Transactional
     public void onDispatchCompleted(DispatchCompletedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M3",event.getEventId())) return;
         try {
             repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
                 vehicle.setCurrentHubId(event.getToHubId());

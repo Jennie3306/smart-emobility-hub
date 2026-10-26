@@ -11,6 +11,7 @@ import com.hcmut.emobility.shared.common.BusinessException;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
+import com.hcmut.emobility.shared.events.VehiclePickedUpEvent;
 /*import org.aspectj.weaver.patterns.IVerificationRequired;*/
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -63,11 +64,15 @@ public class VehicleService {
                     "This reservation does not belong to you", HttpStatus.FORBIDDEN);
         }
 
+        Long originHubId=vehicle.getCurrentHubId();
         vehicle.changeState(VehicleState.IN_USE);
+        vehicle.setCurrentHubId(null);
         vehicle.clearReservation();
 
         RentalSession session = RentalSession.start(vehicleId, userId);
         sessionRepository.save(session);
+        repository.flush();
+        publisher.publish(new VehiclePickedUpEvent(vehicleId,userId,originHubId));
     }
 
     /**

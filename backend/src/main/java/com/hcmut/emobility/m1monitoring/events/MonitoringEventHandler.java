@@ -9,6 +9,9 @@ import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
+import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
+import com.hcmut.emobility.shared.events.VehiclePickedUpEvent;
+import org.springframework.core.annotation.Order;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -26,6 +29,10 @@ import java.util.Optional;
  */
 @Component
 public class MonitoringEventHandler {
+    @EventListener @Order(100) @Transactional(readOnly=true)
+    public void onReservationConfirmed(ReservationConfirmedEvent e) { pushHub(e.getHubId()); }
+    @EventListener @Order(100) @Transactional(readOnly=true)
+    public void onVehiclePickedUp(VehiclePickedUpEvent e) { pushHub(e.getHubId()); }
 
     private static final Logger log = LoggerFactory.getLogger(MonitoringEventHandler.class);
 
@@ -52,8 +59,8 @@ public class MonitoringEventHandler {
     @EventListener
     @Transactional
     public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) {
-            log.debug("[M1] Bo qua su kien da xu ly {}", event.getEventId());
+        if (!processed.markIfNew("M1",event.getEventId())) {
+            log.debug("[M1] Dismiss su kien da xu ly {}", event.getEventId());
             return;
         }
 
@@ -91,7 +98,7 @@ public class MonitoringEventHandler {
     @EventListener
     @Transactional(readOnly = true)
     public void onVehicleReturned(VehicleReturnedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M1",event.getEventId())) return;
         pushHub(event.getHubId());
     }
 
@@ -99,7 +106,7 @@ public class MonitoringEventHandler {
     @EventListener
     @Transactional(readOnly = true)
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M1",event.getEventId())) return;
         pushHub(event.getHubId());
     }
 
@@ -107,7 +114,7 @@ public class MonitoringEventHandler {
     @EventListener
     @Transactional(readOnly = true)
     public void onDispatchCompleted(DispatchCompletedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M1",event.getEventId())) return;
         pushHub(event.getFromHubId());
         pushHub(event.getToHubId());
     }

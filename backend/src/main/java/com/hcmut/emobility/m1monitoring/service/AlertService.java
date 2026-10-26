@@ -81,14 +81,14 @@ public class AlertService {
     public AlertDto acknowledge(Long alertId, String username) {
         Alert alert = alerts.findById(alertId)
                 .orElseThrow(() -> new BusinessException("ALERT_NOT_FOUND",
-                        "Khong tim thay canh bao " + alertId, HttpStatus.NOT_FOUND));
+                        "Alert not found: " + alertId, HttpStatus.NOT_FOUND));
         alert.acknowledge(username);
         AlertDto dto = toDto(alert);
         publisher.publishAlert(dto);
         return dto;
     }
 
-    /** FR-M1-11. Bo qua canh bao, bat buoc nhap ly do. */
+    /** FR-M1-11. Dismiss canh bao, bat buoc nhap ly do. */
     @Transactional
     public AlertDto dismiss(Long alertId, String reason) {
         if (reason == null || reason.isBlank()) {
@@ -96,7 +96,7 @@ public class AlertService {
         }
         Alert alert = alerts.findById(alertId)
                 .orElseThrow(() -> new BusinessException("ALERT_NOT_FOUND",
-                        "Khong tim thay canh bao " + alertId, HttpStatus.NOT_FOUND));
+                        "Alert not found: " + alertId, HttpStatus.NOT_FOUND));
         alert.dismiss(reason);
         AlertDto dto = toDto(alert);
         publisher.publishAlert(dto);
@@ -108,7 +108,7 @@ public class AlertService {
         return alerts.findOpen().stream().map(this::toDto).toList();
     }
 
-    /** FR-M1-10. Lich su canh bao trong khoang thoi gian. */
+    /** FR-M1-10. Alert history trong khoang thoi gian. */
     @Transactional(readOnly = true)
     public List<AlertDto> findHistory(OffsetDateTime from, OffsetDateTime to, Long hubId) {
         List<Alert> rows = (hubId == null)

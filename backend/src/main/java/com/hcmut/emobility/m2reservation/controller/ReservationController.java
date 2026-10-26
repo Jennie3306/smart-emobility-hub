@@ -72,7 +72,7 @@ public class ReservationController {
     /** userId comes from the login session - NEVER from the body/header, so nobody can book for someone else (NFR-SEC-01). */
     private Long currentUserId(Authentication auth) {
         return users.findByUsername(auth.getName()).map(AppUser::getId).orElseThrow(() ->
-                new BusinessException("UNAUTHENTICATED", "Phien dang nhap khong hop le", HttpStatus.UNAUTHORIZED));
+                new BusinessException("UNAUTHENTICATED", "Invalid login session", HttpStatus.UNAUTHORIZED));
     }
 
     private ReservationResponse toResponse(Reservation r) {

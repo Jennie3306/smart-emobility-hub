@@ -91,7 +91,7 @@ public class Reservation {
     /** CONFIRMED -> CHECKED_IN. BR-M2-07: only valid while now < expiresAt. */
     public void checkIn(OffsetDateTime now) {
         if (state == ReservationState.CONFIRMED && isOverdue(now)) {
-            throw new BusinessException("RESERVATION_EXPIRED", "Dat cho da het han luc " + expiresAt);
+            throw new BusinessException("RESERVATION_EXPIRED", "Reservation expired at " + expiresAt);
         }
         moveTo(ReservationState.CHECKED_IN, now);
         this.checkedInAt = now;
@@ -114,7 +114,7 @@ public class Reservation {
     public void reassignResource(Long newResourceId) {
         if (state != ReservationState.CONFIRMED) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Chi doi tai nguyen khi dat cho dang CONFIRMED, hien tai " + state);
+                    "Only CONFIRMED reservations can change resources; current state: " + state);
         }
         this.resourceId = newResourceId;
         this.activeResourceKey = resourceKeyOf(resourceType, newResourceId);
@@ -142,7 +142,7 @@ public class Reservation {
     private void moveTo(ReservationState target, OffsetDateTime now) {
         if (!state.canMoveTo(target)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Khong the chuyen dat cho tu " + state + " sang " + target);
+                    "Cannot transition reservation from " + state + " sang " + target);
         }
         this.state = target;
         if (target.isTerminal()) {   // ended: release the keys so the resource can be booked again

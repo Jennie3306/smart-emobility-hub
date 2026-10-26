@@ -60,7 +60,7 @@ public class ThresholdEvaluationTask {
                         availableVehicles.getOrDefault(hub.getId(), 0));
             } catch (Exception ex) {
                 // Mot hub loi khong duoc lam hong ca chu ky.
-                log.error("[M1] Bo qua hub {} do loi: {}", hub.getId(), ex.getMessage(), ex);
+                log.error("[M1] Dismiss hub {} do loi: {}", hub.getId(), ex.getMessage(), ex);
             }
         }
     }

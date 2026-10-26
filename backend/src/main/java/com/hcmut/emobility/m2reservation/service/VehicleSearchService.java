@@ -57,6 +57,6 @@ public class VehicleSearchService {
 
     private RentalVehicle findOrThrow(Long id) {
         return vehicles.findById(id).orElseThrow(() ->
-                new BusinessException("VEHICLE_NOT_FOUND", "Khong tim thay xe " + id, HttpStatus.NOT_FOUND));
+                new BusinessException("VEHICLE_NOT_FOUND", "Vehicle not found: " + id, HttpStatus.NOT_FOUND));
     }
 }

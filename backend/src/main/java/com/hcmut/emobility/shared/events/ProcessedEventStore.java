@@ -17,15 +17,17 @@ public class ProcessedEventStore {
 
     private static final int MAX = 10_000;
 
-    private final Set<UUID> processed = Collections.newSetFromMap(
+    private final Set<String> processed = Collections.newSetFromMap(
         Collections.synchronizedMap(new LinkedHashMap<>(16, 0.75f, true) {
-            @Override protected boolean removeEldestEntry(Map.Entry<UUID, Boolean> eldest) {
+            @Override protected boolean removeEldestEntry(Map.Entry<String, Boolean> eldest) {
                 return size() > MAX;
             }
         }));
 
     /** true neu su kien nay chua tung duoc xu ly (va danh dau la da xu ly). */
     public boolean markIfNew(UUID eventId) {
-        return processed.add(eventId);
+        return markIfNew("legacy",eventId);
     }
+    /** An event may be consumed independently by M1 and M3. This aid remains process-memory only. */
+    public boolean markIfNew(String consumer,UUID eventId) { return processed.add(consumer+":"+eventId); }
 }

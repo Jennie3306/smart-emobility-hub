@@ -12,6 +12,8 @@ import com.hcmut.emobility.shared.common.BusinessException;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.ReservationCancelledEvent;
 import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
+import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
+import com.hcmut.emobility.shared.events.ReservationCheckedInEvent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -53,10 +55,10 @@ public class ReservationService implements ReservationCore {
     @Transactional
     public Reservation reserveVehicle(Long userId, Long vehicleId) {
         RentalVehicle vehicle = vehicles.findById(vehicleId).orElseThrow(() ->
-                new BusinessException("VEHICLE_NOT_FOUND", "Khong tim thay xe " + vehicleId, HttpStatus.NOT_FOUND));
+                new BusinessException("VEHICLE_NOT_FOUND", "Vehicle not found: " + vehicleId, HttpStatus.NOT_FOUND));
         if (vehicle.getState() != VehicleState.AVAILABLE) {
             throw new BusinessException("VEHICLE_NOT_AVAILABLE",
-                    "Xe dang o trang thai " + vehicle.getState() + ", khong dat duoc");
+                    "Vehicle state is " + vehicle.getState() + "; booking is unavailable");
         }
         return reserve(userId, ResourceType.VEHICLE, vehicleId, vehicle.getCurrentHubId());
     }
@@ -72,18 +74,18 @@ public class ReservationService implements ReservationCore {
     public Reservation reserve(Long userId, ResourceType type, Long resourceId, Long hubId) {
         // These pre-checks only pick the right error code. The UNIQUE constraint in saveActive decides who wins.
         if (findActive(userId, type).isPresent()) {
-            throw new BusinessException("RESERVATION_LIMIT_EXCEEDED", "Ban dang co mot dat cho hieu luc");
+            throw new BusinessException("RESERVATION_LIMIT_EXCEEDED", "You already have an active reservation");
         }
         if (repository.findFirstByResourceTypeAndResourceIdAndStateIn(
                 type, resourceId, ReservationState.ACTIVE).isPresent()) {
-            throw new BusinessException("RESOURCE_CONFLICT", "Tai nguyen vua duoc nguoi khac dat");
+            throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         }
 
         OffsetDateTime now = now();
         Reservation reservation = Reservation.create(userId, type, resourceId, hubId, now);
         reservation.confirm(now, holdMinutes);
         saveActive(reservation);
-        // TODO(VD-06): publish ReservationConfirmedEvent once TV3 adds it to shared/events.
+        publisher.publish(new ReservationConfirmedEvent(reservation.getId(),userId,type.name(),resourceId,hubId));
         return reservation;
     }
 
@@ -98,10 +100,10 @@ public class ReservationService implements ReservationCore {
         OffsetDateTime now = now();
         if (reservation.getState() == ReservationState.EXPIRED
                 || (reservation.getState() == ReservationState.CONFIRMED && reservation.isOverdue(now))) {
-            throw new BusinessException("RESERVATION_EXPIRED", "Dat cho da het han");
+            throw new BusinessException("RESERVATION_EXPIRED", "Reservation has expired");
         }
         if (reservation.getState() == ReservationState.CHECKED_IN) {
-            throw new BusinessException("ALREADY_CHECKED_IN", "Ban da nhan xe, vui long tra xe qua M3");
+            throw new BusinessException("ALREADY_CHECKED_IN", "You already picked up the vehicle. Return it to finish the trip.");
         }
         reservation.cancel(CancelReason.USER_REQUEST, now);
         saveActive(reservation);
@@ -117,7 +119,7 @@ public class ReservationService implements ReservationCore {
         Reservation reservation = getOwned(reservationId, requesterId);
         reservation.checkIn(now());
         saveActive(reservation);
-        // TODO(VD-07): publish ReservationCheckedInEvent once TV3 adds it to shared/events.
+        publisher.publish(new ReservationCheckedInEvent(reservation.getId(),requesterId,reservation.getResourceType().name(),reservation.getResourceId(),reservation.getHubId()));
         return reservation;
     }
 
@@ -144,10 +146,10 @@ public class ReservationService implements ReservationCore {
     @Transactional(readOnly = true)
     public Reservation getOwned(Long reservationId, Long requesterId) {
         Reservation reservation = repository.findById(reservationId).orElseThrow(() ->
-                new BusinessException("RESERVATION_NOT_FOUND", "Khong tim thay dat cho " + reservationId,
+                new BusinessException("RESERVATION_NOT_FOUND", "Reservation not found: " + reservationId,
                         HttpStatus.NOT_FOUND));
         if (!reservation.isOwnedBy(requesterId)) {
-            throw new BusinessException("ACCESS_DENIED", "Ban khong phai chu dat cho nay", HttpStatus.FORBIDDEN);
+            throw new BusinessException("ACCESS_DENIED", "This reservation does not belong to you", HttpStatus.FORBIDDEN);
         }
         return reservation;
     }
@@ -196,7 +198,7 @@ public class ReservationService implements ReservationCore {
             if (replacement.isPresent()) {
                 reservation.reassignResource(replacement.get().getId());
                 saveActive(reservation);
-                // TODO(VD-06): publish ReservationConfirmedEvent for the new vehicle once TV3 adds the event.
+                publisher.publish(new ReservationConfirmedEvent(reservation.getId(),reservation.getUserId(),ResourceType.VEHICLE.name(),replacement.get().getId(),reservation.getHubId()));
             } else {
                 reservation.cancel(CancelReason.VEHICLE_FAILED, now());
                 saveActive(reservation);
@@ -216,13 +218,22 @@ public class ReservationService implements ReservationCore {
         try {
             return repository.saveAndFlush(reservation);
         } catch (DataIntegrityViolationException e) {
-            throw new BusinessException("RESOURCE_CONFLICT", "Tai nguyen vua duoc nguoi khac dat");
+            throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         } catch (OptimisticLockingFailureException e) {
-            throw new BusinessException("CONCURRENT_UPDATE", "Dat cho vua thay doi, vui long tai lai");
+            throw new BusinessException("CONCURRENT_UPDATE", "Reservation changed. Please refresh.");
         }
     }
 
     private OffsetDateTime now() {
         return OffsetDateTime.now(clock);
+    }
+    /** Reconcile the legacy direct M3 pickup endpoint without invoking another module's service. */
+    @Transactional
+    public void pickedUp(Long vehicleId,Long userId) {
+        var r=repository.findFirstByResourceTypeAndResourceIdAndStateIn(ResourceType.VEHICLE,vehicleId,EnumSet.of(ReservationState.CONFIRMED));
+        r.ifPresent(reservation -> {
+            if(!reservation.isOwnedBy(userId)) throw new BusinessException("ACCESS_DENIED","Reservation owner mismatch",HttpStatus.FORBIDDEN);
+            reservation.checkIn(now());saveActive(reservation);
+        });
     }
 }

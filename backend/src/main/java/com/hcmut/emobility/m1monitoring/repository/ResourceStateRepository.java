@@ -37,7 +37,7 @@ public interface ResourceStateRepository
 
     Optional<ResourceState> findByResourceTypeAndResourceId(String resourceType, Long resourceId);
 
-    List<ResourceState> findByHubIdAndResourceTypeOrderByResourceId(String resourceType, Long hubId);
+    List<ResourceState> findByHubIdAndResourceTypeOrderByResourceId(Long hubId, String resourceType);
 
     @Query("""
            SELECT r FROM ResourceState r

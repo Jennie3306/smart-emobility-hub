@@ -49,7 +49,7 @@ public class MonitoringService {
     public UtilisationDto computeUtilisation(HubCounts c) {
         boolean anomaly = c.usedSlots() > c.totalSlots() || c.pointsInUse() > c.operationalPoints();
         if (anomaly) {
-            log.warn("[M1] Du lieu khong nhat quan o hub {}: dung {}/{} cho, {}/{} tru",
+            log.warn("[M1] Inconsistent data o hub {}: dung {}/{} cho, {}/{} tru",
                     c.hubId(), c.usedSlots(), c.totalSlots(), c.pointsInUse(), c.operationalPoints());
         }
 
@@ -99,7 +99,7 @@ public class MonitoringService {
     public HubDetailDto getHubDetail(Long hubId) {
         Hub hub = hubs.findById(hubId)
                 .orElseThrow(() -> new BusinessException("HUB_NOT_FOUND",
-                        "Khong tim thay hub " + hubId, HttpStatus.NOT_FOUND));
+                        "Hub not found: " + hubId, HttpStatus.NOT_FOUND));
 
         List<VehicleDto> vehicles = hubs.findVehiclesOfHub(hubId).stream()
                 .map(r -> new VehicleDto(

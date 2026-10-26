@@ -8,3 +8,8 @@ spring:
       ddl-auto: create-drop
   flyway:
     enabled: false
+app:
+  monitoring:
+    initial-delay-ms: 3600000
+  m8:
+    monitor-initial-delay-ms: 3600000
