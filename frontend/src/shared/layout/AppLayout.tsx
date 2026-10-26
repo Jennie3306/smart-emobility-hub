@@ -3,6 +3,10 @@ import { logout } from "../api/auth";
 
 const nav = [
   { to: "/m1/dashboard", label: "Dashboard (M1)" },
+  { to: "/m1/hubs", label: "Hubs" },
+  { to: "/m1/alerts", label: "Alerts" },
+  { to: "/m2/search", label: "Find a vehicle (M2)" },
+  { to: "/m2/my-reservation", label: "My reservation" },
   { to: "/m3/vehicles",  label: "Rental vehicles (M3)" },
   // moi module tu them muc cua minh
   { to: "/m8/simulation", label: "What-if Studio (M8)" },

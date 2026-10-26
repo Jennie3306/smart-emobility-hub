@@ -19,6 +19,9 @@ export const router = createBrowserRouter([
       { path: "m3/vehicles", lazy: async () => ({ Component: (await import("../modules/m3vehicle/pages/VehicleListPage")).default }) },
       // M2, M4..M8: moi nguoi them route tai day theo mau tren
       { path: "m8/simulation", lazy: async () => ({ Component: (await import("../modules/m8simulation/pages/SimulationPage")).default }) },
+      // M2
+      { path: "m2/search", lazy: async () => ({ Component: (await import("../modules/m2reservation/pages/SearchVehiclePage")).default }) },
+      { path: "m2/my-reservation", lazy: async () => ({ Component: (await import("../modules/m2reservation/pages/MyReservationPage")).default }) },
     ],
   },
 ]);
