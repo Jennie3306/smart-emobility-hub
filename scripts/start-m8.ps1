@@ -10,7 +10,7 @@ foreach ($taskPort in @(8080,5173)) {
 }
 Push-Location $taskRoot
 try {
-    docker compose up -d db
+    docker compose up -d --wait db
     if ($LASTEXITCODE -ne 0) { throw 'Start Docker Desktop and retry.' }
     $taskMaven = Get-Command mvn.cmd -ErrorAction SilentlyContinue
     $taskMavenPath = if ($taskMaven) { $taskMaven.Source } else { 'C:\Program Files\JetBrains\IntelliJ IDEA Community Edition 2025.2.6.2\plugins\maven\lib\maven3\bin\mvn.cmd' }

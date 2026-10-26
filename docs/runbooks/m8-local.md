@@ -1,6 +1,7 @@
 # M8 — local setup and integration
 
-Branch: feature/m8-UI_whatif. Integrates M3 6ed46b4 and M6 2e74eb8.
+Branch: feature/m8-UI_whatif. Includes M1 1656510, M2 5e59464, M3 6ed46b4
+and M6 5583c1c, with local integration fixes. These changes have not been pushed.
 
 ## Start and sign in
 
@@ -40,13 +41,25 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
   and do not overwrite authoritative M3 vehicle state in the engine.
 - Independently verified proposals and persistent Discard.
 - Apply returns 409 DISPATCH_NOT_CONNECTED until M7 provides execution and revalidation.
-- A 30-minute network check warns when assigned vehicles exceed parking capacity.
-  Request-based overload forecasting awaits the M2 demand feed.
+- Accepted M2 bookings from the captured 30-minute window can supply the scenario volume.
+  The saved snapshot retains that window, so editing an old run repeats its original volume.
+- A 30-minute network check repeats recent accepted bookings against current resources,
+  without rerouting, and reports projected unserved requests on M8 and the M1 dashboard.
+  Run check now refreshes this projection immediately. The dashboard polls status every
+  30 seconds; this does not change the backend check interval.
+- M1 parking/charger observations appear separately from assigned PostgreSQL vehicles.
+  M6 AVAILABLE charger events are normalized to M1 FREE; they do not change vehicle state.
+- Student search loads Hub choices from M1. Reservation pickup creates an M3 trip;
+  return completes the reservation, and cancellation releases a reserved vehicle.
+- Compact M8 navigation keeps simulation, history/comparison and snapshot accessible
+  when the sidebar is hidden. SockJS uses the browser global alias in Vite.
 
 ## Modeling assumptions
 
 - Requests arrive within arrivalWindowMins using a seeded random schedule.
 - Only AVAILABLE vehicles with battery >=20% serve requests; full M2 reservation behavior is not modeled.
+- Accepted bookings are not total demand: rejected attempts and searches are excluded.
+  Cancelled or completed bookings still count as historical accepted arrivals.
 - Each trip holds a vehicle for tripMins, then returns to its origin; no charging or battery depletion.
 - Hub closure lasts the horizon. Rerouting picks available hubs by ID without travel time.
 - Requests still waiting at the horizon count as failed. Mean wait includes served requests only.
@@ -60,15 +73,40 @@ English display labels for seeded hubs do not change live Hub rows.
 
 ## Handoff
 
-- TV2: live demand by Hub/time window; request and reservation semantics.
-- TV3: snapshot contract and review of M3 identity/response fixes in this branch.
-- TV4: M8 migrations, operational hub state/capacity and parking integration.
+- TV2: booking persistence and the accepted-booking read contract are integrated;
+  total attempted demand remains unavailable.
+- TV3: review the local rental lifecycle/event and snapshot contract changes.
+- TV4: review V20 M2 persistence migration already applied locally; approve the separate
+  M8 schema, operational hub state and M4 parking validation contract. M4 remains a stub.
 - TV7: Apply contract with live revalidation, deduplication and execution status.
   RecommendationApprovedEvent currently lacks dispatch details; M8 does not alter it.
-- M1: dashboard monitoring warnings and execution status.
+- M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
 
 ## Verify
 
 From backend, invoke Maven with -B verify. From frontend, run npm.cmd run build.
 Tests cover repeatability/conservation, closure, rerouting, battery eligibility, zero demand,
 restart persistence, bounds, M8 roles, recommendation feasibility and M3 user-ID spoof prevention.
+
+## Local verification — 27 October 2026
+
+- Backend Maven verify passed 88 tests. V10, V11 and V20 are applied to the existing
+  PostgreSQL volume. No database volume was reset.
+- Frontend TypeScript and production build passed after the compact navigation and
+  SockJS fixes. Browser verification covered M1 live connection, M8 booking volume,
+  saved-run loading, KPI comparison, history and snapshot navigation at an 800px viewport. Student login reached search with live Hub choices and vehicle results; no active reservation remained.
+- Real HTTP/PostgreSQL smoke: reservation -> RESERVED -> pickup/IN_USE -> return/COMPLETED;
+  a second booking -> cancellation/AVAILABLE. Wrong-owner pickup and return both returned
+  403, as did student access to M8. The demo vehicle's Hub and battery were restored.
+- M6 NORMAL_TICK reached M1 with a FREE charger. M8 repeated the two accepted demo
+  bookings, ignored a conflicting manual volume, saved KPIs and received an LLM proposal.
+  Simulation left the live vehicle records unchanged. The monitor projected one unserved
+  request if those two bookings repeated; the M1 dashboard displayed the warning.
+- Smoke evidence is ignored local data: .local/integration-smoke-results.json and
+  .local/integration-verify.log. Two retained demo booking records contribute to the
+  rolling 30-minute window until they age out; this is test traffic, not real demand.
+
+For a demo, open History & comparison and View & edit on
+Integration demo - repeat recent bookings. Compare it with another saved run, or use
+Try this plan to preview rerouting. Saving a new run can call the configured LLM.
+M7 Apply is unavailable, M4 parking validation is pending, and M8 history is file-backed.
