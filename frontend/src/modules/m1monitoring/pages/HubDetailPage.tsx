@@ -15,7 +15,7 @@ export default function HubDetailPage() {
     setError(null);
     monitoringApi.getHub(Number(hubId))
       .then(setHub)
-      .catch(() => setError('Khong tai duoc chi tiet hub'));
+      .catch(() => setError('Unable to load hub details'));
   };
 
   useEffect(load, [hubId]);
@@ -23,7 +23,7 @@ export default function HubDetailPage() {
   if (error) return (
     <div className="p-6">
       <p className="mb-3">{error}</p>
-      <button className="rounded border px-3 py-1" onClick={load}>Thu lai</button>
+      <button className="rounded border px-3 py-1" onClick={load}>Retry</button>
     </div>
   );
   if (!hub) return <div className="m-6 h-40 animate-pulse rounded border bg-gray-100" />;
@@ -34,23 +34,23 @@ export default function HubDetailPage() {
 
   return (
     <div className="p-6">
-      <Link to="/hubs" className="text-sm underline">&larr; Danh sach hub</Link>
+      <Link to="/m1/hubs" className="text-sm underline">&larr; Hub list</Link>
       <h1 className="mt-2 text-2xl font-bold">{hub.name}</h1>
       <p className="text-gray-500">{hub.location}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <Tile label="Xe kha dung" value={`${hub.availableVehicles}`} />
-        <Tile label="Cho do trong"
+        <Tile label="Available vehicles" value={`${hub.availableVehicles}`} />
+        <Tile label="Free parking slots"
               value={`${hub.utilisation.freeSlots}/${hub.utilisation.totalSlots}`} />
-        <Tile label="Tru sac trong"
+        <Tile label="Free chargers"
               value={`${hub.utilisation.freePoints}/${hub.utilisation.operationalPoints}`} />
       </div>
       <div className="mt-3"><UtilisationBar u={hub.utilisation} /></div>
 
-      <h2 className="mt-6 font-semibold">Xe tai hub</h2>
+      <h2 className="mt-6 font-semibold">Vehicles at this hub</h2>
       <select className="my-2 rounded border px-2 py-1 text-sm"
               value={stateFilter} onChange={e => setStateFilter(e.target.value)}>
-        <option value="ALL">Tat ca trang thai</option>
+        <option value="ALL">All states</option>
         {[...new Set(hub.vehicles.map(v => v.state))].map(s =>
           <option key={s} value={s}>{s}</option>)}
       </select>
@@ -60,7 +60,7 @@ export default function HubDetailPage() {
       ) : (
         <table className="w-full text-sm">
           <thead className="border-b text-left">
-            <tr><th>Ma xe</th><th>Loai</th><th>Pin</th><th>Trang thai</th></tr>
+            <tr><th>Vehicle code</th><th>Type</th><th>Battery</th><th>State</th></tr>
           </thead>
           <tbody>
             {vehicles.map(v => (
@@ -82,7 +82,7 @@ export default function HubDetailPage() {
 
       <details className="mt-6">
         <summary className="cursor-pointer font-semibold">
-          Cho do ({hub.parkingSlots.length})
+          Parking ({hub.parkingSlots.length})
         </summary>
         <div className="mt-2 flex flex-wrap gap-1 text-xs">
           {hub.parkingSlots.map(s =>
@@ -94,7 +94,7 @@ export default function HubDetailPage() {
 
       <details className="mt-3">
         <summary className="cursor-pointer font-semibold">
-          Tru sac ({hub.chargingPoints.length})
+          Chargers ({hub.chargingPoints.length})
         </summary>
         <div className="mt-2 flex flex-wrap gap-1 text-xs">
           {hub.chargingPoints.map(p =>

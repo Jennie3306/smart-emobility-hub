@@ -4,6 +4,7 @@ import { monitoringApi } from '../api/monitoringApi';
 import { useHubStream } from '../api/useHubStream';
 import type { Alert, Dashboard } from '../api/types';
 import { UtilisationBar } from './UtilisationBar';
+import { BookingRiskPanel } from '../../m8simulation/pages/BookingRiskPanel';
 
 /** UC-M1-04. Man hinh quan trong nhat cua module, chi operator xem duoc. */
 export default function DashboardPage() {
@@ -15,7 +16,7 @@ export default function DashboardPage() {
     setError(null);
     monitoringApi.getDashboard()
       .then(setData)
-      .catch(() => setError('Khong tai duoc dashboard'));
+      .catch(() => setError('Unable to load dashboard'));
   }, []);
 
   useEffect(load, [load]);
@@ -48,7 +49,7 @@ export default function DashboardPage() {
       setData(d => d ? { ...d, openAlerts: mergeAlert(d.openAlerts, a) } : d));
 
   const dismiss = (id: number) => {
-    const reason = window.prompt('Ly do bo qua canh bao?');
+    const reason = window.prompt('Reason for dismissing this alert?');
     if (!reason) return;
     monitoringApi.dismiss(id, reason).then(a =>
       setData(d => d ? { ...d, openAlerts: mergeAlert(d.openAlerts, a) } : d));
@@ -57,7 +58,7 @@ export default function DashboardPage() {
   if (error) return (
     <div className="p-6">
       <p className="mb-3">{error}</p>
-      <button className="rounded border px-3 py-1" onClick={load}>Thu lai</button>
+      <button className="rounded border px-3 py-1" onClick={load}>Retry</button>
     </div>
   );
   if (!data) return (
@@ -71,13 +72,14 @@ export default function DashboardPage() {
     <div className="p-6">
       {!live && (
         <div className="mb-4 rounded border border-amber-400 bg-amber-50 p-3 text-sm">
-          Du lieu co the da cu — cap nhat luc {lastUpdate.toLocaleTimeString()}
+          Data may be stale — last updated {lastUpdate.toLocaleTimeString()}
         </div>
       )}
+      <BookingRiskPanel />
 
       <div className="mb-4 flex items-center gap-2 text-sm">
         <span className={`h-2 w-2 rounded-full ${live ? 'bg-green-500' : 'bg-gray-400'}`} />
-        {live ? 'Dang ket noi thoi gian thuc' : 'Mat ket noi, dang goi lai moi 15 giay'}
+        {live ? 'Live updates connected' : 'Disconnected; refreshing every 15 seconds'}
       </div>
 
       {/* Vung 1 - dai tom tat */}
@@ -89,11 +91,11 @@ export default function DashboardPage() {
           </div>
         ))}
         <div className="rounded border px-4 py-2">
-          <div className="text-xs uppercase text-gray-500">Tong hub</div>
+          <div className="text-xs uppercase text-gray-500">Total hubs</div>
           <div className="text-xl font-semibold">{data.totalHubs}</div>
         </div>
         <div className="rounded border px-4 py-2">
-          <div className="text-xs uppercase text-gray-500">Canh bao dang mo</div>
+          <div className="text-xs uppercase text-gray-500">Open alerts</div>
           <div className="text-xl font-semibold">{data.openAlertCount}</div>
         </div>
       </div>
@@ -104,14 +106,14 @@ export default function DashboardPage() {
           <h2 className="mb-2 font-semibold">Hub</h2>
           <table className="w-full text-sm">
             <thead className="border-b text-left">
-              <tr><th>Hub</th><th>Xe</th><th>Cho do</th><th>Tru sac</th><th>Utilisation</th></tr>
+              <tr><th>Hub</th><th>Vehicles</th><th>Parking</th><th>Chargers</th><th>Utilisation</th></tr>
             </thead>
             <tbody>
               {data.hubs.map(h => (
                 <tr key={h.id}
                     className={`border-b ${h.hasOpenAlert ? 'bg-red-50' : ''} ${flashing.has(h.id) ? 'bg-yellow-100' : ''}`}>
                   <td className="py-1">
-                    <Link to={`/hubs/${h.id}`} className="underline">{h.name}</Link>
+                    <Link to={`/m1/hubs/${h.id}`} className="underline">{h.name}</Link>
                   </td>
                   <td className="tabular-nums">{h.availableVehicles}</td>
                   <td className="tabular-nums">
@@ -129,29 +131,29 @@ export default function DashboardPage() {
 
         {/* Vung 3 - canh bao dang mo */}
         <div>
-          <h2 className="mb-2 font-semibold">Canh bao dang mo</h2>
+          <h2 className="mb-2 font-semibold">Open alerts</h2>
           {data.openAlerts.length === 0 ? (
             <p className="rounded border p-4 text-sm text-gray-500">
-              Khong co canh bao nao dang mo
+              No open alerts
             </p>
           ) : (
             <ul className="space-y-2">
               {data.openAlerts.map(a => (
                 <li key={a.id} className="rounded border p-3 text-sm">
                   <div className="font-semibold">
-                    {a.type === 'CAPACITY' ? 'Gan het cho do' : 'Sap het xe'} — {a.hubName}
+                    {a.type === 'CAPACITY' ? 'Parking capacity warning' : 'Low vehicle availability'} — {a.hubName}
                   </div>
                   <div className="text-gray-600">
-                    Chi so {a.triggerValue}{a.type === 'CAPACITY' ? '%' : ' xe'} ·{' '}
+                    Value {a.triggerValue}{a.type === 'CAPACITY' ? '%' : ' vehicles'} ·{' '}
                     {new Date(a.raisedAt).toLocaleTimeString()} · {a.state}
                   </div>
                   <div className="mt-2 flex gap-2">
                     {a.state === 'OPEN' && (
                       <button className="rounded border px-2 py-1"
-                              onClick={() => acknowledge(a.id)}>Xac nhan</button>
+                              onClick={() => acknowledge(a.id)}>Acknowledge</button>
                     )}
                     <button className="rounded border px-2 py-1"
-                            onClick={() => dismiss(a.id)}>Bo qua</button>
+                            onClick={() => dismiss(a.id)}>Dismiss</button>
                   </div>
                 </li>
               ))}

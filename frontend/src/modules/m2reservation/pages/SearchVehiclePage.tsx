@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  errorCode, errorMessage, hubName, HUBS, reservationApi, VEHICLE_TYPE_LABEL,
+  errorCode, errorMessage, hubName, reservationApi, VEHICLE_TYPE_LABEL,
   type HubSuggestion, type VehicleDetail, type VehicleSummary, type VehicleType,
 } from "../api/reservationApi";
 
@@ -31,6 +31,8 @@ export default function SearchVehiclePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<VehicleDetail | null>(null);
+  const [hubs,setHubs]=useState<{id:number;name:string}[]>([]);
+  useEffect(()=>{reservationApi.hubs().then(setHubs).catch(()=>setError("Unable to load live hub list."));},[]);
 
   async function search(forHub = hubId) {
     setLoading(true);
@@ -64,33 +66,33 @@ export default function SearchVehiclePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-bold text-brand">Tìm & đặt xe (M2)</h1>
+      <h1 className="text-xl font-bold text-brand">Find & book a vehicle (M2)</h1>
 
       <div className="flex flex-wrap gap-4 items-end bg-white p-4 rounded shadow text-sm">
         <label className="flex flex-col gap-1">Hub
           <select className="border rounded p-1" value={hubId ?? ""}
                   onChange={(e) => setHubId(e.target.value ? Number(e.target.value) : undefined)}>
-            <option value="">Tất cả</option>
-            {HUBS.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+            <option value="">All</option>
+            {hubs.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
           </select>
         </label>
-        <label className="flex flex-col gap-1">Loại xe
+        <label className="flex flex-col gap-1">Vehicle type
           <select className="border rounded p-1" value={type ?? ""}
                   onChange={(e) => setType((e.target.value || undefined) as VehicleType | undefined)}>
-            <option value="">Tất cả</option>
+            <option value="">All</option>
             <option value="E_BIKE">{VEHICLE_TYPE_LABEL.E_BIKE}</option>
             <option value="E_SCOOTER">{VEHICLE_TYPE_LABEL.E_SCOOTER}</option>
           </select>
         </label>
-        <label className="flex flex-col gap-1">Pin tối thiểu (%)
+        <label className="flex flex-col gap-1">Minimum battery (%)
           <input type="number" min={0} max={100} className="border rounded p-1 w-24"
                  value={minBattery} onChange={(e) => setMinBattery(Number(e.target.value))} />
         </label>
         <button className="bg-brand text-white px-4 py-1.5 rounded disabled:opacity-50"
                 disabled={loading} onClick={() => search()}>
-          Tìm
+          Search
         </button>
-        <Link to="/m2/my-reservation" className="ml-auto text-brand underline">Đặt chỗ của tôi</Link>
+        <Link to="/m2/my-reservation" className="ml-auto text-brand underline">My reservation</Link>
       </div>
 
       {error && <p className="text-state-fault">{error}</p>}
@@ -98,10 +100,10 @@ export default function SearchVehiclePage() {
 
       {!loading && results?.length === 0 && (
         <div className="bg-white p-4 rounded shadow space-y-2">
-          <p>Không còn xe phù hợp.</p>
+          <p>No matching vehicles available.</p>
           {suggestions.length > 0 && (
             <div className="flex flex-wrap gap-3 text-sm">
-              <span>Gợi ý Hub khác:</span>
+              <span>Try another hub:</span>
               {suggestions.map((s) => (
                 <button key={s.hubId} className="text-brand underline" onClick={() => chooseHub(s.hubId)}>
                   {hubName(s.hubId)} ({s.availableCount} xe)
@@ -115,7 +117,7 @@ export default function SearchVehiclePage() {
       {!loading && !!results?.length && (
         <table className="w-full bg-white rounded shadow text-sm">
           <thead className="bg-slate-100 text-left">
-            <tr><th className="p-2">Pin</th><th>Hub</th><th>Mã xe</th><th>Loại</th><th /></tr>
+            <tr><th className="p-2">Battery</th><th>Hub</th><th>Vehicle code</th><th>Type</th><th /></tr>
           </thead>
           <tbody>
             {results.map((v) => (
@@ -125,7 +127,7 @@ export default function SearchVehiclePage() {
                 <td className="font-medium">{v.code}</td>
                 <td>{VEHICLE_TYPE_LABEL[v.type]}</td>
                 <td className="text-right pr-2">
-                  <button className="text-brand underline" onClick={() => openDetail(v.id)}>Chi tiết</button>
+                  <button className="text-brand underline" onClick={() => openDetail(v.id)}>Details</button>
                 </td>
               </tr>
             ))}
@@ -179,25 +181,25 @@ function VehicleDetailModal({ vehicle, onClose, onReserved, onConflict }: {
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow p-6 w-full max-w-md space-y-3">
-        <h2 className="text-lg font-bold text-brand">Xe {vehicle.code}</h2>
+        <h2 className="text-lg font-bold text-brand">Vehicle {vehicle.code}</h2>
         <dl className="grid grid-cols-2 gap-y-1 text-sm">
-          <dt>Loại xe</dt><dd>{VEHICLE_TYPE_LABEL[vehicle.type]}</dd>
-          <dt>Pin</dt><dd><BatteryBar level={vehicle.batteryLevel} /></dd>
+          <dt>Vehicle type</dt><dd>{VEHICLE_TYPE_LABEL[vehicle.type]}</dd>
+          <dt>Battery</dt><dd><BatteryBar level={vehicle.batteryLevel} /></dd>
           <dt>Hub</dt><dd>{hubName(vehicle.hubId)}</dd>
-          <dt>Trạng thái</dt><dd>{vehicle.state}</dd>
+          <dt>State</dt><dd>{vehicle.state}</dd>
         </dl>
-        <p className="text-sm text-state-idle">Xe sẽ được giữ trong {vehicle.holdMinutes} phút sau khi đặt.</p>
+        <p className="text-sm text-state-idle">The vehicle will be held for {vehicle.holdMinutes} minutes after booking.</p>
         {error && (
           <p className="text-state-fault text-sm">
             {error}{" "}
-            {error.includes("đang hiệu lực") && <Link to="/m2/my-reservation" className="underline">Xem đặt chỗ</Link>}
+            {error.includes("active reservation") && <Link to="/m2/my-reservation" className="underline">View reservation</Link>}
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <button className="px-4 py-1.5 rounded border" onClick={onClose}>Đóng</button>
+          <button className="px-4 py-1.5 rounded border" onClick={onClose}>Close</button>
           <button className="px-4 py-1.5 rounded bg-brand text-white disabled:opacity-50"
                   disabled={busy || blocked} onClick={reserve}>
-            {busy ? "Đang đặt..." : "Đặt xe"}
+            {busy ? "Booking…" : "Book vehicle"}
           </button>
         </div>
       </div>

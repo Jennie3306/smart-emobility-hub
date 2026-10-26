@@ -16,9 +16,9 @@ export function AppLayout() {
   const navigate = useNavigate();
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="bg-brand text-white px-6 py-3 flex items-center gap-6">
+      <header className="bg-brand text-white px-6 py-3 flex flex-wrap items-center gap-4">
         <span className="font-bold">Smart E-Mobility Hub</span>
-        <nav className="flex gap-4 text-sm">
+        <nav className="flex flex-wrap gap-4 text-sm">
           {nav.map((n) => (
             <NavLink key={n.to} to={n.to}
               className={({ isActive }) => (isActive ? "underline" : "opacity-80 hover:opacity-100")}>

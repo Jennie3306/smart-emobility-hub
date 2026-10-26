@@ -15,7 +15,7 @@ export default function AlertHistoryPage() {
     const from = new Date(to.getTime() - days * 86400000);
     monitoringApi.getAlertHistory({ from: from.toISOString(), to: to.toISOString() })
       .then(setAlerts)
-      .catch(() => setError('Khong tai duoc lich su canh bao'));
+      .catch(() => setError('Unable to load alert history'));
   };
 
   useEffect(load, [days]);
@@ -23,7 +23,7 @@ export default function AlertHistoryPage() {
   if (error) return (
     <div className="p-6">
       <p className="mb-3">{error}</p>
-      <button className="rounded border px-3 py-1" onClick={load}>Thu lai</button>
+      <button className="rounded border px-3 py-1" onClick={load}>Retry</button>
     </div>
   );
   if (!alerts) return <div className="m-6 h-40 animate-pulse rounded border bg-gray-100" />;
@@ -32,33 +32,33 @@ export default function AlertHistoryPage() {
 
   return (
     <div className="p-6">
-      <h1 className="mb-4 text-xl font-bold">Lich su canh bao</h1>
+      <h1 className="mb-4 text-xl font-bold">Alert history</h1>
 
       <div className="mb-4 flex gap-3 text-sm">
         <select className="rounded border px-2 py-1" value={days}
                 onChange={e => setDays(Number(e.target.value))}>
-          <option value={1}>24 gio qua</option>
-          <option value={7}>7 ngay qua</option>
-          <option value={30}>30 ngay qua</option>
+          <option value={1}>Last 24 hours</option>
+          <option value={7}>Last 7 days</option>
+          <option value={30}>Last 30 days</option>
         </select>
         <select className="rounded border px-2 py-1" value={type}
                 onChange={e => setType(e.target.value)}>
-          <option value="ALL">Moi loai</option>
-          <option value="CAPACITY">Gan het cho do</option>
-          <option value="LOW_VEHICLE">Sap het xe</option>
+          <option value="ALL">All types</option>
+          <option value="CAPACITY">Parking capacity warning</option>
+          <option value="LOW_VEHICLE">Low vehicle availability</option>
         </select>
       </div>
 
       {rows.length === 0 ? (
         <p className="py-10 text-center text-gray-500">
-          Khong co canh bao nao trong khoang thoi gian da chon
+          No alerts in the selected period
         </p>
       ) : (
         <table className="w-full text-sm">
           <thead className="border-b text-left">
             <tr>
-              <th>Thoi diem phat</th><th>Hub</th><th>Loai</th><th>Chi so</th>
-              <th>Trang thai</th><th>Nguoi xac nhan</th><th>Thoi diem dong</th>
+              <th>Raised</th><th>Hub</th><th>Type</th><th>Value</th>
+              <th>State</th><th>Acknowledged by</th><th>Closed</th>
             </tr>
           </thead>
           <tbody>
@@ -66,7 +66,7 @@ export default function AlertHistoryPage() {
               <tr key={a.id} className="border-b">
                 <td className="py-1">{new Date(a.raisedAt).toLocaleString()}</td>
                 <td>{a.hubName}</td>
-                <td>{a.type === 'CAPACITY' ? 'Cho do' : 'Thieu xe'}</td>
+                <td>{a.type === 'CAPACITY' ? 'Parking' : 'Vehicle shortage'}</td>
                 <td className="tabular-nums">{a.triggerValue}</td>
                 <td>{a.state}{a.dismissReason ? ` (${a.dismissReason})` : ''}</td>
                 <td>{a.acknowledgedBy ?? '—'}</td>

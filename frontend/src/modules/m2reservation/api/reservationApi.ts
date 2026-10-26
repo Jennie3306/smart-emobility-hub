@@ -1,5 +1,6 @@
 import type { AxiosError } from "axios";
 import { api, type ApiError } from "@/shared/api/client";
+import { englishHubLabels } from "@/shared/api/hubLabels";
 
 export type VehicleType = "E_BIKE" | "E_SCOOTER";
 export type ReservationState =
@@ -43,21 +44,24 @@ export interface SearchParams {
 
 // Hard-coded from the V2 seed until M1 provides GET /api/m1/hubs (recorded in section 4.4)
 export const HUBS = [
-  { id: 1, name: "Hub Ga Metro" },
-  { id: 2, name: "Hub KTX Khu A" },
-  { id: 3, name: "Hub KTX Khu B" },
-  { id: 4, name: "Hub BK" },
-  { id: 5, name: "Hub KHTN" },
+  { id: 1, name: "Metro Hub" },
+  { id: 2, name: "Dormitory A Hub" },
+  { id: 3, name: "Dormitory B Hub" },
+  { id: 4, name: "Bach Khoa Hub" },
+  { id: 5, name: "Science Hub" },
 ];
 
-export const hubName = (id: number | null) => HUBS.find((h) => h.id === id)?.name ?? "-";
+const hubNames=new Map(HUBS.map(h=>[h.id,h.name]));
+export const hubName = (id: number | null) => id===null?"-":hubNames.get(id) ?? `Hub #${id}`;
 
 export const VEHICLE_TYPE_LABEL: Record<VehicleType, string> = {
-  E_BIKE: "Xe đạp điện",
-  E_SCOOTER: "Xe máy điện",
+  E_BIKE: "Electric bicycle",
+  E_SCOOTER: "Electric scooter",
 };
 
 export const reservationApi = {
+  hubs: () => api.get<{id:number;name:string}[]>("/m1/hubs").then(r=>{const hubs=englishHubLabels(r.data);hubs.forEach(h=>hubNames.set(h.id,h.name));return hubs;}),
+  returnVehicle: (vehicleId:number,hubId:number,batteryLevel:number) => api.post(`/m3/vehicles/${vehicleId}/return`,{hubId,batteryLevel}),
   search: (params: SearchParams) =>
     api.get<VehicleSummary[]>("/m2/vehicles/search", { params }).then((r) => r.data),
   detail: (id: number) =>
@@ -86,13 +90,13 @@ export function errorCode(err: unknown): string | undefined {
 export function errorMessage(err: unknown): string {
   const data = (err as AxiosError<ApiError>).response?.data;
   switch (data?.code) {
-    case "RESOURCE_CONFLICT": return "Xe vừa được người khác đặt, vui lòng chọn xe khác";
-    case "RESERVATION_LIMIT_EXCEEDED": return "Bạn đã có một đặt xe đang hiệu lực";
-    case "VEHICLE_NOT_AVAILABLE": return "Xe vừa chuyển trạng thái, không còn đặt được";
-    case "RESERVATION_EXPIRED": return "Đặt chỗ đã hết hạn";
-    case "ACCESS_DENIED": return "Bạn không có quyền thao tác đặt chỗ này";
-    case "INVALID_STATE_TRANSITION": return "Đặt chỗ không còn ở trạng thái cho phép thao tác này";
-    case "VALIDATION_FAILED": return "Pin tối thiểu phải từ 0 đến 100";
-    default: return data?.message ?? "Có lỗi xảy ra, vui lòng thử lại";
+    case "RESOURCE_CONFLICT": return "This vehicle was just reserved. Choose another vehicle.";
+    case "RESERVATION_LIMIT_EXCEEDED": return "You already have an active vehicle reservation";
+    case "VEHICLE_NOT_AVAILABLE": return "The vehicle is no longer available";
+    case "RESERVATION_EXPIRED": return "Reservation expired";
+    case "ACCESS_DENIED": return "You do not own this reservation";
+    case "INVALID_STATE_TRANSITION": return "This action is not allowed in the current reservation state";
+    case "VALIDATION_FAILED": return "Minimum battery must be between 0 and 100";
+    default: return data?.message ?? "An error occurred. Please try again.";
   }
 }

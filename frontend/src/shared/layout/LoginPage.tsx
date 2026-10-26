@@ -11,7 +11,7 @@ export function LoginPage() {
   async function handleSubmit() {
     try {
       const user = await login(username, password);
-      navigate(user.role === "OPERATOR" ? "/m8/simulation" : "/");
+      navigate(user.role === "OPERATOR" ? "/m8/simulation" : "/m2/search");
     } catch {
       setError("Invalid username or password");
     }

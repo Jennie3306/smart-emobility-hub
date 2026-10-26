@@ -15,7 +15,7 @@ export default function HubListPage() {
     setError(null);
     monitoringApi.getHubs({ hasVehicle, hasFreeSlot })
       .then(setHubs)
-      .catch(() => setError('Khong tai duoc danh sach hub'));
+      .catch(() => setError('Unable to load hubs'));
   };
 
   useEffect(load, [hasVehicle, hasFreeSlot]);
@@ -23,11 +23,11 @@ export default function HubListPage() {
   if (error) return (
     <div className="p-6">
       <p className="mb-3">{error}</p>
-      <button className="rounded border px-3 py-1" onClick={load}>Thu lai</button>
+      <button className="rounded border px-3 py-1" onClick={load}>Retry</button>
     </div>
   );
 
-  // Trang thai dang tai: the skeleton, khong dung spinner toan trang
+  // State dang tai: the skeleton, khong dung spinner toan trang
   if (!hubs) return (
     <div className="grid gap-3 p-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 6 }).map((_, i) =>
@@ -40,22 +40,22 @@ export default function HubListPage() {
       <div className="mb-4 flex gap-4 text-sm">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={hasVehicle}
-                 onChange={e => setHasVehicle(e.target.checked)} /> Con xe
+                 onChange={e => setHasVehicle(e.target.checked)} /> Has available vehicles
         </label>
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={hasFreeSlot}
-                 onChange={e => setHasFreeSlot(e.target.checked)} /> Con cho trong
+                 onChange={e => setHasFreeSlot(e.target.checked)} /> Has free parking
         </label>
       </div>
 
       {hubs.length === 0 ? (
         <p className="py-12 text-center text-gray-500">
-          Chua co Mobility Hub nao duoc dang ky
+          No mobility hubs registered
         </p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {hubs.map(h => (
-            <Link key={h.id} to={`/hubs/${h.id}`}
+            <Link key={h.id} to={`/m1/hubs/${h.id}`}
                   className="rounded border p-4 hover:bg-gray-50">
               <div className="text-lg font-semibold">{h.name}</div>
               <div className="text-sm text-gray-500">{h.location}</div>

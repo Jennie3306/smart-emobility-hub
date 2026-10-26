@@ -15,7 +15,7 @@ export function UtilisationBar({ u }: { u: Utilisation }) {
         <div className={`h-2 rounded ${color}`} style={{ width: `${p}%` }} />
       </div>
       <span className="text-sm tabular-nums">{p}%</span>
-      {u.dataAnomaly && <span title="Du lieu khong nhat quan">!</span>}
+      {u.dataAnomaly && <span title="Inconsistent data">!</span>}
     </div>
   );
 }

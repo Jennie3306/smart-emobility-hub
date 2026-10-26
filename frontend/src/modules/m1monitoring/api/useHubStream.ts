@@ -1,3 +1,4 @@
+import { englishHubLabels } from "@/shared/api/hubLabels";
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -24,11 +25,11 @@ export function useHubStream(onHub: (s: HubStatus) => void,
         setLive(true);
         stopPolling();
         client.subscribe('/topic/hubs', msg => {
-          onHub(JSON.parse(msg.body));
+          onHub(englishHubLabels(JSON.parse(msg.body)));
           setLastUpdate(new Date());
         });
         client.subscribe('/topic/alerts', msg => {
-          onAlert(JSON.parse(msg.body));
+          onAlert(englishHubLabels(JSON.parse(msg.body)));
           setLastUpdate(new Date());
         });
       },
