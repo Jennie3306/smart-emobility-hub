@@ -9,17 +9,29 @@
 | **Phạm vi module** | Sinh dữ liệu cảm biến giả lập; cập nhật trạng thái tài nguyên; ghi nhận và theo dõi sự cố (xe hỏng, cổng sạc ngừng hoạt động); **phát sự kiện** cho các module liên quan. **Không** tự xử lý đặt chỗ hay phiên sạc của module khác. |
 | **Cách dùng file này** | Điền lần lượt từ mục 1 đến mục 9, cập nhật sau mỗi vòng. Chữ nghiêng xám là gợi ý, điền xong thì xóa. Nội dung trong file này chính là nguyên liệu để viết file .tex của module trên Prism. |
 
-> **Trạng thái tài liệu (02/10/2026):** Phân tích/state/entity còn có nội dung
-> proposal trong [`m6-open-decisions.md`](../../docs/proposals/m6-open-decisions.md);
-> các quyết định `M6-Dxx` chưa được approver chốt. Mục §7.3/§7.4 và §8 ghi nhận
-> walking skeleton simulator đã có code và focused test; phần đó không có nghĩa
-> Incident workflow, persistence, atomic after-commit hay consumer dedupe đã xong.
+> **Trạng thái tài liệu (cập nhật 21/10/2026):** TV2 đã chốt M6-D01, D02 (chu kỳ
+> demo 5.000 ms), D07 và D08; TV3 đã chốt D03, D05, D06, D09; TV4 đã chấp thuận
+> proposal schema D10. D08 yêu cầu toàn bộ `/api/m6/**` dùng role `OPERATOR`, chỉ
+> ngoại lệ API chỉ-đọc khi có nhu cầu Student cụ thể; hiện chưa xác định ngoại lệ.
+> TV6 đã chọn proposal D04/D11/D12 làm baseline implement phía M6; allowlist mã
+> lỗi D04/D12 đang được kiểm tra theo loại resource. D04 vẫn cần TV5/M5 xác nhận
+> ChargerFailed, D11 addendum schema latest-state cần TV4 duyệt, D12 cần
+> TV3 review và consumer xác nhận payload trước khi coi là contract toàn hệ thống.
+> Các ID khác vẫn theo dõi trong [`m6-open-decisions.md`](../../docs/proposals/m6-open-decisions.md).
+> Mục §7.3/§7.4 và §8 ghi nhận walking skeleton simulator đã có code và focused
+> test. Consumer-side dedupe D09 đã được triển khai ở nhánh local
+> `codex/integrate-m6-m3-20261019` và được kiểm tra ở §8; thay đổi đó chưa có
+> trên nhánh feature M6. Incident workflow chưa được triển khai; persistence và
+> atomic after-commit cho M6 vẫn chờ TV4 duyệt addendum latest-state và TV2 chốt
+> severity/mapping/active-duplicate policy cho Incident.
 
 > **Đồng bộ liên module ngày 02/10/2026:** Bản mới của M2 xác nhận nhận
 > `VehicleFailed`; M4 và M5 xác nhận nhận `ChargerFailed`. M8 vẫn là consumer
 > `ResourceStateUpdated` theo Phụ lục A, nhưng chỉ dùng event làm tín hiệu dữ
 > liệu đã đổi; mỗi simulation run phải lấy snapshot nhất quán qua API chỉ đọc.
-> Các xác nhận này không tự chốt ownership ChargingPoint ở M6-D06.
+> TV3 chọn phương án C cho M6-D06 (ghi nhận 20/10/2026): M6 sở hữu device
+> health, M5 sở hữu charging allocation/session. Transition contract chi tiết
+> vẫn cần phối hợp với TV5/M5.
 
 # 1. Functional requirements (§2.2)
 
@@ -30,7 +42,7 @@
 | FR-M6-01 | Báo cáo sự cố | Hệ thống phải cho phép Operator đã đăng nhập báo cáo xe hoặc cổng sạc bị hỏng bằng cách cung cấp Hub, loại tài nguyên, mã tài nguyên, mức độ, lý do và mô tả. | Must | Interactive | Operator |
 | FR-M6-02 | Xử lý vòng đời sự cố | Hệ thống phải cho phép Operator xem, gán người xử lý và chuyển Incident qua các trạng thái hợp lệ `Reported`, `Assigned`, `InProgress`, `Resolved`, `Closed`, đồng thời từ chối chuyển trạng thái sai. | Must | Interactive | Operator |
 | FR-M6-03 | Tiếp nhận dữ liệu thiết bị | Hệ thống phải tiếp nhận readings do adapter Sensor/Simulator sinh ra cho xe (bao gồm thông tin pin), chỗ đỗ và cổng sạc; kiểm tra payload/định danh, chống xử lý trùng theo inbound `DeviceReading.eventId`, rồi chỉ lưu latest state thuộc quyền sở hữu M6. | Must | **Non-interactive** | Sensor/Simulator |
-| FR-M6-04 | Cập nhật trạng thái định kỳ | Hệ thống phải kích hoạt simulation tick theo chu kỳ cấu hình (baseline đề xuất 5 giây) cho readings về xe/pin, chỗ đỗ và cổng sạc; phát `ResourceStateUpdated` với `hubId`, `resourceType`, `resourceId`, `newState` sau khi thay đổi được lưu theo ownership đã chốt. M6 không ghi state hay bảng thuộc module khác. *(ownership theo M6-D05/D06/D10 còn chờ duyệt)* | Must | **Non-interactive** | Timer/Scheduler |
+| FR-M6-04 | Cập nhật trạng thái định kỳ | Hệ thống phải kích hoạt simulation tick theo chu kỳ cấu hình 5 giây đã được TV2 chốt cho demo, cho readings về xe/pin, chỗ đỗ và cổng sạc; phát `ResourceStateUpdated` với `hubId`, `resourceType`, `resourceId`, `newState` sau khi thay đổi được lưu theo ownership đã chốt. M6 không ghi state hay bảng thuộc module khác. *(D02 đã chốt; D05/D06 đã được TV3 chốt; D10 được TV4 chấp thuận, migration chưa triển khai)* | Must | **Non-interactive** | Timer/Scheduler |
 | FR-M6-05 | Cô lập tài nguyên gặp sự cố | Khi xác nhận lỗi thiết bị, hệ thống phải tạo Incident ở trạng thái `Reported`, khóa health state do M6 sở hữu và phát đúng `VehicleFailed` hoặc `ChargerFailed`; M6 không sửa reservation, vehicle lifecycle, parking hoặc charging session của module khác. | Must | **Non-interactive** | Sự kiện thiết bị |
 
 # 2. Business rules (§2.4)
@@ -39,15 +51,15 @@
 
 | **Mã**   | **Luật nghiệp vụ** | **Áp dụng khi** | **Liên quan FR** |
 |----------|--------------------|-----------------|------------------|
-| BR-M6-01 | Chỉ người dùng có role `OPERATOR` được gọi API báo cáo và xử lý Incident. Sensor/Simulator chỉ tạo Incident qua adapter nội bộ và không được assign/resolve/close. *(M6-D01, D08)* | Mọi thao tác Incident | FR-M6-01, FR-M6-02 |
-| BR-M6-02 | Scheduler dùng `app.simulator.interval-ms`; baseline demo là 5.000 ms. Mọi kịch bản ngẫu nhiên phải nhận seed; unit test gọi tick trực tiếp và không chờ đồng hồ thật. *(M6-D02, D03)* | Chạy simulator | FR-M6-03, FR-M6-04 |
-| BR-M6-03 | Pin thấp không phải lỗi thiết bị. `VehicleFailed` chỉ phát cho lỗi cơ khí, sensor offline hoặc báo cáo thủ công; `ChargerFailed` chỉ phát cho offline, quá nhiệt, lỗi nguồn hoặc báo cáo thủ công. *(M6-D04, D12)* | Phân loại dữ liệu lỗi | FR-M6-03, FR-M6-05 |
-| BR-M6-04 | Incident chỉ chuyển `Reported → Assigned → InProgress → Resolved → Closed`; cho phép `Resolved → InProgress` để reopen. `Closed` là terminal. *(M6-D07)* | Chuyển trạng thái Incident | FR-M6-02 |
-| BR-M6-05 | ChargingPoint chỉ chuyển `Available → InUse`, `InUse → Available`, `Available/InUse → Faulty`, `Faulty → UnderRepair`, `UnderRepair → Available/Faulty`. Không được cấp phát khi `Faulty` hoặc `UnderRepair`. *(M6-D06)* | Cập nhật trạng thái cổng sạc | FR-M6-03, FR-M6-05 |
+| BR-M6-01 | Chỉ người dùng role `OPERATOR` được gọi API Incident; Sensor/Simulator tạo Incident qua adapter nội bộ. Student không tạo hoặc xử lý Incident; hiện chưa có endpoint chỉ-đọc M6 được yêu cầu cho Student. TV2 chốt actor/policy và đồng ý không thêm kỹ thuật viên. *(M6-D01, D08; TV2/TV3, 2026-10-21)* | Mọi thao tác Incident | FR-M6-01, FR-M6-02 |
+| BR-M6-02 | Scheduler dùng `app.simulator.interval-ms=5000` cho chu kỳ demo theo quyết định TV2. Mọi kịch bản ngẫu nhiên phải nhận seed; unit test gọi tick trực tiếp và không chờ đồng hồ thật. Interval đã cấu hình; scheduler vẫn tắt mặc định. *(M6-D02, D03; TV2, 2026-10-21)* | Chạy simulator | FR-M6-03, FR-M6-04 |
+| BR-M6-03 | Pin thấp không phải `VehicleFailed`: TV3 xác nhận pin thấp dùng `VehicleLowBattery`, còn `VehicleFailed` làm M3 chuyển xe sang `MAINTENANCE`. M6 kiểm tra đúng allowlist uppercase theo resource: Vehicle `MECHANICAL`, `SENSOR_OFFLINE`, `MANUAL_REPORT`; Charger `OFFLINE`, `OVERHEAT`, `POWER_FAULT`, `MANUAL_REPORT`. M6 không suy diễn ngưỡng; TV5/M5 vẫn cần xác nhận charger trigger/reaction. *(D04/D12 baseline TV6 2026-10-21; validation code có trên hai nhánh local)* | Phân loại dữ liệu lỗi | FR-M6-03, FR-M6-05 |
+| BR-M6-04 | Incident chỉ chuyển `Reported → Assigned → InProgress → Resolved → Closed`; cho phép `Resolved → InProgress` để reopen. `Closed` là terminal. TV2 đã chốt lifecycle; Incident state machine/API chưa được implement. *(M6-D07; TV2, 2026-10-21)* | Chuyển trạng thái Incident | FR-M6-02 |
+| BR-M6-05 | TV3 chốt tách device health do M6 sở hữu khỏi charging allocation/session do M5 sở hữu (phương án C). Các transition và quy tắc cấp phát cụ thể trong bảng state vẫn là proposal, cần TV5/M5 xác nhận. *(M6-D06)* | Cập nhật trạng thái cổng sạc | FR-M6-03, FR-M6-05 |
 | BR-M6-06 | Mỗi tài nguyên chỉ có tối đa một Incident đang hoạt động (`Reported`, `Assigned`, `InProgress`) tại một thời điểm; báo cáo trùng bị từ chối với `ACTIVE_INCIDENT_EXISTS`. *(baseline bổ sung cần TV2 duyệt)* | Tạo Incident | FR-M6-01, FR-M6-05 |
-| BR-M6-07 | `DeviceReading.eventId` là inbound idempotency key; duplicate là no-op có structured log và được nhận diện trước state transition. Baseline proposal M6-D09/D10 ghép `markIfNew`, state write và Incident write vào một atomic transaction/rollback unit; chỉ sau commit thành công mới publish. Write/commit lỗi rollback cả dedupe mark, state và Incident, không publish. Mỗi outbound `DomainEvent` có eventId riêng, không đồng nhất với inbound eventId. *(M6-D09/D10 chưa duyệt)* | Xử lý device update/event | FR-M6-03, FR-M6-04, FR-M6-05 |
-| BR-M6-08 | M6 chỉ ghi dữ liệu do M6 sở hữu và chỉ giao tiếp liên module qua `ResourceStateUpdated`, `VehicleFailed`, `ChargerFailed`. Consumer tự xử lý trong package của mình. *(M6-D05, D12)* | Tích hợp liên module | FR-M6-03, FR-M6-05 |
-| BR-M6-09 | HTTP 400/404/409 chỉ áp dụng cho API Operator tương ứng với payload sai/resource không tồn tại/state transition sai hoặc Incident active. Device-reading adapter trả `ProcessingResult` tương ứng, không dùng HTTP status. Với cả API Operator và device-reading transaction, write/commit lỗi phải rollback dữ liệu liên quan và không publish event. *(M6-D09/D10 chưa duyệt)* | Lỗi API và transaction | FR-M6-01, FR-M6-02, FR-M6-03, FR-M6-04, FR-M6-05 |
+| BR-M6-07 | `DeviceReading.eventId` là inbound idempotency key. D11 baseline TV6 chỉ lưu latest state và Incident, không lưu raw telemetry theo từng tick; durable persistence chưa implement. Consumer-side dedupe dùng `(consumerKey, eventId)`; lỗi consumer được catch/log, không rethrow làm rollback publisher đã commit. Mỗi outbound `DomainEvent` có ID riêng. *(D09/D10 đã chốt; D11 baseline TV6, owner confirmation còn mở)* | Xử lý device update/event | FR-M6-03, FR-M6-04, FR-M6-05 |
+| BR-M6-08 | M6 không gọi UPDATE hoặc ghi dữ liệu thuộc module khác; M6 phát event để consumer tự xử lý. TV3 chốt `VehicleFailed` để M3 chuyển xe sang `MAINTENANCE` và M2 hủy Reservation tương ứng. Phản ứng ChargerFailed của M4/M5 cần xác nhận riêng. *(M6-D05 đã chốt; D12 còn chờ)* | Tích hợp liên module | FR-M6-03, FR-M6-05 |
+| BR-M6-09 | TV3 chốt quy ước HTTP 400/404/409 áp dụng toàn hệ thống. API service thực hiện validate → đổi state → save → publish trong transaction hoặc sau commit theo semantics của `EventPublisher`; consumer có transaction riêng, lỗi được catch/log và không rollback publisher đã commit. Atomic rollback của M6 reading/Incident chưa implement. *(M6-D09, D10)* | Lỗi API và transaction | FR-M6-01, FR-M6-02, FR-M6-03, FR-M6-04, FR-M6-05 |
 
 # 3. Use-case (§2.5)
 
@@ -64,8 +76,9 @@ liền không có mũi tên. UC-M6-01 và UC-M6-03 «include» use case kiểm t
 và tài nguyên; UC-M6-04 «include» UC-M6-03 vì tick dùng cùng luồng xử lý dữ liệu
 thiết bị. UC-M6-05 «extend» UC-M6-03 khi dữ liệu xác nhận lỗi; mũi tên «extend»
 trỏ về use case gốc UC-M6-03. Ghi chú UML nêu các event được phát sau commit;
-M2–M5 tự xử lý event ngoài boundary M6. Đây là baseline phân tích đang chờ duyệt
-các quyết định M6-Dxx, không phải xác nhận rằng chức năng đã được implement.
+M2–M5 tự xử lý event ngoài boundary M6. Actor, cadence, Incident lifecycle và
+permission đã được TV2 chốt; các phần chưa có quyết định tiếp tục được ghi rõ
+trong bảng open decisions. Đây là thiết kế, không phải xác nhận đã implement.
 
 ## 3.2 Đặc tả use case (tối thiểu 3)
 
@@ -111,9 +124,9 @@ các quyết định M6-Dxx, không phải xác nhận rằng chức năng đã 
 | **Hậu điều kiện thành công** | Latest state thuộc M6 được lưu một lần; `ResourceStateUpdated` được phát; nếu là failure thì Incident `Reported` và đúng failure event được phát. |
 | **Hậu điều kiện thất bại** | Payload bị từ chối hoặc transaction rollback; không phát event dựa trên dữ liệu chưa lưu. |
 | **Trigger** | Khi được cấu hình rõ, Timer/Scheduler gọi `scheduledTick()` và delegate sang `runScenario(NORMAL_TICK, seed)`; Operator gọi deterministic scenario qua `SimulatorController`. Scheduler hiện mặc định tắt. |
-| **Luồng chính** | 1. `DeviceSimulatorService` tạo batch readings, mỗi reading có inbound `eventId`. 2. Với từng reading, `DeviceEventService.processReading(...)` gọi `validate(reading)`. 3. M6 tìm resource theo `resourceId`. 4. Trong atomic boundary đề xuất M6-D09/D10, M6 gọi `markIfNew(eventId)`. 5. Nếu mới, M6 kiểm tra và áp dụng state transition, rồi lưu state đã cập nhật. 6. Nếu reading báo ChargingPoint failure, `IncidentService` kiểm tra Incident active, tạo Incident `Reported` và trả Incident cho `DeviceEventService`. 7. M6 commit atomic writes. 8. Sau commit thành công, `DeviceEventService` gọi `buildEvents(reading)` rồi phát `ResourceStateUpdated`; với failure, phát thêm event phù hợp. 9. Hệ thống ghi structured log với inbound eventId và kết quả; outbound `DomainEvent.eventId` được sinh riêng. |
+| **Luồng chính** | 1. `DeviceSimulatorService` tạo batch readings, mỗi reading có inbound `eventId`. 2. Với từng reading, `DeviceEventService.processReading(...)` gọi `validate(reading)`. 3. M6 tìm resource theo `resourceId`. 4. Walking skeleton gọi producer-side `markIfNew(eventId)` trong store process-memory riêng. 5. Nếu mới, M6 kiểm tra và cập nhật latest state trong memory. 6. M6 phát `ResourceStateUpdated`; các failure scenario phát thêm event hiện có. 7. Hệ thống ghi structured log với inbound eventId và kết quả; outbound `DomainEvent.eventId` được sinh riêng. |
 | **Luồng thay thế** | 5a. Reading bình thường lưu state và phát `ResourceStateUpdated` sau commit; bỏ qua tạo Incident và failure event. 6a. Vehicle pin thấp không phải failure; M6 chỉ phát state update, còn `VehicleLowBattery` thuộc M3. 6b. Nếu lỗi xảy ra khi xe đang được đặt hoặc cổng đang phục vụ phiên sạc, M6 cô lập health state thuộc mình; M2/M3 hoặc M4/M5 tự xử lý reservation/session. 1a. Operator chạy deterministic scenario với seed cố định qua cùng pipeline. |
-| **Luồng ngoại lệ** | 2a. Payload sai → trả `INVALID_DEVICE_PAYLOAD`, không ghi/publish. 3a. Resource không tồn tại → trả `RESOURCE_NOT_FOUND`, không tự tạo resource. 4a. `eventId` đã xử lý → `ProcessingResult.duplicate()` và structured log; kết thúc trước transition. 5b. Transition sai → rollback inbound dedupe mark nếu đã ghi, trả `INVALID_STATE_TRANSITION`, không publish. 6c. Incident active → kết quả theo BR-M6-06 đang chờ TV2; không tự chọn policy. 7a. Write/commit thất bại → rollback state, Incident và dedupe mark; trả `PERSISTENCE_ERROR`, không publish. |
+| **Luồng ngoại lệ** | 2a. Payload sai → trả `INVALID_DEVICE_PAYLOAD`, không ghi/publish. 3a. Resource không tồn tại → trả `RESOURCE_NOT_FOUND`, không tự tạo resource. 4a. `eventId` đã xử lý → `ProcessingResult.duplicate()` và structured log; kết thúc trước transition. 5b. Transition sai → rollback inbound dedupe mark nếu đã ghi, trả `INVALID_STATE_TRANSITION`, không publish. 6c. Incident active → kết quả theo BR-M6-06 còn chờ quyết định riêng; không tự chọn policy. 7a. Write/commit thất bại → rollback state, Incident và dedupe mark; trả `PERSISTENCE_ERROR`, không publish. |
 | **FR/BR liên quan** | FR-M6-03–05; BR-M6-02–09. |
 
 # 4. Thiết kế hành vi (§3.3)
@@ -124,13 +137,14 @@ File nguồn: [`m6_state_machines.drawio`](../../docs/architecture/m6_state_mach
 
 ![State machine Incident và ChargingPoint](../../docs/figures/m6_state_machines.drawio.png)
 
-> **Trạng thái thiết kế:** Các transition bên dưới là baseline đề xuất, chưa phải
-> policy được duyệt. M6-D06 (owner/vòng đời ChargingPoint), M6-D07 (vòng đời
-> Incident) và baseline BR-M6-06 (Incident active trùng) còn chờ approver tương ứng.
+> **Trạng thái thiết kế:** Incident lifecycle đã được TV2 chốt theo M6-D07;
+> Incident active trùng ở BR-M6-06 vẫn cần quyết định riêng. TV3 đã chốt owner
+> split M6-D06 (M6 sở hữu health, M5 sở hữu usage/session); transition details
+> của ChargingPoint vẫn cần TV5/M5.
 > ChargingPoint diagram là transition
 > fragment: nguồn chưa quy định initial state, nên không giả định cổng mới tạo
-> luôn ở `Available`. Việc tách trạng thái sử dụng (`Available`/`InUse`) khỏi
-> device health (`Faulty`/`UnderRepair`) cũng còn chờ TV3/M5 xác nhận.
+> luôn ở `Available`. Hình hiện tại chưa vẽ riêng usage state và health state;
+> cần được cập nhật theo phương án C sau khi TV5/M5 xác nhận transition contract.
 
 Nhãn trên mũi tên là trigger; guard và action/effect được ghi đầy đủ trong các
 bảng. Initial pseudostate của Incident dùng chấm đen đặc. Theo UML, transition
@@ -182,16 +196,18 @@ theo baseline BR-M6-06 đang chờ TV2 duyệt, còn state transition sai trả 
 Sensor/Simulator kiểm tra adapter, schema và resource; `eventId` trùng là no-op có
 structured log. Với event mới, M6 kiểm tra transition riêng rồi mới xét Incident
 active. Đặc tả chưa chốt kết quả cho một reading mới khi Incident đã active, nên
-nhánh đó được đánh dấu chờ quyết định theo BR-M6-06 thay vì tự gán một response.
+nhánh đó vẫn chờ quyết định riêng theo BR-M6-06.
 
 Hai nhánh hợp lệ cùng ghi Incident `Reported`, cập nhật health/latest state M6 nếu
 áp dụng, và chỉ ghi nhận `eventId` ở nhánh reading trong transaction. Chỉ sau
 commit thành công M6 mới phát `ResourceStateUpdated` khi state đổi cùng failure
 event phù hợp; commit lỗi rollback và không publish. Consumer tự xử lý ngoài
-boundary M6. Mapping consumer trong ghi chú hình là đề xuất M6-D12, vẫn chờ xác
-nhận. Authorization status code cũng chưa được chốt theo M6-D08; sơ đồ không tự
-suy diễn 401/403. Đây là mô hình đặc tả đang chờ các quyết định M6-Dxx, không phải
-xác nhận chức năng đã được implement.
+boundary M6. Mapping consumer trong ghi chú hình dùng baseline M6-D12 do TV6 chọn;
+TV3 review và consumer xác nhận payload vẫn còn cần để coi đây là contract toàn
+hệ thống. Theo D08, toàn bộ `/api/m6/**` yêu cầu `OPERATOR`; chỉ mở ngoại lệ
+read-only nếu có nhu cầu Student cụ thể, hiện chưa xác định endpoint nào. Quy ước
+401/403 theo D09. Đây là mô hình đặc tả, không phải xác nhận chức năng đã được
+implement.
 
 ## 4.3 Sequence diagram: Sự kiện thiết bị → cập nhật trạng thái → phát sự kiện
 
@@ -234,7 +250,7 @@ rollback và after-commit coordination chưa được implement.
 |----|----|----|----|----|
 | Danh sách Incident | Operator | ID, resource, Hub, severity, status, assignee, reportedAt; bộ lọc status/severity/resource | Lọc, mở chi tiết, tạo báo cáo | Loading skeleton; empty state; tải thành công; lỗi API kèm code/message |
 | Chi tiết và workflow Incident | Operator | Timeline trạng thái, reason/description, resource, assignee, timestamps, version, hành động hợp lệ | Assign, Start, Resolve, Reopen, Close | Disable action đang gửi; toast thành công; 409 yêu cầu tải lại; transition sai hiển thị lý do |
-| Điều khiển Simulator | Operator | Scheduler enabled/disabled và configured interval (read-only), seed, kịch bản, tick gần nhất, event gần nhất | Chạy deterministic tick/scenario; xem trạng thái | Xác nhận inbound eventId; validation error; trạng thái đang chạy; không cho chạy trùng. Không bật/tắt scheduler hoặc đổi interval runtime khi M6-D03 chưa chốt. |
+| Điều khiển Simulator | Operator | Scheduler enabled/disabled và configured interval (read-only), seed, kịch bản, tick gần nhất, event gần nhất | Chạy deterministic tick/scenario; xem trạng thái | Xác nhận inbound eventId; validation error; trạng thái đang chạy; không cho chạy trùng. D02 chốt chu kỳ demo 5.000 ms; scheduler vẫn được cấu hình tắt mặc định. |
 
 *\[Dán ảnh mockup TV5 gửi lại hoặc link Figma\]*
 
@@ -248,8 +264,9 @@ File nguồn: [`m6_class_design.drawio`](../../docs/architecture/m6_class_design
 
 Trong sơ đồ, mỗi class có các ngăn tên / thuộc tính / operations; mũi tên nét
 đứt là dependency (dùng/gọi), không phải quan hệ sở hữu dữ liệu. Vì Incident
-tham chiếu tài nguyên qua cặp `resourceType` + `resourceId`, sơ đồ không gán một
-association/FK trực tiếp cho `ChargingPoint` khi cardinality còn chờ TV4.
+tham chiếu tài nguyên qua cặp `resourceType` + `resourceId`, schema proposal D10
+đã được TV4 chấp thuận dùng logical reference, không tạo polymorphic FK cho
+resource. M6 sở hữu health state; usage/session thuộc M5.
 Operations được ghi đủ kiểu tham số và kiểu trả về; DTO/enum được dùng làm type
 nhưng không khai triển thành class riêng.
 
@@ -257,19 +274,23 @@ nhưng không khai triển thành class riêng.
 > `SimulatorScheduler`, `DeviceSimulatorService`, `SyntheticReadingFactory`,
 > `DeviceEventService`, `DemoDeviceCatalog`, hai in-memory store và `EventPublisher`
 > khớp code hiện tại. Incident workflow/repositories/entities và ChargingPoint
-> persistence vẫn là target design chờ TV3/TV4; không có M6 migration.
+> persistence vẫn là target design theo D10 đã được TV4 chấp thuận; chưa có M6
+> migration. Owner split
+> ChargingPoint đã được TV3 chốt theo phương án C.
 
 ## 6.1 Entity gửi TV4 (để làm ERD)
 
 | **Entity** | **Thuộc tính chính (kèm kiểu)** | **Khóa / quan hệ** |
 |------------|---------------------------------|--------------------|
-| Incident | `id: Long` (PK, generated); `resourceType: ResourceType` (NOT NULL); `resourceId: Long` (NOT NULL, logical reference); `hubId: Long` (NOT NULL); `reasonCode: String` (NOT NULL); `description: String?`; `severity: IncidentSeverity` (NOT NULL); `status: IncidentStatus` (NOT NULL); `reporterType: ReporterType` (NOT NULL); `reporterUserId: Long?`; `assigneeUserId: Long?`; `reportedAt: OffsetDateTime` (NOT NULL); `assignedAt/startedAt/resolvedAt/closedAt: OffsetDateTime?`; `version: Long` (NOT NULL, optimistic lock) | FK `hubId → hub.id` cần TV4 chốt; `reporterUserId`/`assigneeUserId → app_user.id` nếu TV4 xác nhận. Không tạo polymorphic FK cho `resourceId` trước khi TV4 chọn cách biểu diễn. Index đề xuất: `(resource_type, resource_id, status)`, `(hub_id, status)`, `(assignee_user_id, status)`. Toàn bộ schema còn là handoff đề xuất M6-D10. |
-| ChargingPoint | `id: Long` (PK); `code: String` (NOT NULL, UNIQUE); `hubId: Long` (NOT NULL); `state: ChargingPointState` (NOT NULL); `updatedAt: OffsetDateTime` (NOT NULL); `version: Long` (NOT NULL, optimistic lock) | FK `hubId → hub.id` cần TV4 xác nhận. Cách tách usage/health state và owner của `state` chờ TV3/TV5 theo M6-D06; chưa có entity hay migration trong walking skeleton. |
-| ProcessedDeviceEvent | `eventId: UUID` (đề xuất PK/inbound idempotency key); `processedAt: OffsetDateTime` (NOT NULL); `result: String` (NOT NULL) | Riêng producer-side inbound `DeviceReading` dedupe, khác consumer-side `shared.events.ProcessedEventStore`. PK/retention, state/Incident transaction coupling và persistence cần TV3/TV4 chốt theo M6-D09/D10; walking skeleton hiện dùng store trong bộ nhớ. |
+| Incident | `id: Long` (PK, generated); `resourceType: ResourceType` (NOT NULL); `resourceId: Long` (NOT NULL, logical reference); `hubId: Long` (NOT NULL); `reasonCode: String` (NOT NULL); `description: String?`; `severity: IncidentSeverity` (NOT NULL); `status: IncidentStatus` (NOT NULL); `reporterType: ReporterType` (NOT NULL); `reporterUserId: Long?`; `assigneeUserId: Long?`; `reportedAt: OffsetDateTime` (NOT NULL); `assignedAt/startedAt/resolvedAt/closedAt: OffsetDateTime?`; `version: Long` (NOT NULL, optimistic lock) | TV4 đã chấp thuận proposal D10 (2026-10-21): FK `hubId → hub.id`; `reporterUserId`/`assigneeUserId → app_user.id` nếu user entity hiện hữu hỗ trợ; không tạo polymorphic FK cho `resourceId`; các index `(resource_type, resource_id, status)`, `(hub_id, status)`, `(assignee_user_id, status)`. Migration chưa có. |
+| ChargingPoint | `id: Long` (PK); `code: String` (NOT NULL, UNIQUE); `hubId: Long` (NOT NULL); `healthState` thuộc M6; usage/allocation state thuộc mô hình M5; `updatedAt: OffsetDateTime` (NOT NULL); `version: Long` (NOT NULL, optimistic lock) | TV3 đã chốt tách health khỏi usage/session theo M6-D06; TV4 đã chấp thuận proposal D10 (2026-10-21). Chưa có entity hay migration trong walking skeleton; transition contract vẫn cần TV5/M5. |
+| DeviceLatestState (D11 addendum) | Một dòng hiện trạng: `resourceType`, `resourceId`, `hubId`, `state`, `batteryLevel: Integer?`, `failureReason: String?`, `observedAt: OffsetDateTime` | TV6 đề xuất unique `(resourceType, resourceId)` và logical resource reference, không polymorphic FK. Addendum chưa được TV4 duyệt; chưa có entity hoặc migration. Không lưu raw reading/tick history. |
+| ProcessedDeviceEvent | `eventId: UUID` (đề xuất PK/inbound idempotency key); `processedAt: OffsetDateTime` (NOT NULL); `result: String` (NOT NULL) | Riêng producer-side inbound `DeviceReading` dedupe, khác consumer-side `shared.events.ProcessedEventStore`. Consumer namespaced dedupe đã được TV3 chốt theo D09; TV4 đã chấp thuận model proposal D10. Retention/coupling còn là quyết định triển khai; walking skeleton hiện dùng store trong bộ nhớ. |
 
-> **Gửi TV4 — trạng thái đề xuất, chưa phải ERD đã duyệt:** Các FK, index,
-> nullable fields, `ChargingPoint.state` ownership và atomic coupling nêu trên
-> là câu hỏi/handoff để TV4 cùng TV3 chốt. TV6 không tạo Flyway migration.
+> **D10 đã được TV4 chấp thuận (2026-10-21):** TV4 sở hữu Flyway migration theo
+> schema proposal; migration chưa được tạo. Cần đồng bộ nếu khi triển khai phát
+> sinh khác biệt vật lý đáng kể so với proposal đã chấp thuận.
+> được tạo và schema chưa được TV4 duyệt.
 
 `DeviceReading`, `DeviceStateSnapshot`, `ProcessingResult`, `RunScenarioRequest`,
 `SimulationRunView`, `SimulatorStatusView`, `ResourceKey` và các enum là runtime
@@ -283,9 +304,9 @@ walking skeleton. `processReading` và `runScenario` là các method đã có co
 | **Signature**      | `reportIncident(command: ReportIncidentCommand): Incident` |
 |--------------------|---------------------------------------|
 | **Class**          | `IncidentService` |
-| **Mục đích**       | Xác thực báo cáo, ngăn Incident active trùng và tạo Incident `Reported`. Trong luồng `DeviceReading`, method trả Incident cho `DeviceEventService`, nơi điều phối event sau commit; publisher path của manual report vẫn là proposal M6-D09. |
+| **Mục đích**       | Xác thực báo cáo, ngăn Incident active trùng và tạo Incident `Reported`. Luồng publication tuân theo transaction order đã được TV3 chốt ở D09; Incident lifecycle D07 và schema D10 đã được chốt nhưng chưa implement. BR-M6-06 về Incident active trùng vẫn cần quyết định riêng. |
 | **Tiền điều kiện** | Operator hợp lệ hoặc trusted internal adapter; resource tồn tại; reason code hợp lệ. |
-| **Hậu điều kiện**  | Incident được lưu đúng một lần; trả Incident đã tạo cho caller. Device-reading flow không publish từ method này; manual-flow publication owner còn chờ M6-D09. |
+| **Hậu điều kiện**  | Incident được lưu đúng một lần; trả Incident đã tạo cho caller. Device-reading flow không publish từ method này; publication theo thứ tự validate → state → save → publish đã được TV3 chốt, nhưng chưa có code Incident để xác minh. |
 | **Ngoại lệ**       | `RESOURCE_NOT_FOUND`, `ACTIVE_INCIDENT_EXISTS`, `INVALID_FAILURE_REASON`. |
 
 | **Signature**      | `transitionIncident(id: Long, command: TransitionIncidentCommand): Incident` |
@@ -293,7 +314,7 @@ walking skeleton. `processReading` và `runScenario` là các method đã có co
 | **Class**          | `IncidentService` |
 | **Mục đích**       | Áp dụng state machine Incident, cập nhật assignee/note/timestamps và health state M6 liên quan theo action. |
 | **Tiền điều kiện** | Incident tồn tại; action hợp lệ; `expectedVersion` khớp; `assigneeUserId` có giá trị khi `action = ASSIGN`; `note` bắt buộc cho `RESOLVE` và `REOPEN` theo state table đề xuất. |
-| **Hậu điều kiện**  | Incident và health state M6 liên quan được lưu cùng transaction; trả Incident mới. Event publication cho manual/transition path vẫn là proposal M6-D09. |
+| **Hậu điều kiện**  | Incident và health state M6 liên quan được lưu cùng transaction; trả Incident mới. Event publication tuân theo transaction order D09; lifecycle D07/schema D10 đã được chốt nhưng chưa có code để xác minh. |
 | **Ngoại lệ**       | `INCIDENT_NOT_FOUND`, `INVALID_STATE_TRANSITION`, `CONCURRENT_UPDATE`. |
 
 | **Signature**      | `processReading(reading: DeviceReading): ProcessingResult` |
@@ -362,13 +383,23 @@ Ghi chú của người phụ trách: ..........................................
 | Event M6 phát | Payload hiện có | Phản ứng do consumer sở hữu | Trạng thái đồng bộ |
 |---|---|---|---|
 | `VehicleFailed` | `vehicleId`, `hubId`, `reason` cùng `eventId`, `occurredAt` kế thừa | M2 chuyển/hủy Reservation liên quan; M3 chuyển xe sang Maintenance | Khớp M2 và hợp đồng `shared/events`; M6 không sửa Reservation hoặc vehicle lifecycle |
-| `ChargerFailed` | `chargingPointId`, `hubId`, `reason` cùng `eventId`, `occurredAt` kế thừa | M4 xử lý ParkingSpace liên quan nếu có; M5 dừng/interrupt phiên rồi phân lại cổng hoặc đưa lại hàng đợi | Khớp M4/M5; mapping ChargingPoint–ParkingSpace thuộc M4. Việc M6 hay M5 sở hữu health/usage state của ChargingPoint vẫn chờ M6-D06 |
+| `ChargerFailed` | `chargingPointId`, `hubId`, `reason` cùng `eventId`, `occurredAt` kế thừa | M4/M5 tự xử lý trong module mình; M3 không xử lý event này | TV3 đã chốt owner split M6-D06 (health M6, usage/session M5); M4/M5 đã xác nhận nhận event ngày 02/10, nhưng reaction runtime chưa được chứng minh |
 | `ResourceStateUpdated` | `hubId`, `resourceType`, `resourceId`, `newState` cùng metadata kế thừa | M1 cập nhật dashboard; M8 đánh dấu projection/snapshot source đã thay đổi rồi lấy snapshot nhất quán qua API chỉ đọc khi chạy mô phỏng | Khớp Phụ lục A và không biến chuỗi event thành snapshot nhất quán |
 
 Các consumer phải tự dedupe theo outbound `DomainEvent.eventId`. Inbound
 `DeviceReading.eventId` chỉ thuộc pipeline M6 và không được dùng thay ID event
 liên module. Spring `ApplicationEventPublisher` là bus trong tiến trình; không
 được mô tả như message broker bền vững, hàng đợi hoặc cơ chế retry tự động.
+
+**Baseline reason code/payload do TV6 chọn ngày 2026-10-21 (D04/D12):** reason
+codes là uppercase `String` để khớp event class hiện có; giữ nguyên payload
+`VehicleFailed(vehicleId, hubId, reason)`,
+`ChargerFailed(chargingPointId, hubId, reason)` và
+`ResourceStateUpdated(hubId, resourceType, resourceId, newState)`, cùng metadata
+`eventId`/`occurredAt`. Vehicle reasons: `MECHANICAL`, `SENSOR_OFFLINE`,
+`MANUAL_REPORT`; charger reasons: `OFFLINE`, `OVERHEAT`, `POWER_FAULT`,
+`MANUAL_REPORT`. TV3 review và consumer payload acknowledgements vẫn cần được
+ghi nhận trước khi coi đây là contract tích hợp đã được mọi module duyệt.
 
 ## 7.3 Quyết định cài đặt quan trọng (§4.3)
 
@@ -380,13 +411,19 @@ dedupe inbound ID, cập nhật latest state trong bộ nhớ rồi phát event 
 `shared.events.EventPublisher`; `DeviceSimulatorService` quản lý run/scenario.
 `NORMAL_TICK` sinh vehicle có battery, parking space và charging point;
 `VEHICLE_FAILURE` phát `VehicleFailedEvent`; `CHARGER_FAILURE` phát
-`ResourceStateUpdatedEvent(FAULTY)` và `ChargerFailedEvent`. Reason `MECHANICAL`
-và `OFFLINE` chỉ là fixture test/demo, chưa phải danh sách M6-D12 đã duyệt.
+`ResourceStateUpdatedEvent(FAULTY)` và `ChargerFailedEvent`. Theo baseline D04/D12
+TV6 chọn ngày 2026-10-21, vehicle reasons là `MECHANICAL`, `SENSOR_OFFLINE`,
+`MANUAL_REPORT`; charger reasons là `OFFLINE`, `OVERHEAT`, `POWER_FAULT`,
+`MANUAL_REPORT`. `FailureReasonCodes` kiểm tra exact uppercase allowlist theo
+resource; các scenario hiện có vẫn dùng `MECHANICAL` và `OFFLINE`. TV5/M5 vẫn
+cần xác nhận điều kiện/reaction ChargerFailed, còn TV3 và consumers cần xác nhận
+contract liên module.
 
-HTTP điều khiển scenario/status yêu cầu role `OPERATOR` theo phạm vi ghi trong
-PLAN (15); rule được thêm vào `shared/config/SecurityConfig` và cần TV3 review
-vì shared thuộc TV3. Scheduler có adapter nhưng mặc định tắt, không đặt cadence
-mặc định; khi bật, interval và seed phải được cấu hình rõ. State và inbound
+HTTP điều khiển scenario/status hiện yêu cầu role `OPERATOR`; catch-all
+`/api/m6/**` cũng đã được thêm vào `shared/config/SecurityConfig` trên nhánh
+tích hợp để khóa các route M6 khác. Thay đổi security này chưa có trên nhánh
+feature. Scheduler có adapter nhưng mặc định tắt; D02 đã chốt và code cấu hình
+interval demo 5.000 ms. State và inbound
 dedupe mất khi process dừng; event publish đồng bộ, không có persistence,
 transaction rollback, outbox, after-commit, retry hoặc durability. Ngày
 02/10/2026, focused Maven tests đạt 21 test và `mvn -B verify` đạt 30 test,
@@ -403,11 +440,11 @@ chuyển xe ID 1 sang `MAINTENANCE`; malformed/unknown/missing/null inputs trả
 | **Chức năng** | **Thiết kế ban đầu** | **Thực tế đã làm** | **Lý do** |
 |---------------|----------------------|--------------------|-----------|
 | Event producer | Spring event bus và ba contract outbound M6 | Focused tests và Compose/PostgreSQL smoke ngày 02/10/2026 xác nhận ba scenario phát `ResourceStateUpdatedEvent`, `VehicleFailedEvent`, `ChargerFailedEvent` theo fixture | Bus synchronous, process-local, không durable |
-| Bộ giả lập IoT | Scenario định trước cho vehicle/battery, parking space và charging point | `NORMAL_TICK`, `VEHICLE_FAILURE`, `CHARGER_FAILURE`; `NORMAL_TICK` phát Vehicle `AVAILABLE`, ParkingSpace `FREE`, ChargingPoint `AVAILABLE`; latest state và dedupe trong bộ nhớ; seed tái tạo business payload, inbound IDs mới và timestamp tạo tại thời điểm gọi | Walking skeleton, chưa persistence; timestamp không được bảo đảm khác nhau; reason strings là fixture, cadence không mặc định |
-| Operator simulator API | POST scenario và GET status, role `OPERATOR` | `/api/m6/simulator/**`; 200 hợp lệ, 400 validation, 401 unauthenticated, 403 Student, 409 run đang chạy; SecurityConfig rule cần TV3 review | Endpoint chỉ vận hành simulator; lỗi parse/path được handler cục bộ chuẩn hóa, không sửa GlobalExceptionHandler |
-| Scheduler | Có adapter, mặc định tắt và không tự chọn cadence | `@ConditionalOnProperty`; chỉ chạy `NORMAL_TICK` khi bật với interval/seed cấu hình | Chưa có quyết định M6-D02 về cadence |
-| Incident / schema | Incident workflow và ba entity handoff cho TV4 | Incident API/JPA chưa triển khai; §6.1 là danh sách entity/constraint/index đề xuất, không có migration | TV4 sở hữu migration; M6-D06/D09/D10 vẫn cần chốt |
-| Consumer dedupe | Dedupe theo cặp consumer key + outbound event ID | Đề xuất tương thích ngược được ghi ở M6-D09; chưa đổi `ProcessedEventStore`/M3; producer proof độc lập | Shared store và M3 handler thuộc TV3; chờ TV3 review trước khi đổi consumer behavior |
+| Bộ giả lập IoT | Scenario định trước cho vehicle/battery, parking space và charging point | `NORMAL_TICK`, `VEHICLE_FAILURE`, `CHARGER_FAILURE`; `NORMAL_TICK` phát Vehicle `AVAILABLE`, ParkingSpace `FREE`, ChargingPoint `AVAILABLE`; latest state và dedupe trong bộ nhớ; reason codes được kiểm tra theo resource; seed tái tạo business payload, inbound IDs mới | Walking skeleton, chưa persistence; timestamp không được bảo đảm khác nhau; D11 schema addendum đang chờ TV4 |
+| Operator simulator API | POST scenario và GET status, role `OPERATOR` | `/api/m6/**` yêu cầu Operator trên nhánh tích hợp; 200 hợp lệ, 400 validation, 401 unauthenticated, 403 Student, 409 run đang chạy | D08 đã được triển khai trên nhánh tích hợp; chưa có ngoại lệ Student chỉ-đọc được yêu cầu; feature sync còn chờ |
+| Scheduler | Một service dùng chung với Manual Adapter và Auto Adapter theo M6-D03 | `@ConditionalOnProperty`; chỉ chạy `NORMAL_TICK` khi bật với interval/seed cấu hình | TV2 chốt interval demo 5.000 ms theo D02; interval đã cấu hình, scheduler mặc định tắt |
+| Incident / schema | TV2 chốt actor và lifecycle ở D01/D07; TV6 chọn model D10, TV4 chấp thuận 2026-10-21 | Incident API/JPA chưa triển khai; TV2 severity/mapping/BR-M6-06 và TV4 migration là gate; latest-state schema addendum cũng chờ TV4 | Không tự đặt severity/duplicate policy hoặc tạo migration thuộc TV4 |
+| Consumer dedupe | Dedupe theo cặp consumer key + outbound event ID | Nhánh tích hợp local đổi `ProcessedEventStore` sang `markIfNew(consumerKey, eventId)`, M3 dùng stable keys, processor chạy `REQUIRES_NEW`, listener bắt/log lỗi; §8 ghi focused proof. Thay đổi chưa có trên nhánh feature M6 | Shared store/M3 handler chỉ ở nhánh tích hợp; memory-only và mất khi restart |
 | Runtime integration | M2/M3/M4/M5/M8 nhận event của M6 | H2 integration test và Compose/PostgreSQL smoke xác nhận M3 nhận `VehicleFailed` và xe ID 1 thành `MAINTENANCE`; M4/M5/M8 runtime reaction chưa được chứng minh | Các module tự triển khai reaction; không có gọi chéo service |
 
 # 8. Test case (§5.3)
@@ -433,10 +470,20 @@ chuyển xe ID 1 sang `MAINTENANCE`; malformed/unknown/missing/null inputs trả
 | TC-M6-15 | Hai scenario không chạy chồng nhau | API simulator | Concurrency / negative | Run thứ nhất giữ bằng latch; request thứ hai trong lúc chạy | Service từ chối; API trả 409 `SIMULATOR_ALREADY_RUNNING`; sau run đầu guard được giải phóng | Pass, focused Maven run 21 test; latch concurrency và MockMvc 409 `SIMULATOR_ALREADY_RUNNING` | P |
 | TC-M6-16 | Scenario/body sai hoặc thiếu seed | API simulator | API validation / negative | Unknown scenario, malformed/empty JSON, `{}`, seed `null` | HTTP 400 `VALIDATION_FAILED`; details chỉ rõ scenario hợp lệ hoặc request/seed | Pass, `mvn -B verify` (MockMvc) và isolated HTTP smoke: unknown/malformed/empty/missing/null đều 400 | P |
 | TC-M6-17 | Lỗi ở giữa batch vẫn giữ counters của reading đã xử lý | FR-M6-04 | Failure injection | Reading đầu thành công, reading tiếp theo ném lỗi | Run `FAILED`, readingCount giữ batch size và processedCount giữ giá trị đã xong | Pass, focused Maven run 21 test; failure giữa batch giữ reading/processed counters | P |
+| TC-M6-18 | Consumer dedupe theo stable key | M6-D09 | Dedupe pair / negative | Cùng outbound `eventId`, cùng consumer key rồi key khác | Cùng key no-op; key khác vẫn được xử lý | Pass, `ProcessedEventStoreTest` trong focused 14-test run và `mvn -B verify` integration | P |
+| TC-M6-19 | Lặp lại `VehicleFailed` không đổi M3 lần hai | M6-D05/D09 | H2 event integration / idempotency | Cùng `VehicleFailedEvent` được publish hai lần | Xe vào `MAINTENANCE`; version không tăng ở lần nhận trùng | Pass, `DeviceEventM3IntegrationTest` trong focused 14-test run và `mvn -B verify` integration | P |
+| TC-M6-20 | M3 consumer lỗi không thoát ra publisher | M6-D09 | Failure injection | Processor ném exception trong handler | Listener bắt/log lỗi và lời gọi handler không ném exception | Pass, `VehicleEventHandlerTest` trong focused 14-test run và `mvn -B verify` integration | P |
+| TC-M6-21 | Threshold `VehicleLowBattery` do M3 sở hữu | M6-D04 | Boundary values | Trả xe ở 19% và đúng 20%; threshold cấu hình 20% | 19% phát `VehicleLowBattery`; 20% chỉ phát `VehicleReturned` | Pass, `VehicleServiceTest` trong focused 14-test run và `mvn -B verify` integration | P |
+| TC-M6-22 | Reason code uppercase hợp lệ theo resource; code sai loại hoặc lowercase bị từ chối | M6-D04/D12 | Equivalence partitions / negative | Vehicle `MECHANICAL`, `SENSOR_OFFLINE`, `MANUAL_REPORT`; Charger `OFFLINE`, `OVERHEAT`, `POWER_FAULT`, `MANUAL_REPORT`; lowercase và code sai loại | Code hợp lệ được xử lý; code sai bị `REJECTED`, không lưu state/publish | Pass, `DeviceEventServiceTest`; `mvn -B verify` ngày 21/10/2026: 41 tests, 0 failures/errors | P |
+| TC-M6-23 | Cập nhật latest snapshot cùng resource không giữ history trong walking skeleton | M6-D11 | State upsert | Hai reading cùng `VEHICLE/1`, state/pin khác nhau | Một snapshot trong memory store với state/pin của reading mới nhất | Pass, `DeviceEventServiceTest`; `mvn -B verify` ngày 21/10/2026: 41 tests, 0 failures/errors. Chưa chứng minh persistence DB | P |
+| TC-M6-24 | Toàn namespace M6 áp dụng D08 OPERATOR matcher | M6-D08 | Security boundary / negative | Route chưa map `/api/m6/unmapped-access-check`; unauthenticated, STUDENT, OPERATOR | 401, 403; Operator đi qua authorization và nhận 404 do route chưa tồn tại | Pass, `SimulatorControllerSecurityTest`; `mvn -B verify` ngày 21/10/2026: 41 tests, 0 failures/errors | P |
 
-Consumer namespaced dedupe test không được đánh dấu đạt: thay đổi
-`ProcessedEventStore`/M3 cần TV3 phê duyệt M6-D09. Đây là phần chờ, không phải
-test bị bỏ qua rồi coi như thành công.
+TC-M6-18–21 là proof consumer/M3 D09 trên working tree
+`codex/integrate-m6-m3-20261019`; shared/M3 changes chưa có trên feature branch.
+TC-M6-22/23 (M6-owned D04/D11 in-memory behavior) đã chạy trên cả hai nhánh
+local. TC-M6-24 kiểm tra matcher trong shared `SecurityConfig`, chỉ có trên
+nhánh tích hợp. Không gộp các proof consumer với inbound `DeviceReading`
+dedupe: đó là hai store và hai boundary khác nhau.
 
 Verification evidence ngày 02/10/2026: focused command
 `mvn -B -Dtest='*Simulator*,*DeviceEvent*,*EventStore*' test` đạt 21 test;
@@ -451,6 +498,15 @@ ID 1 sang `MAINTENANCE`, và `CHARGER_FAILURE` có hai event mong đợi. Unknow
 scenario, JSON malformed/rỗng, thiếu seed và seed null đều trả 400
 `VALIDATION_FAILED`. Frontend trả 200. Log đối chiếu được `runId`, inbound ID
 và outbound ID. Chỉ project/network/volume/image smoke riêng được dừng và xóa.
+
+Verification evidence ngày 20/10/2026 trên working tree local (không commit):
+focused Maven command chạy 14 test, không failure/error/skip; `mvn -B verify`
+đạt 37 test trên `codex/integrate-m6-m3-20261019` và 31 test trên
+`feature/m6-iot-simulator-event-bus`. Trên cả hai branch, frontend `npm ci`,
+`npm run test -- --run --passWithNoTests`, `npm run build` và Compose config đều
+thoát 0 theo CI/demo runbook; frontend hiện chưa có test file. `npm ci` báo 16
+vulnerabilities trong lockfile/dependency tree (7 moderate, 7 high, 2 critical);
+dependency remediation chưa nằm trong phạm vi công việc này.
 
 # 9. Checklist hoàn thành module
 
@@ -511,24 +567,31 @@ Incident/health state do M6 sở hữu và phát fact liên module, không bao g
 Bảng FR tại mục 1 xác định năm yêu cầu chức năng bắt buộc. FR-M6-01 và
 FR-M6-02 là luồng tương tác của Operator. FR-M6-03 đến FR-M6-05 là các luồng
 non-interactive, lần lượt nhận readings về xe/pin, chỗ đỗ, cổng sạc; được kích
-hoạt theo chu kỳ; và cô lập lỗi thiết bị. M6 chỉ lưu state thuộc ownership đã
-được chốt; ownership vehicle/parking/ChargingPoint còn phụ thuộc M6-D05/D06/D10.
+hoạt theo chu kỳ; và cô lập lỗi thiết bị. TV3 đã chốt ranh giới event ở D05 và
+health/usage ownership ở D06. TV6 đã chọn model proposal làm baseline D10; physical
+schema đã được TV4 chấp thuận; Flyway migration vẫn chờ được triển khai.
 
 ## 10.2 §2.4 — Luật nghiệp vụ
 
 > Dẫn bảng BR (mục 2). Với mỗi luật quan trọng, giải thích ngắn vì sao có luật đó — thường gắn với tài nguyên dùng chung hoặc tình huống tranh chấp.
 
-Các luật tại mục 2 là baseline đề xuất, chưa phải business policy được duyệt.
-Con số 5.000 ms trong BR-M6-02 chỉ là proposal trong tài liệu: code không đặt
-interval mặc định, scheduler tắt mặc định và khi bật cần interval/seed tường
-minh. Walking skeleton chỉ kiểm tra cách bật/tắt adapter, không tuyên bố đã đáp
-ứng NFR thời gian thực. BR-M6-04/05 cũng vẫn là state-table proposal.
+Các luật tại mục 2 gồm quyết định đã được TV2/TV3 chốt và các proposal còn mở.
+TV2 đã chấp thuận chu kỳ demo 5.000 ms ở BR-M6-02; interval đã đặt,
+scheduler tắt mặc định và khi bật cần seed tường minh. Walking skeleton
+chỉ kiểm tra adapter, chưa chứng minh đã đáp ứng NFR thời gian thực. BR-M6-04
+(Incident) đã được chốt nhưng chưa implement; BR-M6-05 còn cần TV5/M5 cho
+transition ChargingPoint.
 
-BR-M6-06 đề xuất giới hạn một Incident active cho mỗi resource. BR-M6-07 ghi rõ
+BR-M6-06 vẫn là proposal chưa được TV2 duyệt: giới hạn một Incident active cho
+mỗi resource. BR-M6-07 ghi rõ
 inbound `DeviceReading.eventId`, thứ tự dedupe trước transition và atomic write
-proposal; publish chỉ sau commit. BR-M6-09 giới hạn HTTP status cho API Operator,
-còn rollback/no-publish áp dụng cho cả API và device-reading flow. M6-Dxx vẫn là
-baseline đề xuất, cần người có authority tương ứng phê duyệt.
+proposal; publish chỉ sau commit. D09 đã chốt quy ước lỗi, consumer dedupe và
+transaction/error handling của consumer; atomic write cho state/Incident M6 vẫn
+chưa được implement vì latest-state schema addendum chờ TV4 và Incident policy
+chờ TV2. D01, D02, D07 và D08
+đã được TV2 chốt; D04/D11/D12 có baseline implement phía M6 do TV6 chọn, nhưng
+xác nhận liên module tương ứng vẫn còn mở. BR-M6-06 (Incident active trùng) và
+ChargingPoint transition details cũng cần quyết định/phối hợp riêng.
 
 ## 10.3 §2.5 — Mô hình use case
 
@@ -539,10 +602,10 @@ case dùng đường liền không mũi tên. UC-M6-01 và UC-M6-03 «include» 
 payload/tài nguyên; UC-M6-04 «include» UC-M6-03 vì simulation tick đi qua cùng
 luồng xử lý reading. UC-M6-05 «extend» UC-M6-03 với điều kiện reading xác nhận
 lỗi; vì vậy mũi tên nét đứt hướng từ use case mở rộng về use case gốc. Event
-publication được ghi là postcondition sau commit trong UML note, không vẽ tên
+publication được ghi theo transaction order D09 trong UML note, không vẽ tên
 method hay chữ ký hàm thành use case. M2–M5 chỉ nhận event và tự thực hiện phản
-ứng bên ngoài boundary M6. Các lựa chọn gắn M6-Dxx vẫn là baseline đề xuất chờ
-phê duyệt.
+ứng bên ngoài boundary M6. Các quyết định D01/D02/D07/D08 đã có phê duyệt; các
+quyết định còn mở và phần proposal tương ứng được liệt kê trong decision log.
 
 Ba bảng tại mục 3.2 mô tả đầy đủ tiền điều kiện, hậu điều kiện, trigger, luồng
 chính, luồng thay thế và ngoại lệ. Tình huống tài nguyên đang được đặt hoặc đang
@@ -565,9 +628,12 @@ Incident, ChargingPoint và ProcessedDeviceEvent dưới nhãn proposal; các de
 ở vùng này không phải implementation hiện hữu.
 
 M6 đã có producer code và event integration; Incident service/API/JPA, ChargingPoint
-persistence và migration chưa được cài đặt. `ProcessedDeviceEvent` là handoff
-concept, khác consumer-side `shared.events.ProcessedEventStore`. Không có JPA entity
-hoặc migration M6. Ownership/schema và decision M6-D05/D06/D09/D10 còn chờ review.
+persistence và migration chưa được cài đặt. TV6 đã chọn Incident,
+ChargingPoint health state và `ProcessedDeviceEvent` trong proposal làm baseline
+M6-D10, TV4 đã chấp thuận schema proposal ngày 2026-10-21; `ProcessedDeviceEvent`
+vẫn khác consumer-side `shared.events.ProcessedEventStore`. Không có JPA entity
+hoặc migration M6; TV4 cần triển khai migration. Ranh giới event D05, owner split
+D06 và consumer dedupe D09 đã được TV3 chốt.
 
 ## 10.5 §3.3 — Thiết kế hành vi
 
@@ -580,9 +646,9 @@ ngoài state machine. Incident đi theo whitelist transition, có nhánh
 Resolved → InProgress để reopen và không có transition đi ra khỏi Closed.
 ChargingPoint có đủ hai nhánh Available/InUse → Faulty; transition repair và
 guard/action của từng cạnh khớp với bảng. Các chuyển không nằm trong bảng bị
-từ chối theo baseline. Initial state và ownership/separation của ChargingPoint
-còn bỏ ngỏ theo M6-D06; M6-D07 cũng chưa được duyệt, nên hình/bảng vẫn là đề xuất,
-không phải quyết định nghiệp vụ đã chốt.
+từ chối theo baseline. TV3 đã chốt ownership/separation theo M6-D06, nhưng hình
+hiện tại chưa tách riêng health và usage; transition details cần TV5/M5. TV2 đã
+chốt Incident lifecycle theo D07; state table/diagram vẫn chưa được implement.
 
 Activity diagram tại mục 4.2 tách luồng Operator khỏi readings của
 Sensor/Simulator. Nhánh manual kiểm tra quyền, payload/resource, Incident active
@@ -590,12 +656,17 @@ rồi transition; nhánh device kiểm tra schema/resource, nhận diện duplic
 `eventId` trước transition, sau đó xét Incident active. Duplicate là no-op có
 structured log; payload/resource/transition lỗi không ghi và không publish.
 Write state/Incident và đánh dấu inbound event nằm trong atomic boundary đề xuất;
-chỉ nhánh commit thành công mới publish. Kết quả khi Incident active còn chờ TV2
-theo BR-M6-06; status code quyền Operator còn chờ M6-D08.
+chỉ nhánh commit thành công mới publish. Kết quả khi Incident active còn chờ quyết
+định riêng theo BR-M6-06. Quyền D08 đã được TV2/TV3 chốt; catch-all `/api/m6/**`
+đã được thêm vào SecurityConfig trên nhánh tích hợp.
 
 Sequence diagram tại mục 4.3 là target design cho một `ChargingPoint` failure,
-không phải execution trace của walking skeleton. Atomic `markIfNew`, state/Incident
-write, commit/rollback và after-commit publication đều là proposal M6-D09/D10.
+không phải execution trace của walking skeleton. TV3 đã chốt consumer dedupe theo
+`(consumerKey, eventId)` cùng nguyên tắc transaction/error handling cho consumer;
+M3 implementation có trên nhánh tích hợp local, còn nhánh feature giữ trạng thái
+trước đồng bộ. Atomic producer state/Incident write, commit/rollback và publication
+boundary còn phụ thuộc việc implement persistence theo D10 đã được chấp thuận và
+semantics thực tế của `EventPublisher`.
 Code hiện tại xác thực reading, kiểm tra duplicate, ghi latest state vào process
 memory rồi phát event đồng bộ; listener failure có thể xảy ra sau memory write.
 Inbound `DeviceReading.eventId` khác outbound `DomainEvent.eventId`. Chỉ M3
@@ -627,11 +698,14 @@ mỗi outbound event có UUID riêng. Timestamp ghi thời điểm tạo, không
 
 Sai lệch hiện tại được ghi ở mục 7.4: walking skeleton M6 đã phát event trong
 tiến trình, có focused tests, và đã qua isolated Compose/PostgreSQL smoke.
-State/dedupe chỉ ở memory, publish không atomic/durable, Incident workflow/JPA
-chưa có và consumer dedupe đa module còn chờ TV3. Smoke chứng minh M3 handler
-xử lý `VehicleFailed`; M4/M5/M8 runtime reaction chưa được chứng minh. Ownership
-ChargingPoint, reason-code policy và entity schema tiếp tục chờ approver tương
-ứng.
+State/dedupe chỉ ở memory, publish không durable, Incident workflow/JPA chưa có;
+consumer namespaced dedupe mới có trên nhánh tích hợp local. Smoke chứng minh M3
+handler xử lý `VehicleFailed`; M4/M5/M8 runtime reaction chưa được chứng minh.
+D04/D11/D12 đã có baseline TV6 để implement phía M6, nhưng owner review/consumer
+acknowledgements chưa hoàn tất; ChargingPoint transition details và BR-M6-06
+cũng còn mở. D04 reason-code allowlist đã được thêm vào code tích hợp; D11
+latest-state schema addendum vẫn cần TV4 duyệt, còn D10 Flyway migration chưa
+tồn tại. D08 catch-all security matcher mới có trên nhánh tích hợp.
 
 ## 10.9 §5.3 — Kiểm thử module
 
