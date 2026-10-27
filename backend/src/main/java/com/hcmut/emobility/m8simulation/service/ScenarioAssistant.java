@@ -92,7 +92,8 @@ public class ScenarioAssistant {
             if(target!=null) for(Hub donor:snapshot.hubs()) {
                 if(donor.id()==target || (scenario.disabled() && donor.id()==scenario.hubId())) continue;
                 int spare=(int)snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(),donor.id()) && v.state().equals("AVAILABLE") && v.battery()>=20).count()-1;
-                if(spare>0) { candidates.add(new Recommendation(UUID.randomUUID().toString(),"dispatch",donor.id(),target,Math.min(spare,kpi.failed()),"Keep at least one vehicle at the source hub; verify the impact by simulating again.","PENDING",0)); break; }
+                int amount=Math.min(Math.min(spare,kpi.failed()),parkingRoom(snapshot,target));
+                if(amount>0) { candidates.add(new Recommendation(UUID.randomUUID().toString(),"dispatch",donor.id(),target,amount,"Keep at least one vehicle at the source hub; verify the impact by simulating again.","PENDING",0)); break; }
             }
             source="LOCAL_RULES";
         }
@@ -109,13 +110,14 @@ public class ScenarioAssistant {
             long occupied=snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(),r.toHubId())).count();
             var donor=snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(),r.fromHubId()) && v.state().equals("AVAILABLE") && v.battery()>=20).toList();
             if(target==null || r.amount()<=0 || r.amount()>donor.size()-1 || r.fromHubId()==r.toHubId()
-                    || occupied+r.amount()>target.capacity() || (scenario.disabled() && (r.toHubId()==scenario.hubId() || r.fromHubId()==scenario.hubId()))) {
+                    || occupied+r.amount()>target.capacity() || r.amount()>parkingRoom(snapshot,r.toHubId())
+                    || (scenario.disabled() && (r.toHubId()==scenario.hubId() || r.fromHubId()==scenario.hubId()))) {
                 warnings.add("An infeasible recommendation was rejected."); continue;
             }
             var movedIds=new HashSet<Long>(); donor.stream().limit(r.amount()).forEach(v -> movedIds.add(v.id()));
             var vehicles=snapshot.vehicles().stream().map(v -> movedIds.contains(v.id())?new Vehicle(v.id(),r.toHubId(),v.battery(),v.state()):v).toList();
-            Kpi projected=engine.simulate(new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource()),scenario).kpi();
-            if(projected.failed()<kpi.failed()) accepted.add(new Recommendation(r.id(),r.action(),r.fromHubId(),r.toHubId(),r.amount(),r.reason(),r.status(),projected.failurePercent()));
+            Kpi projected=engine.simulate(new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),snapshot.capacities()),scenario).kpi();
+            if(projected.failed()<kpi.failed()) accepted.add(new Recommendation(r.id(),r.action(),r.fromHubId(),r.toHubId(),r.amount(),r.reason()+" Parking is limited by captured M1 observations; M4 reservations and M7 execution still require live revalidation.",r.status(),projected.failurePercent()));
         }
         if(kpi.failed()>0 && !scenario.reroute() && accepted.stream().noneMatch(r->r.action().equals("reroute"))) {
             Scenario alternative=new Scenario(scenario.name(),scenario.hubId(),scenario.disabled(),scenario.injectedRequests(),scenario.durationMins(),scenario.arrivalWindowMins(),scenario.tripMins(),true,scenario.seed());
@@ -127,6 +129,16 @@ public class ScenarioAssistant {
             }
         }
         if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Try reopening the hub or enabling rerouting.");
+        if(kpi.failed()>0) warnings.add("Dispatch requires captured parking observations. M1 observations are provisional, not authoritative M4 reservations; live execution is unavailable.");
         return new Proposals(List.copyOf(accepted),source,List.copyOf(warnings));
+    }
+    /** Fail closed for historical snapshots without observations; never equate rental count with occupancy. */
+    private int parkingRoom(Snapshot snapshot,long hubId) {
+        Hub hub=snapshot.hubs().stream().filter(h->h.id()==hubId).findFirst().orElse(null);
+        CapacityState observed=snapshot.capacities().stream().filter(c->c.hubId()==hubId).findFirst().orElse(null);
+        if(hub==null || observed==null || observed.totalSlots()<0 || observed.usedSlots()<0) return 0;
+        long assigned=snapshot.vehicles().stream().filter(v->Objects.equals(v.hubId(),hubId)).count();
+        long room=Math.min((long)hub.capacity()-assigned,Math.min(observed.freeSlots(),(long)observed.totalSlots()-observed.usedSlots()));
+        return (int)Math.max(0,room);
     }
 }

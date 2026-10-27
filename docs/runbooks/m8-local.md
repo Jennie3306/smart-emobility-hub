@@ -110,3 +110,32 @@ For a demo, open History & comparison and View & edit on
 Integration demo - repeat recent bookings. Compare it with another saved run, or use
 Try this plan to preview rerouting. Saving a new run can call the configured LLM.
 M7 Apply is unavailable, M4 parking validation is pending, and M8 history is file-backed.
+
+## Exploratory QA fixes — 27 October 2026
+
+- Trying a rerouting plan restores the saved run's demand mode and snapshot together.
+  The displayed effective request count is also the submitted count. A manual 100-request
+  plan stays manual even after the operator temporarily selects a zero-booking window.
+- Numeric bounds, empty numbers, scenario names and arrival-window/horizon relationships
+  are validated before running, with field feedback and a reason when Run is disabled.
+- Draft changes mark the previous KPIs/recommendations as results from the previous run.
+  Editing or changing context clears obsolete success/error notices.
+- KPI comparison scrolls within its own region; long scenario headings can wrap.
+- Dispatch projections respect the smaller of assigned-vehicle headroom and captured M1
+  free parking (also bounded by total minus used). Historical snapshots without occupancy
+  observations cannot produce new dispatch proposals. Rerouting remains available.
+  This is a conservative simulation guard, not authoritative M4 parking approval.
+  Previously saved recommendations retain their historical results and limitations.
+
+Regression checks: frontend scenario-draft tests; backend RecommendationTest covers a
+40-space destination with zero/one observed spaces and no assigned rentals, plus missing
+observations. M7 execution and M8 database persistence remain pending.
+
+After fixes: 89 backend tests passed; backend packaging succeeded after releasing the
+running Windows JAR lock. Five frontend regression tests and the production build passed.
+Browser checks confirmed field errors and disabled Run for invalid horizon/negative requests,
+restoration from zero-booking mode to manual 100 requests via Try this plan, and a saved
+reroute run with 100 requests / 12 served / 88 failed on the same snapshot. Editing to 500
+showed Draft changed and an explicit previous-results notice. At 320px, the comparison
+region scrolls internally (243px client / 270px content) with no document overflow.
+The two QA-fix runs remain in history; no booking, Apply or live-resource mutation occurred.
