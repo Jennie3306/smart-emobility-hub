@@ -1,0 +1,319 @@
+M6 policy UI verification — 2026-10-29
+Production frontend served via Vite preview on 127.0.0.1:18098.
+Only GET simulator/status was stubbed to IDLE to isolate Incident fixture UI.
+No backend runtime or Incident API/DB is claimed by these browser receipts.
+
+SOURCE: output/playwright/m6-policy-20261029/01-critical-filter.txt
+SHA256: f7eeba7229ed9041dc909ef0cba3e40c3609f291d36939406ddf0a239267648a
+### Page
+- Page URL: http://127.0.0.1:18098/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]: Smart E-Mobility Hub
+    - navigation [ref=e6]:
+      - link "Dashboard (M1)" [ref=e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - paragraph [ref=e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=e15]
+          - paragraph [ref=e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=e18]:
+        - button "Simulator" [ref=e19] [cursor=pointer]
+        - button "Incident · Fixture" [active] [pressed] [ref=e20] [cursor=pointer]
+      - region [ref=e50]:
+        - generic [ref=e51]:
+          - heading "Incident · Dữ liệu fixture" [level=2] [ref=e52]
+          - paragraph [ref=e53]: Chưa kết nối nghiệp vụ thật. Thao tác chỉ thay dữ liệu mẫu trong trang, không lưu database hay phát event. Tải lại trang sẽ đặt lại fixture.
+          - paragraph [ref=e54]: "Severity theo quyết định TV2: LOW, MEDIUM, HIGH, CRITICAL. Fixture chưa thực thi chính sách Incident trùng hoặc thay đổi health."
+        - generic [ref=e55]:
+          - button "Mở bản mẫu báo cáo" [ref=e56] [cursor=pointer]
+          - button "Đặt lại fixture" [ref=e57] [cursor=pointer]
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "Danh sách mẫu" [level=2] [ref=e60]
+            - generic [ref=e61]: 1 / 5 bản mẫu
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - text: Trạng thái
+              - combobox "Trạng thái" [ref=e64]:
+                - option "Tất cả trạng thái" [selected]
+                - option "Reported"
+                - option "Assigned"
+                - option "InProgress"
+                - option "Resolved"
+                - option "Closed"
+            - generic [ref=e65]:
+              - text: Tài nguyên
+              - combobox "Tài nguyên" [ref=e66]:
+                - option "Tất cả tài nguyên" [selected]
+                - option "Xe"
+                - option "Cổng sạc"
+            - generic [ref=e67]:
+              - text: Severity
+              - combobox "Severity" [ref=e68]:
+                - option "Tất cả severity"
+                - option "LOW"
+                - option "MEDIUM"
+                - option "HIGH"
+                - option "CRITICAL" [selected]
+            - generic [ref=e69]:
+              - text: Tìm trong fixture
+              - textbox "Tìm trong fixture" [ref=e70]:
+                - /placeholder: Mã fixture, tài nguyên hoặc Hub
+          - table [ref=e72]:
+            - caption [ref=e73]: Incident fixture, chưa kết nối backend
+            - rowgroup [ref=e74]:
+              - row [ref=e75]:
+                - columnheader "Incident" [ref=e76]
+                - columnheader "Tài nguyên / Hub" [ref=e77]
+                - columnheader "Severity" [ref=e78]
+                - columnheader "Người xử lý mẫu" [ref=e79]
+                - columnheader "Trạng thái" [ref=e80]
+            - rowgroup [ref=e81]:
+              - row [ref=e109]:
+                - cell [ref=e110]:
+                  - button "Xem FIX-004" [ref=e111] [cursor=pointer]: FIX-004
+                - cell "Cổng sạc / DEMO-4 Hub KTX (mẫu)" [ref=e112]:
+                  - text: Cổng sạc / DEMO-4
+                  - generic [ref=e113]: Hub KTX (mẫu)
+                - cell "CRITICAL" [ref=e114]
+                - cell "Operator mẫu A" [ref=e115]
+                - cell "Resolved" [ref=e116]
+        - region [ref=e127]:
+          - generic [ref=e128]:
+            - heading "Chi tiết mẫu · FIX-001" [level=2] [ref=e129]
+            - generic [ref=e130]: Reported
+          - paragraph [ref=e131]: Dữ liệu mẫu để review giao diện; không phải sự cố đã lưu.
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - term [ref=e134]: Resource
+              - definition [ref=e135]: VEHICLE / DEMO-1
+            - generic [ref=e136]:
+              - term [ref=e137]: Reason code mẫu
+              - definition [ref=e138]: MANUAL_REPORT
+            - generic [ref=e139]:
+              - term [ref=e140]: Severity
+              - definition [ref=e141]: LOW
+            - generic [ref=e142]:
+              - term [ref=e143]: Version / timestamps
+              - definition [ref=e144]: Chờ API và migration
+          - generic [ref=e145]:
+            - text: Người xử lý mẫu
+            - combobox "Người xử lý mẫu" [ref=e146]:
+              - option "Chọn người mẫu" [selected]
+              - option "Operator mẫu A"
+              - option "Operator mẫu B"
+          - button "Gán người mẫu" [disabled] [ref=e148]
+          - status
+          - heading "Lịch sử thao tác fixture" [level=3] [ref=e149]
+          - list [ref=e150]:
+            - listitem [ref=e151]: Fixture bắt đầu tại Reported; không có lịch sử backend.
+```
+
+
+SOURCE: output/playwright/m6-policy-20261029/02-required-empty.txt
+SHA256: 19786cba8b7b84ba5929ac5e954369e9d1505162d6047471c83d5f874dffec50
+### Result
+{
+  "required": true,
+  "value": "",
+  "missing": true
+}
+### Ran Playwright code
+```js
+await page.getByLabel('Severity báo cáo').evaluate('el => ({required: el.required, value: el.value, missing: el.validity.valueMissing})');
+```
+
+
+SOURCE: output/playwright/m6-policy-20261029/03-preview-critical.txt
+SHA256: 673c9f4f4be143b48e5ce351e0cbaf594810d45ad65893e18c7cbddc17c40a2f
+### Page
+- Page URL: http://127.0.0.1:18098/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]: Smart E-Mobility Hub
+    - navigation [ref=e6]:
+      - link "Dashboard (M1)" [ref=e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=e10]:
+    - generic [ref=e11]:
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - paragraph [ref=e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=e15]
+          - paragraph [ref=e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=e18]:
+        - button "Simulator" [ref=e19] [cursor=pointer]
+        - button "Incident · Fixture" [pressed] [ref=e20] [cursor=pointer]
+      - region [ref=e50]:
+        - generic [ref=e51]:
+          - heading "Incident · Dữ liệu fixture" [level=2] [ref=e52]
+          - paragraph [ref=e53]: Chưa kết nối nghiệp vụ thật. Thao tác chỉ thay dữ liệu mẫu trong trang, không lưu database hay phát event. Tải lại trang sẽ đặt lại fixture.
+          - paragraph [ref=e54]: "Severity theo quyết định TV2: LOW, MEDIUM, HIGH, CRITICAL. Fixture chưa thực thi chính sách Incident trùng hoặc thay đổi health."
+        - generic [ref=e55]:
+          - button "Ẩn bản mẫu báo cáo" [expanded] [ref=e152] [cursor=pointer]
+          - button "Đặt lại fixture" [ref=e57] [cursor=pointer]
+        - generic [ref=e153]:
+          - heading "Bản mẫu báo cáo" [level=2] [ref=e154]
+          - paragraph [ref=e155]: Chỉ xem bản nháp, chưa gửi hoặc thêm Incident. ID bên dưới là dữ liệu nhập mẫu.
+          - generic [ref=e156]:
+            - generic [ref=e157]: Hub mẫu
+            - combobox "Hub mẫu" [ref=e158]:
+              - option "Hub Metro (mẫu)" [selected]
+              - option "Hub KTX (mẫu)"
+            - generic [ref=e159]: Loại tài nguyên
+            - combobox "Loại tài nguyên" [ref=e160]:
+              - option "Xe" [selected]
+              - option "Cổng sạc"
+            - generic [ref=e161]: Mã tài nguyên mẫu
+            - textbox "Mã tài nguyên mẫu" [ref=e162]: DEMO-DRAFT-29
+            - generic [ref=e163]: Reason code
+            - textbox "Reason code" [ref=e164]: MANUAL_REPORT
+            - generic [ref=e165]: Mô tả
+            - textbox "Mô tả" [ref=e166]: Bản nháp kiểm tra severity theo TV2
+            - generic [ref=e167]: Severity báo cáo
+            - combobox "Severity báo cáo" [ref=e168]:
+              - option "Chọn severity" [disabled]
+              - option "LOW"
+              - option "MEDIUM"
+              - option "HIGH"
+              - option "CRITICAL" [selected]
+            - paragraph [ref=e169]: Bắt buộc chọn; không có mức mặc định. Severity không đổi luồng xử lý hoặc tự gán người.
+            - paragraph [ref=e170]: Quy tắc Incident trùng đã chốt; bản nháp này chưa kiểm tra trùng.
+            - button "Xem bản nháp" [active] [ref=e171] [cursor=pointer]
+          - status [ref=e172]:
+            - heading "Bản nháp chưa gửi" [level=3] [ref=e173]
+            - paragraph [ref=e174]: VEHICLE / DEMO-DRAFT-29 · Hub Metro (mẫu)
+            - paragraph [ref=e175]: MANUAL_REPORT
+            - paragraph [ref=e176]: Bản nháp kiểm tra severity theo TV2
+            - paragraph [ref=e177]: "Severity: CRITICAL"
+            - paragraph [ref=e178]: Chưa xác minh tài nguyên hoặc Incident trùng; không có request nghiệp vụ.
+        - generic [ref=e58]:
+          - generic [ref=e59]:
+            - heading "Danh sách mẫu" [level=2] [ref=e60]
+            - generic [ref=e61]: 1 / 5 bản mẫu
+          - generic [ref=e62]:
+            - generic [ref=e63]:
+              - text: Trạng thái
+              - combobox "Trạng thái" [ref=e64]:
+                - option "Tất cả trạng thái" [selected]
+                - option "Reported"
+                - option "Assigned"
+                - option "InProgress"
+                - option "Resolved"
+                - option "Closed"
+            - generic [ref=e65]:
+              - text: Tài nguyên
+              - combobox "Tài nguyên" [ref=e66]:
+                - option "Tất cả tài nguyên" [selected]
+                - option "Xe"
+                - option "Cổng sạc"
+            - generic [ref=e67]:
+              - text: Severity
+              - combobox "Severity" [ref=e68]:
+                - option "Tất cả severity"
+                - option "LOW"
+                - option "MEDIUM"
+                - option "HIGH"
+                - option "CRITICAL" [selected]
+            - generic [ref=e69]:
+              - text: Tìm trong fixture
+              - textbox "Tìm trong fixture" [ref=e70]:
+                - /placeholder: Mã fixture, tài nguyên hoặc Hub
+          - table [ref=e72]:
+            - caption [ref=e73]: Incident fixture, chưa kết nối backend
+            - rowgroup [ref=e74]:
+              - row [ref=e75]:
+                - columnheader "Incident" [ref=e76]
+                - columnheader "Tài nguyên / Hub" [ref=e77]
+                - columnheader "Severity" [ref=e78]
+                - columnheader "Người xử lý mẫu" [ref=e79]
+                - columnheader "Trạng thái" [ref=e80]
+            - rowgroup [ref=e81]:
+              - row [ref=e109]:
+                - cell [ref=e110]:
+                  - button "Xem FIX-004" [ref=e111] [cursor=pointer]: FIX-004
+                - cell "Cổng sạc / DEMO-4 Hub KTX (mẫu)" [ref=e112]:
+                  - text: Cổng sạc / DEMO-4
+                  - generic [ref=e113]: Hub KTX (mẫu)
+                - cell "CRITICAL" [ref=e114]
+                - cell "Operator mẫu A" [ref=e115]
+                - cell "Resolved" [ref=e116]
+        - region [ref=e127]:
+          - generic [ref=e128]:
+            - heading "Chi tiết mẫu · FIX-001" [level=2] [ref=e129]
+            - generic [ref=e130]: Reported
+          - paragraph [ref=e131]: Dữ liệu mẫu để review giao diện; không phải sự cố đã lưu.
+          - generic [ref=e132]:
+            - generic [ref=e133]:
+              - term [ref=e134]: Resource
+              - definition [ref=e135]: VEHICLE / DEMO-1
+            - generic [ref=e136]:
+              - term [ref=e137]: Reason code mẫu
+              - definition [ref=e138]: MANUAL_REPORT
+            - generic [ref=e139]:
+              - term [ref=e140]: Severity
+              - definition [ref=e141]: LOW
+            - generic [ref=e142]:
+              - term [ref=e143]: Version / timestamps
+              - definition [ref=e144]: Chờ API và migration
+          - generic [ref=e145]:
+            - text: Người xử lý mẫu
+            - combobox "Người xử lý mẫu" [ref=e146]:
+              - option "Chọn người mẫu" [selected]
+              - option "Operator mẫu A"
+              - option "Operator mẫu B"
+          - button "Gán người mẫu" [disabled] [ref=e148]
+          - status
+          - heading "Lịch sử thao tác fixture" [level=3] [ref=e149]
+          - list [ref=e150]:
+            - listitem [ref=e151]: Fixture bắt đầu tại Reported; không có lịch sử backend.
+```
+
+
+SOURCE: output/playwright/m6-policy-20261029/04-mobile-width.txt
+SHA256: 8fb891db2d85262fd911ba08d87eaf7572ce6da478bf2aa4f2276d8435ed51b7
+### Result
+{"width":390,"scrollWidth":390}
+### Ran Playwright code
+```js
+await (async (page) => ({ width: page.viewportSize().width, scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth) }))(page);
+```
+
+
+SOURCE: output/playwright/m6-policy-20261029/network.txt
+SHA256: 54ec8fbe13bbc63cb18661e117ea3ac531098396f737da11442d3990bbe04c29
+### Result
+6. [GET] http://127.0.0.1:18098/api/m6/simulator/status => [200] OK
+
+Note: 5 static requests not shown, run with --static option to see them.
+
+
+SOURCE: output/playwright/m6-policy-20261029/routes.txt
+SHA256: 0796ed55da78038ad2aefc914a77fc1203b46f8c740d0675fb94b8eeac664dcd
+1. **/api/m6/simulator/status (status=200, body={"schedulerEnabled":false,"intervalMs":null,"state..., contentType=application/json)
+
+
+SOURCE: output/playwright/m6-policy-20261029/console.txt
+SHA256: d0e5634bb0c1271965327ad2ac18107af18fa7da6d2c9ce13e03eeda6cb603db
+### Result
+Total messages: 0 (Errors: 0, Warnings: 0)

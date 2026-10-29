@@ -1,0 +1,1265 @@
+M6 historical verification — curated on 2026-10-29
+Execution dates remain 2026-10-27/28; this file is not a new test run.
+Browser 400/409 injection is distinct from the real API 400 and live scenario POSTs.
+Original files remain local under output/. Hashes identify the full originals.
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/01-unauthenticated.txt
+SHA256 OF FULL ORIGINAL: c5d9cff142ce142f228049b1a46f352899a4953bb640c2fdef659b0e013fe126
+CONTENT (selected lines):
+- Page URL: http://127.0.0.1:18088/login
+- Page Title: Smart E-Mobility Hub
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/02-student-forbidden.txt
+SHA256 OF FULL ORIGINAL: 98dde7ffeb4b17ea37873c4888675ff529fc945215898c939f108a9daef5a555
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+- Console: 1 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [ref=f4e3]:
+  - banner [ref=f4e4]:
+    - generic [ref=f4e5]: Smart E-Mobility Hub
+    - navigation [ref=f4e6]:
+      - link "Dashboard (M1)" [ref=f4e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f4e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f4e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f4e10]:
+    - generic [ref=f4e11]:
+      - generic [ref=f4e12]:
+        - generic [ref=f4e13]:
+          - paragraph [ref=f4e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f4e15]
+          - paragraph [ref=f4e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f4e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f4e18]:
+        - button "Simulator" [pressed] [ref=f4e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f4e20] [cursor=pointer]
+      - generic [ref=f4e22]:
+        - region [ref=f4e23]:
+          - generic [ref=f4e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f4e25]
+            - button "Làm mới trạng thái" [ref=f4e26] [cursor=pointer]
+          - paragraph [ref=f4e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - alert [ref=f4e41]:
+            - strong [ref=f4e42]: HTTP 403 · Chỉ tài khoản Operator được sử dụng simulator.
+            - paragraph [ref=f4e43]: ACCESS_DENIED
+            - link "Đăng nhập tài khoản Operator" [ref=f4e44] [cursor=pointer]:
+              - /url: /login
+          - paragraph [ref=f4e45]: Chưa xác nhận được trạng thái mới; dữ liệu còn hiển thị có thể đã cũ.
+          - generic [ref=f4e30]:
+            - generic [ref=f4e31]: Scenario
+            - combobox "Scenario" [ref=f4e32]:
+              - option "Cập nhật thiết bị thông thường" [selected]
+              - option "Lỗi thiết bị xe"
+              - option "Lỗi cổng sạc"
+            - generic [ref=f4e33]: Seed
+            - textbox "Seed" [ref=f4e34]: "42"
+            - paragraph [ref=f4e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [disabled] [ref=f4e36]
+        - generic [ref=f4e37]:
+          - heading "Kết quả run" [level=2] [ref=f4e38]
+          - paragraph [ref=f4e39]: Kết quả chưa tải được.
+          - paragraph [ref=f4e40]: Chọn scenario và seed để bắt đầu. Kết quả sẽ hiển thị counts và ID sự kiện backend trả về.
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/03-normal-long-seed.txt
+SHA256 OF FULL ORIGINAL: b6c538fffb24f2f3b80dbd595ad566c5bb554de1b617b36e00a895a574c2c511
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [pressed] [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f6e20] [cursor=pointer]
+      - generic [ref=f6e22]:
+        - region [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f6e25]
+            - button "Làm mới trạng thái" [ref=f6e26] [cursor=pointer]
+          - paragraph [ref=f6e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - generic [ref=f6e28]:
+            - generic [ref=f6e41]: Hoàn tất
+            - generic [ref=f6e42]:
+              - generic [ref=f6e43]:
+                - term [ref=f6e44]: Scheduler
+                - definition [ref=f6e45]: Đang tắt
+              - generic [ref=f6e46]:
+                - term [ref=f6e47]: Chu kỳ hiện tại
+                - definition [ref=f6e48]: —
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: Scenario
+            - combobox "Scenario" [ref=f6e32]:
+              - option "Cập nhật thiết bị thông thường" [selected]
+              - option "Lỗi thiết bị xe"
+              - option "Lỗi cổng sạc"
+            - generic [ref=f6e33]: Seed
+            - textbox "Seed" [ref=f6e34]: "9223372036854775807"
+            - paragraph [ref=f6e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [ref=f6e36] [cursor=pointer]
+        - region [ref=f6e49]:
+          - generic [ref=f6e50]:
+            - heading "Kết quả run gần nhất" [level=2] [ref=f6e51]
+            - generic [ref=f6e52]: Hoàn tất
+          - paragraph [ref=f6e53]: 9df7cbe5-bc69-49ec-be6b-41d8ca8c4100
+          - generic [ref=f6e54]:
+            - generic [ref=f6e55]:
+              - term [ref=f6e56]: Scenario
+              - definition [ref=f6e57]: NORMAL_TICK
+            - generic [ref=f6e58]:
+              - term [ref=f6e59]: Seed
+              - definition [ref=f6e60]: "9223372036854775807"
+            - generic [ref=f6e61]:
+              - term [ref=f6e62]: Bắt đầu
+              - definition [ref=f6e63]: 08:35:16 28/10/2026
+            - generic [ref=f6e64]:
+              - term [ref=f6e65]: Kết thúc
+              - definition [ref=f6e66]: 08:35:16 28/10/2026
+          - generic [ref=f6e67]:
+            - generic [ref=f6e68]:
+              - term [ref=f6e69]: Readings
+              - definition [ref=f6e70]: "3"
+            - generic [ref=f6e71]:
+              - term [ref=f6e72]: Đã xử lý
+              - definition [ref=f6e73]: "3"
+            - generic [ref=f6e74]:
+              - term [ref=f6e75]: Trùng inbound ID
+              - definition [ref=f6e76]: "0"
+            - generic [ref=f6e77]:
+              - term [ref=f6e78]: Bị từ chối
+              - definition [ref=f6e79]: "0"
+          - heading "Sự kiện do run này phát" [level=3] [ref=f6e80]
+          - list [ref=f6e81]:
+            - listitem [ref=f6e82]:
+              - strong [ref=f6e83]: ResourceStateUpdatedEvent
+              - generic [ref=f6e84]: VEHICLE / 1
+              - code [ref=f6e85]: 6a8d4016-8630-41f5-a181-7b9bef2aa903
+            - listitem [ref=f6e86]:
+              - strong [ref=f6e87]: ResourceStateUpdatedEvent
+              - generic [ref=f6e88]: PARKING_SPACE / 1
+              - code [ref=f6e89]: f355fde4-a58f-4587-92db-f3676573def4
+            - listitem [ref=f6e90]:
+              - strong [ref=f6e91]: ResourceStateUpdatedEvent
+              - generic [ref=f6e92]: CHARGING_POINT / 1
+              - code [ref=f6e93]: 4742727a-e4ab-45cf-b91c-7044fcc56b99
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/04-vehicle-failure.txt
+SHA256 OF FULL ORIGINAL: 2e0d57f0d36f6fa75670aed57a4c6bc0836bf948a823328a04397bc8c581bea4
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [pressed] [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f6e20] [cursor=pointer]
+      - generic [ref=f6e22]:
+        - region [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f6e25]
+            - button "Làm mới trạng thái" [ref=f6e26] [cursor=pointer]
+          - paragraph [ref=f6e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - generic [ref=f6e28]:
+            - generic [ref=f6e41]: Hoàn tất
+            - generic [ref=f6e42]:
+              - generic [ref=f6e43]:
+                - term [ref=f6e44]: Scheduler
+                - definition [ref=f6e45]: Đang tắt
+              - generic [ref=f6e46]:
+                - term [ref=f6e47]: Chu kỳ hiện tại
+                - definition [ref=f6e48]: —
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: Scenario
+            - combobox "Scenario" [ref=f6e32]:
+              - option "Cập nhật thiết bị thông thường"
+              - option "Lỗi thiết bị xe" [selected]
+              - option "Lỗi cổng sạc"
+            - generic [ref=f6e33]: Seed
+            - textbox "Seed" [ref=f6e34]: "42"
+            - paragraph [ref=f6e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [ref=f6e36] [cursor=pointer]
+        - region [ref=f6e49]:
+          - generic [ref=f6e50]:
+            - heading "Kết quả run gần nhất" [level=2] [ref=f6e51]
+            - generic [ref=f6e52]: Hoàn tất
+          - paragraph [ref=f6e53]: 3f9d1ac4-8c85-4c23-82aa-3a9808a57f4e
+          - generic [ref=f6e54]:
+            - generic [ref=f6e55]:
+              - term [ref=f6e56]: Scenario
+              - definition [ref=f6e57]: VEHICLE_FAILURE
+            - generic [ref=f6e58]:
+              - term [ref=f6e59]: Seed
+              - definition [ref=f6e60]: "42"
+            - generic [ref=f6e61]:
+              - term [ref=f6e62]: Bắt đầu
+              - definition [ref=f6e63]: 08:35:26 28/10/2026
+            - generic [ref=f6e64]:
+              - term [ref=f6e65]: Kết thúc
+              - definition [ref=f6e66]: 08:35:26 28/10/2026
+          - generic [ref=f6e67]:
+            - generic [ref=f6e68]:
+              - term [ref=f6e69]: Readings
+              - definition [ref=f6e70]: "1"
+            - generic [ref=f6e71]:
+              - term [ref=f6e72]: Đã xử lý
+              - definition [ref=f6e73]: "1"
+            - generic [ref=f6e74]:
+              - term [ref=f6e75]: Trùng inbound ID
+              - definition [ref=f6e76]: "0"
+            - generic [ref=f6e77]:
+              - term [ref=f6e78]: Bị từ chối
+              - definition [ref=f6e79]: "0"
+          - heading "Sự kiện do run này phát" [level=3] [ref=f6e80]
+          - list [ref=f6e81]:
+            - listitem [ref=f6e94]:
+              - strong [ref=f6e95]: VehicleFailedEvent
+              - generic [ref=f6e96]: VEHICLE / 1
+              - code [ref=f6e97]: 3efa9bca-16d8-49f3-8af6-27c594720c50
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/05-charger-failure.txt
+SHA256 OF FULL ORIGINAL: 39d610fbdc161c0dda9024c660a271b513bc6da1ea7039bfcb523662d2c02bb2
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [pressed] [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f6e20] [cursor=pointer]
+      - generic [ref=f6e22]:
+        - region [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f6e25]
+            - button "Làm mới trạng thái" [ref=f6e26] [cursor=pointer]
+          - paragraph [ref=f6e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - generic [ref=f6e28]:
+            - generic [ref=f6e41]: Hoàn tất
+            - generic [ref=f6e42]:
+              - generic [ref=f6e43]:
+                - term [ref=f6e44]: Scheduler
+                - definition [ref=f6e45]: Đang tắt
+              - generic [ref=f6e46]:
+                - term [ref=f6e47]: Chu kỳ hiện tại
+                - definition [ref=f6e48]: —
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: Scenario
+            - combobox "Scenario" [ref=f6e32]:
+              - option "Cập nhật thiết bị thông thường"
+              - option "Lỗi thiết bị xe"
+              - option "Lỗi cổng sạc" [selected]
+            - generic [ref=f6e33]: Seed
+            - textbox "Seed" [ref=f6e34]: "42"
+            - paragraph [ref=f6e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [ref=f6e36] [cursor=pointer]
+        - region [ref=f6e49]:
+          - generic [ref=f6e50]:
+            - heading "Kết quả run gần nhất" [level=2] [ref=f6e51]
+            - generic [ref=f6e52]: Hoàn tất
+          - paragraph [ref=f6e53]: e7c4459b-2a10-4059-a8a6-33250a400db6
+          - generic [ref=f6e54]:
+            - generic [ref=f6e55]:
+              - term [ref=f6e56]: Scenario
+              - definition [ref=f6e57]: CHARGER_FAILURE
+            - generic [ref=f6e58]:
+              - term [ref=f6e59]: Seed
+              - definition [ref=f6e60]: "42"
+            - generic [ref=f6e61]:
+              - term [ref=f6e62]: Bắt đầu
+              - definition [ref=f6e63]: 08:35:35 28/10/2026
+            - generic [ref=f6e64]:
+              - term [ref=f6e65]: Kết thúc
+              - definition [ref=f6e66]: 08:35:35 28/10/2026
+          - generic [ref=f6e67]:
+            - generic [ref=f6e68]:
+              - term [ref=f6e69]: Readings
+              - definition [ref=f6e70]: "1"
+            - generic [ref=f6e71]:
+              - term [ref=f6e72]: Đã xử lý
+              - definition [ref=f6e73]: "1"
+            - generic [ref=f6e74]:
+              - term [ref=f6e75]: Trùng inbound ID
+              - definition [ref=f6e76]: "0"
+            - generic [ref=f6e77]:
+              - term [ref=f6e78]: Bị từ chối
+              - definition [ref=f6e79]: "0"
+          - heading "Sự kiện do run này phát" [level=3] [ref=f6e80]
+          - list [ref=f6e81]:
+            - listitem [ref=f6e98]:
+              - strong [ref=f6e99]: ResourceStateUpdatedEvent
+              - generic [ref=f6e100]: CHARGING_POINT / 1
+              - code [ref=f6e101]: 069aeb46-1f92-4636-9488-355af820d59b
+            - listitem [ref=f6e102]:
+              - strong [ref=f6e103]: ChargerFailedEvent
+              - generic [ref=f6e104]: CHARGING_POINT / 1
+              - code [ref=f6e105]: 3b0071c5-3cdb-4155-a255-a5e09d3b375a
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/06-real-api-400.txt
+SHA256 OF FULL ORIGINAL: 8d1c51d447e173cef74199a2b6365667308a6e99937a3112678e9bbc3a7ba525
+CONTENT:
+### Result
+{"status":400,"body":{"code":"VALIDATION_FAILED","message":"Du lieu dau vao khong hop le","details":{"seed":"must not be null"},"timestamp":"2026-10-28T08:36:21.529367886+07:00"},"latestRunUnchanged":true}
+### Ran Playwright code
+```js
+await (async (page) => { const before = await (await page.request.get("http://127.0.0.1:18088/api/m6/simulator/status")).json(); const response = await page.request.post("http://127.0.0.1:18088/api/m6/simulator/scenarios/NORMAL_TICK", { data: { seed: null } }); const after = await (await page.request.get("http://127.0.0.1:18088/api/m6/simulator/status")).json(); return { status: response.status(), body: await response.json(), latestRunUnchanged: before.latestRun.runId === after.latestRun.runId }; })(page);
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/07-fixture-filter.txt
+SHA256 OF FULL ORIGINAL: b749adee5d5d8d2ae9010a44c50fadb09387b5b67a899f7580cc2a4af8541991
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [active] [pressed] [ref=f6e20] [cursor=pointer]
+      - region [ref=f6e107]:
+        - generic [ref=f6e108]:
+          - heading "Incident · Dữ liệu fixture" [level=2] [ref=f6e109]
+          - paragraph [ref=f6e110]: Chưa kết nối nghiệp vụ thật. Thao tác chỉ thay dữ liệu mẫu trong trang, không lưu database hay phát event. Tải lại trang sẽ đặt lại fixture.
+          - paragraph [ref=f6e111]: Severity, quy tắc trùng và thay đổi health chưa được mô phỏng.
+        - generic [ref=f6e112]:
+          - button "Mở bản mẫu báo cáo" [ref=f6e113] [cursor=pointer]
+          - button "Đặt lại fixture" [ref=f6e114] [cursor=pointer]
+        - generic [ref=f6e115]:
+          - generic [ref=f6e116]:
+            - heading "Danh sách mẫu" [level=2] [ref=f6e117]
+            - generic [ref=f6e118]: 1 / 5 bản mẫu
+          - generic [ref=f6e119]:
+            - generic [ref=f6e120]:
+              - text: Trạng thái
+              - combobox "Trạng thái" [ref=f6e121]:
+                - option "Tất cả trạng thái"
+                - option "Reported"
+                - option "Assigned"
+                - option "InProgress"
+                - option "Resolved"
+                - option "Closed" [selected]
+            - generic [ref=f6e122]:
+              - text: Tài nguyên
+              - combobox "Tài nguyên" [ref=f6e123]:
+                - option "Tất cả tài nguyên" [selected]
+                - option "Xe"
+                - option "Cổng sạc"
+            - generic [ref=f6e124]:
+              - text: Tìm trong fixture
+              - textbox "Tìm trong fixture" [ref=f6e125]:
+                - /placeholder: Mã fixture, tài nguyên hoặc Hub
+          - table [ref=f6e127]:
+            - caption [ref=f6e128]: Incident fixture, chưa kết nối backend
+            - rowgroup [ref=f6e129]:
+              - row [ref=f6e130]:
+                - columnheader "Incident" [ref=f6e131]
+                - columnheader "Tài nguyên / Hub" [ref=f6e132]
+                - columnheader "Severity" [ref=f6e133]
+                - columnheader "Người xử lý mẫu" [ref=f6e134]
+                - columnheader "Trạng thái" [ref=f6e135]
+            - rowgroup [ref=f6e136]:
+              - row [ref=f6e173]:
+                - cell [ref=f6e174]:
+                  - button "Xem FIX-005" [ref=f6e175] [cursor=pointer]: FIX-005
+                - cell "Xe / DEMO-5 Hub Metro (mẫu)" [ref=f6e176]:
+                  - text: Xe / DEMO-5
+                  - generic [ref=f6e177]: Hub Metro (mẫu)
+                - cell "Chờ TV2" [ref=f6e178]
+                - cell "Operator mẫu A" [ref=f6e179]
+                - cell "Closed" [ref=f6e180]
+        - region [ref=f6e182]:
+          - generic [ref=f6e183]:
+            - heading "Chi tiết mẫu · FIX-001" [level=2] [ref=f6e184]
+            - generic [ref=f6e185]: Reported
+          - paragraph [ref=f6e186]: Dữ liệu mẫu để review giao diện; không phải sự cố đã lưu.
+          - generic [ref=f6e187]:
+            - generic [ref=f6e188]:
+              - term [ref=f6e189]: Resource
+              - definition [ref=f6e190]: VEHICLE / DEMO-1
+            - generic [ref=f6e191]:
+              - term [ref=f6e192]: Reason code mẫu
+              - definition [ref=f6e193]: MANUAL_REPORT
+            - generic [ref=f6e194]:
+              - term [ref=f6e195]: Severity
+              - definition [ref=f6e196]: Chờ TV2
+            - generic [ref=f6e197]:
+              - term [ref=f6e198]: Version / timestamps
+              - definition [ref=f6e199]: Chờ API và migration
+          - generic [ref=f6e200]:
+            - text: Người xử lý mẫu
+            - combobox "Người xử lý mẫu" [ref=f6e201]:
+              - option "Chọn người mẫu" [selected]
+              - option "Operator mẫu A"
+              - option "Operator mẫu B"
+          - button "Gán người mẫu" [disabled] [ref=f6e203]
+          - status
+          - heading "Lịch sử thao tác fixture" [level=3] [ref=f6e204]
+          - list [ref=f6e205]:
+            - listitem [ref=f6e206]: Fixture bắt đầu tại Reported; không có lịch sử backend.
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/08-fixture-reopen.txt
+SHA256 OF FULL ORIGINAL: 7faa5430878813d913d78a7dfff7a4eaa4de4621d6df83ab68aa4dec6f242b7f
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [pressed] [ref=f6e20] [cursor=pointer]
+      - region [ref=f6e107]:
+        - generic [ref=f6e108]:
+          - heading "Incident · Dữ liệu fixture" [level=2] [ref=f6e109]
+          - paragraph [ref=f6e110]: Chưa kết nối nghiệp vụ thật. Thao tác chỉ thay dữ liệu mẫu trong trang, không lưu database hay phát event. Tải lại trang sẽ đặt lại fixture.
+          - paragraph [ref=f6e111]: Severity, quy tắc trùng và thay đổi health chưa được mô phỏng.
+        - generic [ref=f6e112]:
+          - button "Mở bản mẫu báo cáo" [ref=f6e113] [cursor=pointer]
+          - button "Đặt lại fixture" [ref=f6e114] [cursor=pointer]
+        - generic [ref=f6e115]:
+          - generic [ref=f6e116]:
+            - heading "Danh sách mẫu" [level=2] [ref=f6e117]
+            - generic [ref=f6e118]: 0 / 5 bản mẫu
+          - generic [ref=f6e119]:
+            - generic [ref=f6e120]:
+              - text: Trạng thái
+              - combobox "Trạng thái" [ref=f6e121]:
+                - option "Tất cả trạng thái"
+                - option "Reported"
+                - option "Assigned"
+                - option "InProgress"
+                - option "Resolved" [selected]
+                - option "Closed"
+            - generic [ref=f6e122]:
+              - text: Tài nguyên
+              - combobox "Tài nguyên" [ref=f6e123]:
+                - option "Tất cả tài nguyên" [selected]
+                - option "Xe"
+                - option "Cổng sạc"
+            - generic [ref=f6e124]:
+              - text: Tìm trong fixture
+              - textbox "Tìm trong fixture" [ref=f6e125]:
+                - /placeholder: Mã fixture, tài nguyên hoặc Hub
+          - table [ref=f6e127]:
+            - caption [ref=f6e128]: Incident fixture, chưa kết nối backend
+            - rowgroup [ref=f6e129]:
+              - row [ref=f6e130]:
+                - columnheader "Incident" [ref=f6e131]
+                - columnheader "Tài nguyên / Hub" [ref=f6e132]
+                - columnheader "Severity" [ref=f6e133]
+                - columnheader "Người xử lý mẫu" [ref=f6e134]
+                - columnheader "Trạng thái" [ref=f6e135]
+            - rowgroup
+          - status [ref=f6e221]: Không có fixture phù hợp với bộ lọc.
+        - region [ref=f6e216]:
+          - generic [ref=f6e183]:
+            - heading "Chi tiết mẫu · FIX-004" [level=2] [ref=f6e217]
+            - generic [ref=f6e185]: InProgress
+          - paragraph [ref=f6e186]: Dữ liệu mẫu để review giao diện; không phải sự cố đã lưu.
+          - generic [ref=f6e187]:
+            - generic [ref=f6e188]:
+              - term [ref=f6e189]: Resource
+              - definition [ref=f6e190]: CHARGING_POINT / DEMO-4
+            - generic [ref=f6e191]:
+              - term [ref=f6e192]: Reason code mẫu
+              - definition [ref=f6e193]: MANUAL_REPORT
+            - generic [ref=f6e194]:
+              - term [ref=f6e195]: Severity
+              - definition [ref=f6e196]: Chờ TV2
+            - generic [ref=f6e197]:
+              - term [ref=f6e198]: Version / timestamps
+              - definition [ref=f6e199]: Chờ API và migration
+          - button "Resolve mẫu" [ref=f6e222] [cursor=pointer]
+          - status [ref=f6e223]: "FIX-004: Reopen mẫu đã đổi dữ liệu mẫu trong trang."
+          - heading "Lịch sử thao tác fixture" [level=3] [ref=f6e204]
+          - list [ref=f6e205]:
+            - listitem [ref=f6e220]: Fixture bắt đầu tại Resolved; không có lịch sử backend.
+            - listitem [ref=f6e224]: "Thao tác mẫu REOPEN: Resolved → InProgress"
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/11-injected-400.txt
+SHA256 OF FULL ORIGINAL: b77d7d698eb631ff76ae29fc9d6d13d0a060427fc9afe04055c48b4142bd6042
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+- Console: 1 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [pressed] [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f6e20] [cursor=pointer]
+      - generic [ref=f6e22]:
+        - region [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f6e25]
+            - button "Làm mới trạng thái" [ref=f6e26] [cursor=pointer]
+          - paragraph [ref=f6e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - generic [ref=f6e28]:
+            - generic [ref=f6e41]: Hoàn tất
+            - generic [ref=f6e42]:
+              - generic [ref=f6e43]:
+                - term [ref=f6e44]: Scheduler
+                - definition [ref=f6e45]: Đang tắt
+              - generic [ref=f6e46]:
+                - term [ref=f6e47]: Chu kỳ hiện tại
+                - definition [ref=f6e48]: —
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: Scenario
+            - combobox "Scenario" [ref=f6e32]:
+              - option "Cập nhật thiết bị thông thường"
+              - option "Lỗi thiết bị xe"
+              - option "Lỗi cổng sạc" [selected]
+            - generic [ref=f6e33]: Seed
+            - textbox "Seed" [ref=f6e34]: "42"
+            - paragraph [ref=f6e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [ref=f6e36] [cursor=pointer]
+          - alert [ref=f6e270]:
+            - strong [ref=f6e271]: HTTP 400 · Dữ liệu không hợp lệ. Kiểm tra scenario và seed rồi thử lại.
+            - paragraph [ref=f6e272]: VALIDATION_FAILED
+            - generic [ref=f6e273]: "{ \"seed\": \"fixture validation error\" }"
+        - region [ref=f6e49]:
+          - generic [ref=f6e50]:
+            - heading "Kết quả run gần nhất" [level=2] [ref=f6e51]
+            - generic [ref=f6e52]: Hoàn tất
+          - paragraph [ref=f6e53]: e7c4459b-2a10-4059-a8a6-33250a400db6
+          - generic [ref=f6e54]:
+            - generic [ref=f6e55]:
+              - term [ref=f6e56]: Scenario
+              - definition [ref=f6e57]: CHARGER_FAILURE
+            - generic [ref=f6e58]:
+              - term [ref=f6e59]: Seed
+              - definition [ref=f6e60]: "42"
+            - generic [ref=f6e61]:
+              - term [ref=f6e62]: Bắt đầu
+              - definition [ref=f6e63]: 08:35:35 28/10/2026
+            - generic [ref=f6e64]:
+              - term [ref=f6e65]: Kết thúc
+              - definition [ref=f6e66]: 08:35:35 28/10/2026
+          - generic [ref=f6e67]:
+            - generic [ref=f6e68]:
+              - term [ref=f6e69]: Readings
+              - definition [ref=f6e70]: "1"
+            - generic [ref=f6e71]:
+              - term [ref=f6e72]: Đã xử lý
+              - definition [ref=f6e73]: "1"
+            - generic [ref=f6e74]:
+              - term [ref=f6e75]: Trùng inbound ID
+              - definition [ref=f6e76]: "0"
+            - generic [ref=f6e77]:
+              - term [ref=f6e78]: Bị từ chối
+              - definition [ref=f6e79]: "0"
+          - heading "Sự kiện do run này phát" [level=3] [ref=f6e80]
+          - list [ref=f6e81]:
+            - listitem [ref=f6e98]:
+              - strong [ref=f6e99]: ResourceStateUpdatedEvent
+              - generic [ref=f6e100]: CHARGING_POINT / 1
+              - code [ref=f6e101]: 069aeb46-1f92-4636-9488-355af820d59b
+            - listitem [ref=f6e102]:
+              - strong [ref=f6e103]: ChargerFailedEvent
+              - generic [ref=f6e104]: CHARGING_POINT / 1
+              - code [ref=f6e105]: 3b0071c5-3cdb-4155-a255-a5e09d3b375a
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/12-injected-409.txt
+SHA256 OF FULL ORIGINAL: ffb8cff8fe2278e70499bec45a5709171a740e68ad8e0a1c08802a3aa68fb00a
+CONTENT:
+### Page
+- Page URL: http://127.0.0.1:18088/m6/operations
+- Page Title: Smart E-Mobility Hub
+- Console: 2 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [ref=f6e3]:
+  - banner [ref=f6e4]:
+    - generic [ref=f6e5]: Smart E-Mobility Hub
+    - navigation [ref=f6e6]:
+      - link "Dashboard (M1)" [ref=f6e7] [cursor=pointer]:
+        - /url: /m1/dashboard
+      - link "Xe thue (M3)" [ref=f6e8] [cursor=pointer]:
+        - /url: /m3/vehicles
+      - link "Sự cố & IoT (M6)" [ref=f6e9] [cursor=pointer]:
+        - /url: /m6/operations
+  - main [ref=f6e10]:
+    - generic [ref=f6e11]:
+      - generic [ref=f6e12]:
+        - generic [ref=f6e13]:
+          - paragraph [ref=f6e14]: M6 · Vận hành thiết bị
+          - heading "Sự cố & IoT" [level=1] [ref=f6e15]
+          - paragraph [ref=f6e16]: Theo dõi simulator và thử luồng xử lý sự cố của Operator.
+        - generic [ref=f6e17]: Simulator · API thật
+      - navigation "Chọn khu vực M6" [ref=f6e18]:
+        - button "Simulator" [pressed] [ref=f6e19] [cursor=pointer]
+        - button "Incident · Fixture" [ref=f6e20] [cursor=pointer]
+      - generic [ref=f6e22]:
+        - region [ref=f6e23]:
+          - generic [ref=f6e24]:
+            - heading "Điều khiển simulator" [level=2] [ref=f6e25]
+            - button "Làm mới trạng thái" [ref=f6e26] [cursor=pointer]
+          - paragraph [ref=f6e27]: Mỗi lần chạy gửi một scenario và seed tới backend. Scheduler chỉ hiển thị trạng thái.
+          - generic [ref=f6e28]:
+            - generic [ref=f6e41]: Hoàn tất
+            - generic [ref=f6e42]:
+              - generic [ref=f6e43]:
+                - term [ref=f6e44]: Scheduler
+                - definition [ref=f6e45]: Đang tắt
+              - generic [ref=f6e46]:
+                - term [ref=f6e47]: Chu kỳ hiện tại
+                - definition [ref=f6e48]: —
+          - generic [ref=f6e30]:
+            - generic [ref=f6e31]: Scenario
+            - combobox "Scenario" [ref=f6e32]:
+              - option "Cập nhật thiết bị thông thường"
+              - option "Lỗi thiết bị xe"
+              - option "Lỗi cổng sạc" [selected]
+            - generic [ref=f6e33]: Seed
+            - textbox "Seed" [ref=f6e34]: "42"
+            - paragraph [ref=f6e35]: Số nguyên Long; cùng seed tái tạo nội dung readings, mỗi run vẫn có ID mới.
+            - paragraph
+            - button "Chạy scenario" [ref=f6e36] [cursor=pointer]
+          - alert [ref=f6e274]:
+            - strong [ref=f6e275]: HTTP 409 · Một run đang chạy. Làm mới trạng thái rồi chạy lại khi run kết thúc.
+            - paragraph [ref=f6e276]: SIMULATOR_ALREADY_RUNNING
+        - region [ref=f6e49]:
+          - generic [ref=f6e50]:
+            - heading "Kết quả run gần nhất" [level=2] [ref=f6e51]
+            - generic [ref=f6e52]: Hoàn tất
+          - paragraph [ref=f6e53]: e7c4459b-2a10-4059-a8a6-33250a400db6
+          - generic [ref=f6e54]:
+            - generic [ref=f6e55]:
+              - term [ref=f6e56]: Scenario
+              - definition [ref=f6e57]: CHARGER_FAILURE
+            - generic [ref=f6e58]:
+              - term [ref=f6e59]: Seed
+              - definition [ref=f6e60]: "42"
+            - generic [ref=f6e61]:
+              - term [ref=f6e62]: Bắt đầu
+              - definition [ref=f6e63]: 08:35:35 28/10/2026
+            - generic [ref=f6e64]:
+              - term [ref=f6e65]: Kết thúc
+              - definition [ref=f6e66]: 08:35:35 28/10/2026
+          - generic [ref=f6e67]:
+            - generic [ref=f6e68]:
+              - term [ref=f6e69]: Readings
+              - definition [ref=f6e70]: "1"
+            - generic [ref=f6e71]:
+              - term [ref=f6e72]: Đã xử lý
+              - definition [ref=f6e73]: "1"
+            - generic [ref=f6e74]:
+              - term [ref=f6e75]: Trùng inbound ID
+              - definition [ref=f6e76]: "0"
+            - generic [ref=f6e77]:
+              - term [ref=f6e78]: Bị từ chối
+              - definition [ref=f6e79]: "0"
+          - heading "Sự kiện do run này phát" [level=3] [ref=f6e80]
+          - list [ref=f6e81]:
+            - listitem [ref=f6e98]:
+              - strong [ref=f6e99]: ResourceStateUpdatedEvent
+              - generic [ref=f6e100]: CHARGING_POINT / 1
+              - code [ref=f6e101]: 069aeb46-1f92-4636-9488-355af820d59b
+            - listitem [ref=f6e102]:
+              - strong [ref=f6e103]: ChargerFailedEvent
+              - generic [ref=f6e104]: CHARGING_POINT / 1
+              - code [ref=f6e105]: 3b0071c5-3cdb-4155-a255-a5e09d3b375a
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/09-mobile-width.txt
+SHA256 OF FULL ORIGINAL: 21e79af6d613248f8d5da9199957ed80ae85db33fcbb1d859e2745582127383a
+CONTENT:
+### Result
+{"width":390,"scrollWidth":375}
+### Ran Playwright code
+```js
+await (async (page) => ({ width: page.viewportSize().width, scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth) }))(page);
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/10-mobile-width.txt
+SHA256 OF FULL ORIGINAL: 8fb891db2d85262fd911ba08d87eaf7572ce6da478bf2aa4f2276d8435ed51b7
+CONTENT:
+### Result
+{"width":390,"scrollWidth":390}
+### Ran Playwright code
+```js
+await (async (page) => ({ width: page.viewportSize().width, scrollWidth: await page.evaluate(() => document.documentElement.scrollWidth) }))(page);
+```
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/network.txt
+SHA256 OF FULL ORIGINAL: e7a4eb2fa328b28536ceb1cc7b5c540da4853f8acb2ad1a370e9694bff613628
+CONTENT:
+### Result
+6. [GET] http://127.0.0.1:18088/api/m6/simulator/status => [200]
+7. [POST] http://127.0.0.1:18088/api/m6/simulator/scenarios/NORMAL_TICK => [200]
+8. [GET] http://127.0.0.1:18088/api/m6/simulator/status => [200]
+9. [POST] http://127.0.0.1:18088/api/m6/simulator/scenarios/VEHICLE_FAILURE => [200]
+10. [GET] http://127.0.0.1:18088/api/m6/simulator/status => [200]
+11. [POST] http://127.0.0.1:18088/api/m6/simulator/scenarios/CHARGER_FAILURE => [200]
+12. [GET] http://127.0.0.1:18088/api/m6/simulator/status => [200]
+13. [POST] http://127.0.0.1:18088/api/m6/simulator/scenarios/CHARGER_FAILURE => [400] Bad Request
+14. [POST] http://127.0.0.1:18088/api/m6/simulator/scenarios/CHARGER_FAILURE => [409] Conflict
+15. [GET] http://127.0.0.1:18088/api/m6/simulator/status => [200]
+
+Note: 5 static requests not shown, run with --static option to see them.
+
+
+========================================================================
+SOURCE: output/playwright/m6-ui-20261028/console.txt
+SHA256 OF FULL ORIGINAL: daf927476c3e8daa51e8c613ef19a4d015a308102af2273ab52ced9140373084
+CONTENT:
+### Result
+Total messages: 2 (Errors: 2, Warnings: 0)
+
+[ERROR] Failed to load resource: the server responded with a status of 400 (Bad Request) @ http://127.0.0.1:18088/api/m6/simulator/scenarios/CHARGER_FAILURE:0
+[ERROR] Failed to load resource: the server responded with a status of 409 (Conflict) @ http://127.0.0.1:18088/api/m6/simulator/scenarios/CHARGER_FAILURE:0
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/db-before.txt
+SHA256 OF FULL ORIGINAL: 2a28339f546b3136964b2c955f2afbd75f7b03d3afe3c2abb80c40ec5bd92911
+CONTENT:
+ id |   state   | version
+----+-----------+---------
+  1 | AVAILABLE |       0
+(1 row)
+
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/db-after-vehicle.txt
+SHA256 OF FULL ORIGINAL: ae7500d38a7f6e5bb405a65627f242e1a445fce303984d657f89e5a837ec62f0
+CONTENT:
+ id |    state    | version
+----+-------------+---------
+  1 | MAINTENANCE |       1
+(1 row)
+
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/db-schema.txt
+SHA256 OF FULL ORIGINAL: 38853095c866b4d3175a9f3c7560abefbb3de472c706fb198e651a1414f61f06
+CONTENT:
+ version |   description    | success
+---------+------------------+---------
+ 1       | init core tables | t
+ 2       | seed demo data   | t
+(2 rows)
+
+       tablename
+-----------------------
+ app_user
+ flyway_schema_history
+ hub
+ rental_vehicle
+(4 rows)
+
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/compose-ps.txt
+SHA256 OF FULL ORIGINAL: bc2d7e34665ed921d8d39e46db79b223f9d6d5f9c74fb24cdbf8ac1f100a21c9
+CONTENT:
+NAME                              IMAGE                           COMMAND                  SERVICE    CREATED          STATUS                   PORTS
+m6-ui-proof-20261028-backend-1    m6-ui-proof-20261028-backend    "java -jar app.jar"      backend    38 seconds ago   Up 37 seconds            127.0.0.1:18089->8080/tcp
+m6-ui-proof-20261028-db           postgres:16                     "docker-entrypoint.s…"   db         2 minutes ago    Up 2 minutes (healthy)   127.0.0.1:55438->5432/tcp
+m6-ui-proof-20261028-frontend-1   m6-ui-proof-20261028-frontend   "/docker-entrypoint.…"   frontend   38 seconds ago   Up 36 seconds            127.0.0.1:18088->80/tcp
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/cleanup.log
+SHA256 OF FULL ORIGINAL: 590ad3c6ebb287a1d0f5c5c3b5ed6eb5cccc02787ee8f7d8cf0faacd81983366
+CONTENT:
+ Container m6-ui-proof-20261028-frontend-1  Stopping
+ Container m6-ui-proof-20261028-frontend-1  Stopped
+ Container m6-ui-proof-20261028-frontend-1  Removing
+ Container m6-ui-proof-20261028-frontend-1  Removed
+ Container m6-ui-proof-20261028-backend-1  Stopping
+ Container m6-ui-proof-20261028-backend-1  Stopped
+ Container m6-ui-proof-20261028-backend-1  Removing
+ Container m6-ui-proof-20261028-backend-1  Removed
+ Container m6-ui-proof-20261028-db  Stopping
+ Container m6-ui-proof-20261028-db  Stopped
+ Container m6-ui-proof-20261028-db  Removing
+ Container m6-ui-proof-20261028-db  Removed
+ Image m6-ui-proof-20261028-backend:latest  Removing
+ Image m6-ui-proof-20261028-frontend:latest  Removing
+ Volume m6-ui-proof-20261028_pgdata  Removing
+ Network m6-ui-proof-20261028_default  Removing
+ Volume m6-ui-proof-20261028_pgdata  Removed
+ Image m6-ui-proof-20261028-frontend:latest  Removed
+ Image m6-ui-proof-20261028-backend:latest  Removed
+ Network m6-ui-proof-20261028_default  Removed
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/compose-backend-runtime.log
+SHA256 OF FULL ORIGINAL: 1c876610db854d06440426d8e01deb15b0bcc229d23a4fe1778dc3ee278ef554
+CONTENT (selected lines):
+backend-1  | 2026-10-28T08:33:43.057+07:00  INFO 1 --- [smart-emobility-hub] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://db:5432/emobility (PostgreSQL 16.15)
+backend-1  | 2026-10-28T08:33:43.099+07:00  INFO 1 --- [smart-emobility-hub] [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+backend-1  | 2026-10-28T08:33:44.632+07:00  INFO 1 --- [smart-emobility-hub] [           main] c.hcmut.emobility.EmobilityApplication   : Started EmobilityApplication in 3.109 seconds (process running for 3.423)
+backend-1  | 2026-10-28T08:35:16.151+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_STARTED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 scenario=NORMAL_TICK seed=9223372036854775807
+backend-1  | 2026-10-28T08:35:16.152+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_BATCH_CREATED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 scenario=NORMAL_TICK readingCount=3
+backend-1  | 2026-10-28T08:35:16.153+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 inboundEventId=b3805c14-4a1d-4424-a4d0-904e788a0ab6 outboundEventId=6a8d4016-8630-41f5-a181-7b9bef2aa903 eventType=ResourceStateUpdatedEvent resourceType=VEHICLE resourceId=1
+backend-1  | 2026-10-28T08:35:16.154+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 inboundEventId=42438e62-385e-41ce-9f78-c40888a912a6 outboundEventId=f355fde4-a58f-4587-92db-f3676573def4 eventType=ResourceStateUpdatedEvent resourceType=PARKING_SPACE resourceId=1
+backend-1  | 2026-10-28T08:35:16.154+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 inboundEventId=3887d7c1-6a1d-47f6-b2ca-ae8f4eb93ede outboundEventId=4742727a-e4ab-45cf-b91c-7044fcc56b99 eventType=ResourceStateUpdatedEvent resourceType=CHARGING_POINT resourceId=1
+backend-1  | 2026-10-28T08:35:16.154+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-1] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_SUCCEEDED runId=9df7cbe5-bc69-49ec-be6b-41d8ca8c4100 scenario=NORMAL_TICK processedCount=3 duplicateCount=0 rejectedCount=0 outboundCount=3
+backend-1  | 2026-10-28T08:35:26.910+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-3] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_STARTED runId=3f9d1ac4-8c85-4c23-82aa-3a9808a57f4e scenario=VEHICLE_FAILURE seed=42
+backend-1  | 2026-10-28T08:35:26.910+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-3] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_BATCH_CREATED runId=3f9d1ac4-8c85-4c23-82aa-3a9808a57f4e scenario=VEHICLE_FAILURE readingCount=1
+backend-1  | 2026-10-28T08:35:26.942+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-3] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=3f9d1ac4-8c85-4c23-82aa-3a9808a57f4e inboundEventId=b5f261b0-1c43-4efa-bba5-65052e51dca4 outboundEventId=3efa9bca-16d8-49f3-8af6-27c594720c50 eventType=VehicleFailedEvent resourceType=VEHICLE resourceId=1
+backend-1  | 2026-10-28T08:35:26.942+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-3] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_SUCCEEDED runId=3f9d1ac4-8c85-4c23-82aa-3a9808a57f4e scenario=VEHICLE_FAILURE processedCount=1 duplicateCount=0 rejectedCount=0 outboundCount=1
+backend-1  | 2026-10-28T08:35:35.165+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-5] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_STARTED runId=e7c4459b-2a10-4059-a8a6-33250a400db6 scenario=CHARGER_FAILURE seed=42
+backend-1  | 2026-10-28T08:35:35.165+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-5] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_BATCH_CREATED runId=e7c4459b-2a10-4059-a8a6-33250a400db6 scenario=CHARGER_FAILURE readingCount=1
+backend-1  | 2026-10-28T08:35:35.166+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-5] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=e7c4459b-2a10-4059-a8a6-33250a400db6 inboundEventId=dbb1bda3-ebf6-4d4b-a964-d490877da3f1 outboundEventId=069aeb46-1f92-4636-9488-355af820d59b eventType=ResourceStateUpdatedEvent resourceType=CHARGING_POINT resourceId=1
+backend-1  | 2026-10-28T08:35:35.167+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-5] c.h.e.m.service.DeviceEventService       : M6_DEVICE_EVENT_PUBLISHED runId=e7c4459b-2a10-4059-a8a6-33250a400db6 inboundEventId=dbb1bda3-ebf6-4d4b-a964-d490877da3f1 outboundEventId=3b0071c5-3cdb-4155-a255-a5e09d3b375a eventType=ChargerFailedEvent resourceType=CHARGING_POINT resourceId=1
+backend-1  | 2026-10-28T08:35:35.167+07:00  INFO 1 --- [smart-emobility-hub] [nio-8080-exec-5] c.h.e.m.service.DeviceSimulatorService   : M6_SIMULATION_SUCCEEDED runId=e7c4459b-2a10-4059-a8a6-33250a400db6 scenario=CHARGER_FAILURE processedCount=1 duplicateCount=0 rejectedCount=0 outboundCount=2
+
+========================================================================
+SOURCE: output/playwright/m6-prototype-review/03b-invalid-resource.yml
+SHA256 OF FULL ORIGINAL: 065df18d8748fb49918c7597561871bc230900895aa30325340df537a6adddda
+CONTENT:
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: ↗
+        - generic [ref=e6]:
+          - strong [ref=e7]: e-Mobility Hub
+          - generic [ref=e8]: SMART CAMPUS NETWORK
+      - generic [ref=e9]:
+        - generic [ref=e10]: Workspace
+        - navigation [ref=e11]:
+          - button "M1 Hub network dashboard" [ref=e736] [cursor=pointer]:
+            - generic [ref=e737]: M1
+            - generic [ref=e738]: Hub network dashboard
+          - button "M6 Incidents & devices" [ref=e739] [cursor=pointer]:
+            - generic [ref=e740]: M6
+            - generic [ref=e741]: Incidents & devices
+          - button "M5 Charging & priority" [ref=e742] [cursor=pointer]:
+            - generic [ref=e743]: M5
+            - generic [ref=e744]: Charging & priority
+          - button "M7 Redistribution" [ref=e745] [cursor=pointer]:
+            - generic [ref=e746]: M7
+            - generic [ref=e747]: Redistribution
+          - button "M8 What-if Simulation" [ref=e748] [cursor=pointer]:
+            - generic [ref=e749]: M8
+            - generic [ref=e750]: What-if Simulation
+          - button "M4 Parking capacity" [ref=e751] [cursor=pointer]:
+            - generic [ref=e752]: M4
+            - generic [ref=e753]: Parking capacity
+          - button "ID Profile / account settings" [ref=e754] [cursor=pointer]:
+            - generic [ref=e755]: ID
+            - generic [ref=e756]: Profile / account settings
+      - generic [ref=e33]:
+        - strong [ref=e34]: ● Demo environment
+        - text: Operational data is simulated for UI review. No real vehicle, charging port or booking is changed.
+        - generic [ref=e35]: HK261 · Software Engineering
+    - main [ref=e36]:
+      - generic [ref=e37]:
+        - generic [ref=e38]:
+          - generic [ref=e39]: Smart E-Mobility Hub /Incidents & IoT
+          - generic [ref=e40]: IoT simulator & incidents
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - text: ⌕
+            - textbox "Search hubs, vehicles…" [ref=e43]
+          - generic "Choose user role" [ref=e44]:
+            - button "Student" [ref=e45] [cursor=pointer]
+            - button "Operator" [ref=e46] [cursor=pointer]
+          - generic [ref=e47]:
+            - generic [ref=e48]: Prototype
+            - combobox "Choose module to preview" [ref=e49]:
+              - option "M1 · Hub"
+              - option "M2 · Booking"
+              - option "M3 · Trip"
+              - option "M4 · Parking"
+              - option "M5 · Charging"
+              - option "M6 · Incidents" [selected]
+              - option "M7 · Redistribution"
+              - option "M8 · Simulation"
+          - generic [ref=e50]: OP
+      - generic [ref=e51]:
+        - generic [ref=e757]:
+          - generic [ref=e758]:
+            - generic [ref=e759]: M6 · IoT simulator & incidents
+            - heading "Incidents & device events" [level=1] [ref=e760]
+            - generic [ref=e761]: Review IoT and simulator events, assign incident owners and move incidents through valid states. Device readings update only module-owned health state.
+          - button "＋ Report incident" [ref=e763] [cursor=pointer]
+        - generic [ref=e764]:
+          - button "Incident workflow" [ref=e765] [cursor=pointer]
+          - button "Simulator events" [ref=e766] [cursor=pointer]
+        - generic [ref=e767]:
+          - generic [ref=e769]:
+            - generic [ref=e770]:
+              - generic [ref=e771]: Open incidents
+              - generic [ref=e772]: "3"
+              - generic [ref=e773]: Needs operator attention
+            - generic [ref=e774]: ⚠
+          - generic [ref=e776]:
+            - generic [ref=e777]:
+              - generic [ref=e778]: High severity
+              - generic [ref=e779]: "1"
+              - generic [ref=e780]: Across current demo data
+            - generic [ref=e781]: "!"
+          - generic [ref=e783]:
+            - generic [ref=e784]:
+              - generic [ref=e785]: In progress
+              - generic [ref=e786]: "0"
+              - generic [ref=e787]: Assigned repair work
+            - generic [ref=e788]: ⚙
+          - generic [ref=e790]:
+            - generic [ref=e791]:
+              - generic [ref=e792]: Last simulator tick
+              - generic [ref=e793]: 14:29:05
+              - generic [ref=e794]: "Configured interval: 5 sec"
+            - generic [ref=e795]: ◷
+        - generic [ref=e796]:
+          - generic [ref=e797]:
+            - generic [ref=e798]:
+              - generic [ref=e799]: Incident register
+              - generic [ref=e800]: Transitions are guarded; 409 conflicts require a reload.
+            - button "Export log" [ref=e801] [cursor=pointer]
+          - generic [ref=e802]:
+            - generic [ref=e803]:
+              - generic [ref=e804]: Status
+              - combobox [ref=e805]:
+                - option "All statuses" [selected]
+                - option "Reported"
+                - option "Assigned"
+                - option "InProgress"
+                - option "Resolved"
+                - option "Closed"
+            - generic [ref=e806]:
+              - generic [ref=e807]: Severity
+              - combobox [ref=e808]:
+                - option "All severity" [selected]
+                - option "High"
+                - option "Medium"
+                - option "Low"
+            - generic [ref=e809]:
+              - generic [ref=e810]: Resource
+              - textbox "Vehicle or charger ID" [ref=e811]
+          - table [ref=e813]:
+            - rowgroup [ref=e814]:
+              - row [ref=e815]:
+                - columnheader "Incident" [ref=e816]
+                - columnheader "Resource / Hub" [ref=e817]
+                - columnheader "Severity" [ref=e818]
+                - columnheader "Assignee" [ref=e819]
+                - columnheader "Reported" [ref=e820]
+                - columnheader "Status" [ref=e821]
+                - columnheader "Next action" [ref=e822]
+            - rowgroup [ref=e823]:
+              - row [ref=e824]:
+                - 'cell "INC-208 Review fixture: resource existence check" [ref=e825]':
+                  - text: INC-208
+                  - generic [ref=e826]: "Review fixture: resource existence check"
+                - cell "NOT-A-RESOURCE Metro Gateway" [ref=e827]:
+                  - text: NOT-A-RESOURCE
+                  - generic [ref=e828]: Metro Gateway
+                - cell "Medium" [ref=e829]
+                - cell "Unassigned" [ref=e831]
+                - cell "Just now" [ref=e832]
+                - cell "Reported" [ref=e833]
+                - cell [ref=e835]:
+                  - button "Assign" [ref=e837] [cursor=pointer]
+              - row [ref=e838]:
+                - cell "INC-204 Charging point CP-07 offline" [ref=e839]:
+                  - text: INC-204
+                  - generic [ref=e840]: Charging point CP-07 offline
+                - cell "CP-07 Dormitory A" [ref=e841]:
+                  - text: CP-07
+                  - generic [ref=e842]: Dormitory A
+                - cell "High" [ref=e843]
+                - cell "Unassigned" [ref=e845]
+                - cell "4 min ago" [ref=e846]
+                - cell "Reported" [ref=e847]
+                - cell [ref=e849]:
+                  - button "Assign" [ref=e851] [cursor=pointer]
+              - row [ref=e852]:
+                - cell "INC-203 Vehicle EB-112 sensor offline" [ref=e853]:
+                  - text: INC-203
+                  - generic [ref=e854]: Vehicle EB-112 sensor offline
+                - cell "EB-112 Metro Gateway" [ref=e855]:
+                  - text: EB-112
+                  - generic [ref=e856]: Metro Gateway
+                - cell "Medium" [ref=e857]
+                - cell "L. Nguyen" [ref=e859]
+                - cell "18 min ago" [ref=e860]
+                - cell "Resolved" [ref=e861]
+                - cell [ref=e863]:
+                  - button "Close" [ref=e865] [cursor=pointer]
+              - row [ref=e866]:
+                - cell "INC-198 Parking sensor inconsistent" [ref=e867]:
+                  - text: INC-198
+                  - generic [ref=e868]: Parking sensor inconsistent
+                - cell "P-21 Campus Center" [ref=e869]:
+                  - text: P-21
+                  - generic [ref=e870]: Campus Center
+                - cell "Low" [ref=e871]
+                - cell "P. Tran" [ref=e873]
+                - cell "42 min ago" [ref=e874]
+                - cell "Assigned" [ref=e875]
+                - cell [ref=e877]:
+                  - button "Start" [ref=e879] [cursor=pointer]
+  - generic [ref=e880]:
+    - generic [ref=e881]: ✓
+    - generic [ref=e882]:
+      - generic [ref=e883]: Incident reported
+      - text: INC-208 created in Reported state.
+    - button "×" [ref=e884] [cursor=pointer]
+
+========================================================================
+SOURCE: output/playwright/m6-prototype-review/network.txt
+SHA256 OF FULL ORIGINAL: df18a2d8884b2a253f2d31cca69c7a7692d59ce72bccf4e10586003fab6fd227
+CONTENT:
+### Result
+1. [GET] http://127.0.0.1:8769/prototype.html => [200] OK
+2. [GET] https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap => [200]
+3. [GET] https://fonts.gstatic.com/s/bevietnampro/v12/QdVPSTAyLFyeg_IDWvOJmVES_Hw3BXoYZ7Aj.woff2 => [200]
+4. [GET] https://fonts.gstatic.com/s/bevietnampro/v12/QdVMSTAyLFyeg_IDWvOJmVES_HSMIG81Rb0JcBao.woff2 => [200]
+5. [GET] https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8-qxTOlOVk6OThhvA.woff2 => [200]
+6. [GET] https://fonts.gstatic.com/s/bevietnampro/v12/QdVMSTAyLFyeg_IDWvOJmVES_HSQI281Rb0JcBao.woff2 => [200]
+7. [GET] https://fonts.gstatic.com/s/bevietnampro/v12/QdVMSTAyLFyeg_IDWvOJmVES_HToIW81Rb0JcBao.woff2 => [200]
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/npm-ci.log
+SHA256 OF FULL ORIGINAL: 02b376ad651357a05bdeb6d673264a7817ef1287ecfa063436af52e7823cafe5
+CONTENT:
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated recharts@2.15.4: 1.x and 2.x branches are no longer active. Bump to Recharts v3 to receive latest features and bugfixes. See https://github.com/recharts/recharts/wiki/3.0-migration-guide
+
+added 291 packages, and audited 292 packages in 3s
+
+49 packages are looking for funding
+  run `npm fund` for details
+
+11 vulnerabilities (6 moderate, 3 high, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+
+
+========================================================================
+SOURCE: output/validation/m6-ui/compose-build.log
+SHA256 OF FULL ORIGINAL: 550c9a0c4a6182e94fdc4e61a4d85cdcdc98b0a6867aa6ee87c81de4b6bb585e
+CONTENT (selected non-secret lines):
+#1 DONE 0.0s
+#2 DONE 0.0s
+#3 DONE 0.0s
+#4 DONE 0.0s
+#5 DONE 0.0s
+#7 DONE 71.1s
+#6 DONE 71.1s
+#8 DONE 0.0s
+#9 DONE 0.0s
+#10 DONE 0.0s
+#11 DONE 0.0s
+#12 DONE 0.1s
+#17 DONE 0.1s
+#18 DONE 0.3s
+#13 DONE 2.0s
+#19 DONE 2.6s
+#21 DONE 0.4s
+#13 DONE 2.9s
+#18 DONE 6.0s
+#18 DONE 6.0s
+#23 DONE 0.6s
+#24 DONE 7.5s
+#22 DONE 12.5s
+#25 DONE 2.6s
+#27 DONE 0.1s
+#28 [backend] exporting to image
+#28 exporting layers
+#28 exporting layers 1.4s done
+#28 exporting manifest sha256:dd77c847bbf5e3926fbc5b76c7712f3ddc247c4eaf885a9c8ca52731d3a0ff98 done
+#28 exporting config sha256:130676ba31fe595b818189d90abd284df287f5996ace8ee909557bca7ef2525e done
+#28 exporting attestation manifest sha256:21ec53e598876cc674d59f24302c4cb96fd3e5824043ffa01a8704d02080d33f done
+#28 exporting manifest list sha256:3fc03ee2db5ff3767c1500800749301383ede3cf8447cce7b03f63a1bc5eae1a done
+#28 naming to docker.io/library/m6-ui-proof-20261028-backend:latest done
+#28 DONE 1.7s
+#29 DONE 0.0s
+#26 DONE 3.9s
+#30 DONE 0.0s
+#31 DONE 0.0s
+#32 [frontend] exporting to image
+#32 exporting layers 0.0s done
+#32 exporting manifest sha256:b2eea4ec0a0feaae42ba3d6413a030418cb2d815bd10c40d329d7d2b94b70ef9 done
+#32 exporting config sha256:f69dbe85b2d75bfa7090b7f822e20c9a6e7c31d9018a70ecf23d081ccfc34dde done
+#32 exporting attestation manifest sha256:aba53225111298f05095ca08a9bf9b504dedc41cbe195a581f36e76e390f55d0 done
+#32 exporting manifest list sha256:5cd68b1d37237891d318ad5c2188ac4e1b7f5fb3db13a929c8a056bcc5da64f0 done
+#32 naming to docker.io/library/m6-ui-proof-20261028-frontend:latest done
+#32 DONE 0.1s
+#33 DONE 0.0s
+ m6-ui-proof-20261028-backend  Built
+ m6-ui-proof-20261028-frontend  Built
+ Container m6-ui-proof-20261028-db  Healthy
+ Container m6-ui-proof-20261028-backend-1  Started
+ Container m6-ui-proof-20261028-frontend-1  Started
+
+========================================================================
+SOURCE: output/validation/m6-ui/compose-default-config.yml
+SHA256 OF FULL ORIGINAL: c19cccfacdd8cc980a2ecd0bd63b8c970cb48f6e1298f63cdd68f42c54e1bbcb
+CONTENT (selected non-secret lines):
+name: smart-emobility-hub
+services:
+  backend:
+    build:
+      context: /Users/hieu/.codex/worktrees/m6-feature-sync/smart-emobility-hub/backend
+  db:
+    image: postgres:16
+  frontend:
+    build:
+      context: /Users/hieu/.codex/worktrees/m6-feature-sync/smart-emobility-hub/frontend
