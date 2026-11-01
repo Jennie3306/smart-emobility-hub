@@ -17,7 +17,8 @@ Stop with ./scripts/stop-m8.ps1; PostgreSQL and its data remain intact.
 The startup script reads .local/m8-openai-key.dpapi, encrypted with Windows DPAPI
 for the current Windows user. Git ignores this file. It decrypts the key only for
 the backend launch; credentials never become Java command-line arguments or frontend configuration.
-Default endpoint: https://api.openai.com/v1/chat/completions. Model: gpt-4.1-mini.
+Default endpoint: https://api.openai.com/v1/chat/completions. Model: gpt-5.6-sol.
+The GPT-5 request omits temperature because this model rejects temperature=0.
 Override using M8_LLM_URL, M8_LLM_KEY and M8_LLM_MODEL. Never use VITE_* for keys.
 
 The provider receives descriptions and, for recommendations, the snapshot and KPIs.
