@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { simulationApi as api, type Scenario, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
 import "./simulation.css";
+import { AgentPanel } from "./AgentPanel";
+import { refreshActiveRun, acceptPlanningResult } from "./planningState";
 import { effectiveScenario, draftFromPlan, numericFields, validateDraft, draftDiffers } from "./scenarioDraft";
 
 const defaults:Scenario={name:"Peak-hour hub closure",hubId:1,disabled:true,injectedRequests:100,durationMins:120,arrivalWindowMins:60,tripMins:30,reroute:false,seed:42};
@@ -27,10 +29,10 @@ export default function SimulationPage() {
   function edit() {setError("");setNotice("");}
   function navigate(next:typeof tab) {setTab(next);edit();}
   async function refresh() {
-    const [s,m,r]=await Promise.all([api.snapshot(),api.status(),api.list()]);setSnapshot(s);setMonitor(m);setRuns(r);
+    const [s,m,r]=await Promise.all([api.snapshot(),api.status(),api.list()]);setSnapshot(s);setMonitor(m);setRuns(r);setActive(current=>refreshActiveRun(current,r));
   }
   useEffect(()=>{refresh().catch(e=>setError(message(e)));},[]);
-  async function task(action:()=>Promise<void>) {setBusy(true);setError("");setNotice("");try {await action();} catch(e){setError(message(e));} finally{setBusy(false);} }
+  async function task(action:()=>Promise<void>) {setBusy(true);setError("");setNotice("");try {await action();} catch(e){if((e as {response?:{data?:{code?:string}}}).response?.data?.code==="STALE_AGENT_STATE")await refresh().catch(()=>{});setError(message(e));} finally{setBusy(false);} }
   function update(key:keyof Scenario,value:Scenario[keyof Scenario]) {edit();setScenario(s=>({...s,[key]:value}));}
   function load(run:Run) {setError("");setActive(run);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setTab("studio");setNotice("Reusing the saved snapshot for a fair comparison. You can also capture a new snapshot.");}
   const selected=runs.filter(r=>compare.includes(r.id));
@@ -55,6 +57,7 @@ export default function SimulationPage() {
       </nav>
       <div className="m8-content">
         <div className="m8-title"><div><div className="m8-eyebrow">PLAN BEFORE YOU ACT</div><h1>{tab==="studio"?"What if the network changes?":tab==="history"?"Compare plans. See the difference.":"Your network, right now."}</h1><p>{tab==="studio"?"Explore scenarios, measure their impact and choose a plan before taking action.":tab==="history"?"Select two runs to compare KPIs. Reuse the same snapshot and seed to isolate scenario impact.":"Hub and vehicle data from PostgreSQL, booking counts from M2 and resource observations from M1/M6."}</p></div><button className="m8-button secondary" disabled={busy} onClick={()=>task(refresh)}>↻ Refresh</button></div>
+        {busy&&<div className="m8-alert" role="status">Processing simulation and AI planning (up to 3 rounds). Please wait; this can take up to two minutes.</div>}
         {error && <div className="m8-alert error" role="alert">{error}</div>}
         {notice && <div className="m8-alert" role="status">{notice}</div>}
         {!snapshot && !error && <div className="m8-panel">Loading network…</div>}
@@ -72,7 +75,7 @@ export default function SimulationPage() {
               <label className="m8-toggle"><input type="checkbox" checked={scenario.reroute} onChange={e=>update("reroute",e.target.checked)}/><span><strong>Allow requests to use other hubs</strong><small>Choose available hubs by ID; travel time is not modeled.</small></span></label>
               <label>Snapshot source<select value={reuse} onChange={e=>{edit();setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>
               {invalid&&<div id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.<ul>{Object.values(fieldErrors).map(e=><li key={e}>{e}</li>)}</ul></div>}
-              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined,repeatBookings);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"▶ Save & run simulation"}</button>
+              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined,repeatBookings);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"▶ Save & run simulation"}</button>
             </section>
             <section className="m8-results">
               <div className="m8-panel m8-preview"><div className="m8-section-head"><span className="m8-step">02</span><div><h2>Projected impact</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Run a scenario to see the projected impact."}</p></div><span className="m8-chip">{active?(dirty?"Draft changed":"Saved"):"Ready"}</span></div>
@@ -83,10 +86,11 @@ export default function SimulationPage() {
                   <div className="m8-table-wrap"><table><thead><tr><th>Serving hub</th><th>Served</th><th>Failed</th><th>Vehicles available at horizon</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
                 </>:<div className="m8-empty"><div className="m8-orbit">◎</div><h3>Test first. Decide with confidence.</h3><p>Close a hub or increase demand to explore how the network responds.</p><div className="m8-mini-network">{snapshot.hubs.map(h=><span key={h.id}>{h.name}<b>{snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length} available vehicles</b></span>)}</div></div>}
               </div>
-              <div className="m8-panel"><div className="m8-section-head"><span className="m8-step">03</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. Parking observations are provisional; M4/M7 must revalidate before execution.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
+              {active&&<AgentPanel run={active} busy={busy} configured={!!monitor?.aiConfigured} onRetry={()=>task(async()=>{const updated=await api.retry(active.id,active.agent?.totalRounds??0);setActive(current=>acceptPlanningResult(current,updated));setRuns(await api.list());setNotice(`AI planning saved for ${updated.scenario.name}. The original snapshot and scenario are unchanged.`);})}/>}
+              {!active?.agent&&<div className="m8-panel"><div className="m8-section-head"><span className="m8-step">03</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. Parking observations are provisional; M4/M7 must revalidate before execution.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
                 {active?.recommendations.length?active.recommendations.map(r=><div className="m8-recommendation" key={r.id}><div className="m8-rec-icon">⇄</div><div><h3>{r.action==="reroute"?"Route requests to available hubs":`Dispatch ${r.amount} vehicles`}</h3>{r.action==="dispatch"&&<p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}<p className="m8-footnote">{r.reason}</p><strong className="m8-benefit">Projected failure rate: {number(r.projectedFailurePercent)}%</strong><div className="m8-actions">{r.action==="reroute"?<button className="m8-button primary" disabled={busy||r.status!=="PENDING"} onClick={()=>{const plan=draftFromPlan(active);edit();setScenario(plan.scenario);setReuse(plan.reuse);setRepeatBookings(plan.repeatBookings);setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot; live operations are unchanged.");}}>Try this plan</button>:<button className="m8-button primary" disabled={busy||r.status!=="PENDING"||!monitor?.applyEnabled} onClick={()=>task(async()=>{await api.apply(active.id,r.id);await refresh();})}>Approve & execute</button>}<button className="m8-button secondary" disabled={busy||r.status!=="PENDING"} onClick={()=>task(async()=>{setActive(await api.discard(active.id,r.id));setRuns(await api.list());})}>{r.status==="DISCARDED"?"Discarded":"Discard"}</button></div></div></div>):<p className="m8-muted">{active?"No feasible dispatch reduces failed requests. Try reopening the hub or allowing rerouting.":"Run a scenario to find a plan that fits available resources."}</p>}
                 <div className="m8-integration-note">M7 execution is not connected. Review or discard proposals; approval becomes available after integration.</div>
-              </div>
+              </div>}
               {active && <details className="m8-panel"><summary>Model assumptions & limitations</summary><ul>{active.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul><p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Charging and battery depletion are not modeled.</p></details>}
             </section>
           </div>

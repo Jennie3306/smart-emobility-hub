@@ -3,3 +3,5 @@
 @media(max-width:950px){.m8-mobile-nav{display:flex;flex-wrap:wrap;gap:8px;padding:14px 22px 0}.m8-mobile-nav button{background:white;border:1px solid #dce3ea;border-radius:7px;padding:9px 12px;font-size:12px;color:var(--brand)}.m8-mobile-nav button[aria-current=page]{background:var(--brand);color:white;border-color:var(--brand)}}
 
 .m8-panel{min-width:0}.m8-comparison th{white-space:normal;overflow-wrap:anywhere;min-width:90px}.m8-field-error{display:block;color:#9f1239;font-weight:400;margin-top:6px;line-height:1.6}.m8-form [aria-invalid=true]{border-color:#be123c!important}.m8-actions{flex-wrap:wrap}
+
+.m8-agent .m8-section-head{flex-wrap:wrap}.m8-agent ol{list-style:decimal;padding-left:20px}.m8-agent-rounds>li{border-top:1px solid var(--line);padding:12px 0;font-size:12px;overflow-wrap:anywhere}.m8-agent-best{background:#f2f6fa;padding:14px;border-radius:8px;margin:14px 0;font-size:12px}.m8-agent details{margin-bottom:18px}
