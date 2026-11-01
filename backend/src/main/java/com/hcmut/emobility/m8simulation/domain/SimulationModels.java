@@ -36,7 +36,12 @@ public final class SimulationModels {
                                  String reason, String status, double projectedFailurePercent) {}
     public record Run(String id, Instant createdAt, Scenario scenario, Snapshot snapshot, Kpi kpi,
                       Kpi baseline, List<Point> timeline, List<Recommendation> recommendations,
-                      String recommendationSource, List<String> warnings) {}
+                      String recommendationSource, List<String> warnings,AgentModels.AgentState agent) {
+        public Run(String id,Instant createdAt,Scenario scenario,Snapshot snapshot,Kpi kpi,Kpi baseline,List<Point> timeline,
+                   List<Recommendation> recommendations,String recommendationSource,List<String> warnings) {
+            this(id,createdAt,scenario,snapshot,kpi,baseline,timeline,recommendations,recommendationSource,warnings,null);
+        }
+    }
     public record ParseRequest(@NotBlank @Size(max=4000) String text) {}
     public record ParseResult(Scenario scenario, String source, List<String> warnings) {}
 }

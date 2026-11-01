@@ -22,4 +22,5 @@ public class SimulationController {
     public Run discard(@PathVariable String id,@PathVariable String recommendationId) throws IOException { return service.discard(id,recommendationId); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/apply")
     public void apply(@PathVariable String id,@PathVariable String recommendationId) { service.apply(id,recommendationId); }
+    @PostMapping("/runs/{id}/agent/retry") public Run retry(@PathVariable String id,@RequestParam int expectedRounds) throws IOException {return service.retry(id,expectedRounds);}
 }
