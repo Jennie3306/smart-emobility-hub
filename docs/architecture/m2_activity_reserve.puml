@@ -1,0 +1,128 @@
+@startuml m2_activity_reserve
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam ArrowColor #1F4E79
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1F4E79
+  DiamondBackgroundColor #FFF4E5
+  DiamondBorderColor #C55A11
+}
+skinparam swimlane {
+  TitleFontColor #1F4E79
+  BorderColor #8EA9C1
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #B8A100
+}
+title Activity "Xử lý đặt chỗ, kiểm tra xung đột" (FR-M2-03; BR-M2-01, BR-M2-03, BR-M2-04)
+
+|Sinh viên|
+start
+:Chọn xe ở S-M2-02, bấm "Đặt xe";
+:POST /api/m2/reservations
+{ vehicleId };
+|ReservationController|
+:reserve(request, auth)
+@Valid: vehicleId không null;
+:currentUserId(auth);
+:reserveVehicle(userId, vehicleId);
+|ReservationService|
+:Bắt đầu transaction (@Transactional);
+|Repository (PostgreSQL)|
+:VehicleSearchRepository.findById(vehicleId);
+|ReservationService|
+if (Xe tồn tại?) then (có)
+else (không)
+  :BusinessException
+  VEHICLE_NOT_FOUND (404);
+  |Sinh viên|
+  :Thông báo "Không tìm thấy xe";
+  stop
+endif
+|ReservationService|
+if (vehicle.state == AVAILABLE?) then (có)
+else (không)
+  :BusinessException
+  VEHICLE_NOT_AVAILABLE (409);
+  |Sinh viên|
+  :Thông báo "Xe vừa chuyển trạng thái",
+  khóa nút "Đặt xe" → chọn xe khác;
+  stop
+endif
+|ReservationService|
+:reserve(userId, VEHICLE, vehicleId, hubId);
+|Repository (PostgreSQL)|
+:ReservationRepository
+.findFirstByUserIdAndResourceTypeAndStateIn
+(userId, VEHICLE, ACTIVE);
+|ReservationService|
+if (Sinh viên đã có đặt chỗ hiệu lực?) then (không)
+else (có)
+  :BusinessException
+  RESERVATION_LIMIT_EXCEEDED (409);
+  |Sinh viên|
+  :Thông báo "Bạn đã có một đặt xe đang hiệu lực"
+  + liên kết "Xem đặt chỗ";
+  stop
+endif
+|Repository (PostgreSQL)|
+:ReservationRepository
+.findFirstByResourceTypeAndResourceIdAndStateIn
+(VEHICLE, vehicleId, ACTIVE);
+|ReservationService|
+if (Xe đã có đặt chỗ hiệu lực?) then (không)
+else (có)
+  :BusinessException
+  RESOURCE_CONFLICT (409);
+  |Sinh viên|
+  :Thông báo "Xe vừa được người khác đặt"
+  → tải lại kết quả tìm kiếm;
+  stop
+endif
+|ReservationService|
+:Reservation.create(userId, VEHICLE, vehicleId, hubId, now)
+→ PENDING;
+:confirm(now, holdMinutes) → CONFIRMED
+expiresAt = now + 15 phút
+activeResourceKey = "VEHICLE:<vehicleId>"
+activeUserKey = "<userId>:VEHICLE";
+:saveActive(reservation);
+|Repository (PostgreSQL)|
+:saveAndFlush → INSERT INTO reservation;
+if (Vi phạm UNIQUE
+active_resource_key / active_user_key?) then (không)
+else (có)
+  |ReservationService|
+  :Bắt DataIntegrityViolationException
+  → RESOURCE_CONFLICT (409), rollback;
+  |Sinh viên|
+  :Thông báo "Xe vừa được người khác đặt"
+  → tải lại kết quả tìm kiếm;
+  stop
+endif
+|EventPublisher|
+:publish(ReservationConfirmedEvent);
+note right
+  Chỉ yêu cầu đã qua UNIQUE mới tới đây,
+  nên bên thua không bao giờ phát sự kiện.
+  Phát đồng bộ, trong cùng transaction.
+  Bên nhận: M3 đổi xe AVAILABLE → RESERVED.
+  (Event đã có trên nhánh M3, chờ merge vào main.)
+end note
+|ReservationService|
+:Commit transaction;
+|ReservationController|
+:201 Created + ReservationResponse
+(state, expiresAt, remainingSeconds);
+|Sinh viên|
+:Chuyển sang S-M2-03,
+đồng hồ đếm ngược 15:00;
+stop
+
+legend right
+  Mọi BusinessException được GlobalExceptionHandler
+  đổi thành JSON { code, message, details, timestamp }.
+endlegend
+@enduml
