@@ -36,15 +36,18 @@ class ReservationControllerTest {
 
     @Test
     @WithMockUser(username = "student1", roles = "STUDENT")
-    @DisplayName("TC-M2-06: minBattery = -5 or 101 -> 400 VALIDATION_FAILED; 50 -> 200")
+    @DisplayName("TC-M2-06: BVA on minBattery - -1 and 101 -> 400 VALIDATION_FAILED; 0 and 100 -> 200")
     void searchValidatesBattery() throws Exception {
-        mvc.perform(get("/api/m2/vehicles/search").param("minBattery", "-5"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
-        mvc.perform(get("/api/m2/vehicles/search").param("minBattery", "101"))
-                .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/m2/vehicles/search").param("minBattery", "50"))
-                .andExpect(status().isOk());
+        for (String outside : new String[]{"-1", "101"}) {
+            mvc.perform(get("/api/m2/vehicles/search").param("minBattery", outside))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+                    .andExpect(jsonPath("$.details.minBattery").exists());
+        }
+        for (String onBoundary : new String[]{"0", "100"}) {
+            mvc.perform(get("/api/m2/vehicles/search").param("minBattery", onBoundary))
+                    .andExpect(status().isOk());
+        }
     }
 
     @Test
