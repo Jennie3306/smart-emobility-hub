@@ -720,3 +720,22 @@ chứa simulator UI và Incident fixture với severity đã duyệt, không def
 filter/detail/draft và không gửi request Incident. Full backend 71 + frontend 32
 tests pass; browser fixture check dùng GET status stub. Proof mới ở report §8.10.
 Tin TV4/TV5 vẫn chưa gửi; technical/schema gates không được tự đóng từ các fix này.
+
+## 7. Nhật ký quyết định và bàn giao tách khỏi báo cáo M6
+
+Bảng này giữ nguồn và trạng thái phối hợp cho các mục đã được rút khỏi phần
+report. Mã FR/BR/UC là mã truy vết trong report. Mã M6-Dxx dùng riêng để
+theo dõi quyết định. Kết quả phê duyệt không phải bằng chứng triển khai.
+
+| Phạm vi report | Nguồn quyết định và mốc ghi nhận | Việc phối hợp còn mở theo hồ sơ hiện có |
+|---|---|---|
+| FR-M6-01/02, BR-M6-01/04, UC-M6-01/02 | TV2 chấp thuận actor Operator và vòng đời Incident ngày 21/10 (D01/D07). D08 quy định role Operator cho namespace M6, với ngoại lệ chỉ đọc nếu có nhu cầu Student cụ thể. Xem §2 và §3. | Chưa có ngoại lệ chỉ đọc cụ thể. Nhánh feature bảo vệ đường dẫn Simulator và Incident đã chỉ định, chưa áp dụng matcher bao phủ toàn namespace. Thay đổi shared/security cần TV3 review. |
+| FR-M6-04/06, BR-M6-02 | TV2 chấp thuận chu kỳ demo 5.000 ms ngày 21/10 (D02). TV3 chọn dùng chung service cho manual và scheduler, ghi nhận ngày 20/10 (D03). | Không dùng chu kỳ cấu hình demo làm bằng chứng độ trễ thực tế. |
+| FR-M6-03/05, BR-M6-03/05/08, §4 và §7.2 | TV3 chốt ranh giới phát sự kiện và tách health M6 khỏi usage/session M5, ghi nhận 20/10 (D05/D06). Phản hồi TV3 ghi nhận 29/10 xác nhận mã lý do viết hoa và payload đủ cho M3. | TV5/M5 cần đề xuất contract usage, failure/repair/recovery và phối hợp TV3 nếu cần API/event phục hồi. Chưa suy từ producer proof rằng phản ứng M2/M4/M5/M8 đã chạy. |
+| BR-M6-06/07/10, TC-M6-57–63 | [Quyết định TV2 ngày 28/10](../../DESCRIPTION/Template_report/Evidence/M6_IoT/decisions/tv2-20261028.md) ghi severity, bảng mapping và kết quả Incident trùng. [Phản hồi TV3 ghi nhận 29/10](../../DESCRIPTION/Template_report/Evidence/M6_IoT/decisions/tv3-received-20261029.md) giữ tương thích consumer và xác nhận D11 ở mức kiến trúc. | Cơ chế đồng thời, thứ tự kiểm tra và ràng buộc unique đề xuất cần TV3/TV4 xem xét. Cách xử lý mốc thời gian khi Reopen thành công chưa xác định. |
+| §6.1, §7.4 và TC-M6-43–56 | TV4 chấp thuận proposal schema D10 ngày 21/10. TV3 chấp nhận mô hình latest-state và Incident, không lưu raw history, trong phản hồi ghi nhận 29/10 (D11). | TV4 phụ trách migration D10 và xác nhận schema D11 cùng cột/ràng buộc mới. Chưa có migration, Incident API/DB hoặc luồng phát sau commit trong nhánh feature. |
+| Phần ghép báo cáo và review | §3.4 dùng biên bản review prototype TV5; §5.3 có ma trận FR → UC → test case. | Xác nhận ghép ma trận chung với TV7, đối chiếu ERD với TV4 và đưa giới hạn §4.4 vào bản ghép của TV3. Bản ghi này không đánh dấu thay cho review chéo. |
+
+Bản report trước khi tách lịch sử được giữ trong Git ở `26d9ad1`. Hai phản hồi
+gốc, log và ảnh lịch sử tiếp tục nằm trong thư mục evidence. Các phần hiện
+hành của report chỉ mô tả yêu cầu, thiết kế, phạm vi chạy thật và kết quả kiểm thử.
