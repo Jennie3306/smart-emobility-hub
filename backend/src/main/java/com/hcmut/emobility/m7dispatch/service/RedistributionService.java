@@ -1,52 +1,89 @@
 package com.hcmut.emobility.m7dispatch.service;
 
-import com.hcmut.emobility.m7dispatch.domain.*;
+import com.hcmut.emobility.m7dispatch.client.ExternalDtos;
+import com.hcmut.emobility.m7dispatch.client.HubClient;
+import com.hcmut.emobility.m7dispatch.client.RecommendationClient;
+import com.hcmut.emobility.m7dispatch.client.VehicleClient;
+import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
+import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionTaskRepository;
-import com.hcmut.emobility.m7dispatch.client.*;
-import com.hcmut.emobility.m7dispatch.events.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
+import com.hcmut.emobility.shared.common.BusinessException;
+import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
+import com.hcmut.emobility.shared.events.EventPublisher;
+import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
+/**
+ * FR-M7-01..03. Tao, duyet va theo doi nhiem vu dieu chuyen xe.
+ * M7 khong doi trang thai xe: khi nhiem vu DONE, M7 phat DispatchCompletedEvent
+ * va M3 tu chuyen xe sang hub dich, M1 tu cap nhat dashboard hai hub.
+ */
 @Service
 public class RedistributionService {
-    
+
+    /** BR-M7-01: xe dang duoc dat hoac dang co nguoi su dung thi khong dieu chuyen. */
+    private static final Set<String> NOT_MOVABLE = Set.of("RESERVED", "BOOKED", "IN_USE");
+
     private final RedistributionTaskRepository repository;
-    private final ApplicationEventPublisher eventPublisher;
+    private final EventPublisher events;
     private final VehicleClient vehicleClient;
     private final HubClient hubClient;
     private final RecommendationClient recommendationClient;
 
-    @Autowired
-    public RedistributionService(RedistributionTaskRepository repository, 
-                                 ApplicationEventPublisher eventPublisher,
-                                 VehicleClient vehicleClient, 
-                                 HubClient hubClient, 
+    public RedistributionService(RedistributionTaskRepository repository,
+                                 EventPublisher events,
+                                 VehicleClient vehicleClient,
+                                 HubClient hubClient,
                                  RecommendationClient recommendationClient) {
         this.repository = repository;
-        this.eventPublisher = eventPublisher;
+        this.events = events;
         this.vehicleClient = vehicleClient;
         this.hubClient = hubClient;
         this.recommendationClient = recommendationClient;
     }
 
-    public RedistributionTask createRedistributionTask(String vehicleId, String sourceHubId, String destinationHubId) {
-        ExternalDtos.VehicleInfo vehicleInfo = vehicleClient.checkVehicle(vehicleId);
-        if (vehicleInfo.getStatus().equalsIgnoreCase("booked")) {
-            throw new RuntimeException("Xe đã được đặt (BR-M7-01)");
+    /** FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED. */
+    @Transactional
+    public RedistributionTask createRedistributionTask(Long vehicleId, Long sourceHubId, Long destinationHubId) {
+        if (vehicleId == null || sourceHubId == null || destinationHubId == null) {
+            throw new BusinessException("VALIDATION_FAILED",
+                    "vehicleId, sourceHubId and destinationHubId are required", HttpStatus.BAD_REQUEST);
+        }
+        if (sourceHubId.equals(destinationHubId)) {
+            throw new BusinessException("SAME_HUB",
+                    "Source and destination hub must differ", HttpStatus.BAD_REQUEST);
         }
 
-        Optional<RedistributionTask> activeTask = repository.findActiveByVehicleId(vehicleId);
-        if (activeTask.isPresent()) {
-            throw new RuntimeException("Xe đã có lệnh điều chuyển (BR-M7-02)");
+        ExternalDtos.VehicleInfo vehicle = vehicleClient.checkVehicle(vehicleId)
+                .orElseThrow(() -> new BusinessException("VEHICLE_NOT_FOUND",
+                        "Vehicle not found: " + vehicleId, HttpStatus.NOT_FOUND));
+        if (vehicle.state() != null && NOT_MOVABLE.contains(vehicle.state().toUpperCase())) {
+            throw new BusinessException("VEHICLE_RESERVED",
+                    "Vehicle " + vehicleId + " is reserved or in use (BR-M7-01)");
+        }
+        if (vehicle.currentHubId() != null && !vehicle.currentHubId().equals(sourceHubId)) {
+            throw new BusinessException("VEHICLE_NOT_AT_SOURCE",
+                    "Vehicle " + vehicleId + " is at hub " + vehicle.currentHubId()
+                            + ", not at source hub " + sourceHubId);
         }
 
-        ExternalDtos.HubInfo hubInfo = hubClient.checkDestinationCapacity(destinationHubId);
-        if (hubInfo.getCurrentVehicleCount() >= hubInfo.getCapacity()) {
-            throw new RuntimeException("Hub đích đã đầy (BR-M7-03)");
+        if (repository.findActiveByVehicleId(vehicleId).isPresent()) {
+            throw new BusinessException("TASK_ALREADY_ACTIVE",
+                    "Vehicle " + vehicleId + " already has an active redistribution task (BR-M7-02)");
+        }
+
+        ExternalDtos.HubInfo destination = hubClient.checkDestinationCapacity(destinationHubId)
+                .orElseThrow(() -> new BusinessException("HUB_NOT_FOUND",
+                        "Hub not found: " + destinationHubId, HttpStatus.NOT_FOUND));
+        if (destination.isFull()) {
+            throw new BusinessException("DESTINATION_FULL",
+                    "Destination hub " + destinationHubId + " is full (BR-M7-03)");
         }
 
         RedistributionTask task = new RedistributionTask();
@@ -55,49 +92,58 @@ public class RedistributionService {
         task.setDestinationHubId(destinationHubId);
         task.setStatus(RedistributionTaskStatus.CREATED);
         task.setCreatedAt(LocalDateTime.now());
-                
         return repository.save(task);
     }
 
+    /** FR-M7-02, UC-M7-02. Operator duyet khuyen nghi -> tao nhiem vu tu khuyen nghi do (BR-M7-04). */
+    @Transactional
     public RedistributionTask approveRecommendation(String recommendationId) {
-        ExternalDtos.Recommendation rec = recommendationClient.getRecommendation(recommendationId);
-        
+        ExternalDtos.Recommendation rec = recommendationClient.getRecommendation(recommendationId)
+                .orElseThrow(() -> new BusinessException("RECOMMENDATION_NOT_FOUND",
+                        "Recommendation not found or no longer valid: " + recommendationId,
+                        HttpStatus.NOT_FOUND));
+
         RedistributionTask task = createRedistributionTask(
-                rec.getVehicleId(), rec.getSourceHubId(), rec.getDestinationHubId()
-        );
-        
-        // Fix đỏ: Thêm Events. vào trước class
-        eventPublisher.publishEvent(new Events.RecommendationApprovedEvent(recommendationId, task.getTaskId()));
+                rec.vehicleId(), rec.sourceHubId(), rec.destinationHubId());
+        task.setRecommendationId(recommendationId);
+        task = repository.save(task);
+
+        events.publish(new RecommendationApprovedEvent(recommendationId, "REDISTRIBUTE"));
         return task;
     }
 
-    public void updateTaskStatus(String taskId, RedistributionTaskStatus newStatus) {
-        Optional<RedistributionTask> taskOpt = repository.findById(taskId);
-        if (!taskOpt.isPresent()) {
-            throw new RuntimeException("Không tìm thấy task");
-        }
-        
-        RedistributionTask task = taskOpt.get();
-            
-        if (task.getStatus() == RedistributionTaskStatus.DONE || task.getStatus() == RedistributionTaskStatus.FAILED) {
-            if (newStatus == RedistributionTaskStatus.IN_PROGRESS) {
-                throw new RuntimeException("Không thể chuyển trạng thái ngược về InProgress");
-            }
+    /** FR-M7-03, UC-M7-03. Chuyen trang thai theo bang o muc 4.1; DONE thi phat DispatchCompletedEvent. */
+    @Transactional
+    public RedistributionTask updateTaskStatus(Long taskId, RedistributionTaskStatus newStatus) {
+        RedistributionTask task = getTaskDetail(taskId);
+        RedistributionTaskStatus current = task.getStatus();
+        if (newStatus == null || !current.canMoveTo(newStatus)) {
+            throw new BusinessException("INVALID_STATE_TRANSITION",
+                    "Cannot move task from " + current + " to " + newStatus);
         }
 
         task.setStatus(newStatus);
         task.setUpdatedAt(LocalDateTime.now());
-        repository.save(task);
+        RedistributionTask saved = repository.save(task);
 
         if (newStatus == RedistributionTaskStatus.DONE) {
-            // Fix đỏ: Thêm Events. vào trước class
-            eventPublisher.publishEvent(new Events.DispatchCompletedEvent(
-                task.getTaskId(), task.getVehicleId(), task.getDestinationHubId()
-            ));
+            events.publish(new DispatchCompletedEvent(saved.getTaskId(), saved.getVehicleId(),
+                    saved.getSourceHubId(), saved.getDestinationHubId()));
         }
+        return saved;
     }
 
-    public List<RedistributionTask> getTasksByStatus(RedistributionTaskStatus status) {
-        return repository.findByStatus(status);
+    @Transactional(readOnly = true)
+    public RedistributionTask getTaskDetail(Long taskId) {
+        return repository.findById(taskId)
+                .orElseThrow(() -> new BusinessException("TASK_NOT_FOUND",
+                        "Redistribution task not found: " + taskId, HttpStatus.NOT_FOUND));
+    }
+
+    @Transactional(readOnly = true)
+    public List<RedistributionTask> getTasks(RedistributionTaskStatus status) {
+        return status == null
+                ? repository.findAllByOrderByCreatedAtDesc()
+                : repository.findByStatusOrderByCreatedAtDesc(status);
     }
 }

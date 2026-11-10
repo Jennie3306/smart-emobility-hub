@@ -3,51 +3,47 @@ package com.hcmut.emobility.m7dispatch.controller;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.service.RedistributionService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
+/** Duoi /api/m7/** nen chi OPERATOR goi duoc (SecurityConfig). */
 @RestController
-@RequestMapping("/api/redistributions")
+@RequestMapping("/api/m7/redistributions")
 public class RedistributionController {
 
     private final RedistributionService service;
 
-    @Autowired
     public RedistributionController(RedistributionService service) {
         this.service = service;
     }
 
+    public record CreateTaskRequest(Long vehicleId, Long sourceHubId, Long destinationHubId) { }
+
     @PostMapping
-    public ResponseEntity<RedistributionTask> createTask(
-            @RequestParam String vehicleId,
-            @RequestParam String sourceHubId,
-            @RequestParam String destinationHubId) {
-        return ResponseEntity.ok(service.createRedistributionTask(vehicleId, sourceHubId, destinationHubId));
+    public RedistributionTask createTask(@RequestBody CreateTaskRequest request) {
+        return service.createRedistributionTask(
+                request.vehicleId(), request.sourceHubId(), request.destinationHubId());
     }
 
     @PostMapping("/recommendations/{recommendationId}/approve")
-    public ResponseEntity<RedistributionTask> approveRecommendation(@PathVariable String recommendationId) {
-        return ResponseEntity.ok(service.approveRecommendation(recommendationId));
+    public RedistributionTask approveRecommendation(@PathVariable String recommendationId) {
+        return service.approveRecommendation(recommendationId);
     }
 
     @PutMapping("/{taskId}/status")
-    public ResponseEntity<Void> updateStatus(
-            @PathVariable String taskId,
-            @RequestParam RedistributionTaskStatus status) {
-        service.updateTaskStatus(taskId, status);
-        return ResponseEntity.ok().build();
+    public RedistributionTask updateStatus(@PathVariable Long taskId,
+                                           @RequestParam RedistributionTaskStatus status) {
+        return service.updateTaskStatus(taskId, status);
     }
 
     @GetMapping("/{taskId}")
-    public ResponseEntity<RedistributionTask> getTaskDetail(@PathVariable String taskId) {
-        return ResponseEntity.ok(service.getTaskDetail(taskId));
+    public RedistributionTask getTaskDetail(@PathVariable Long taskId) {
+        return service.getTaskDetail(taskId);
     }
 
     @GetMapping
-    public ResponseEntity<List<RedistributionTask>> getTasksByStatus(
-            @RequestParam RedistributionTaskStatus status) {
-        return ResponseEntity.ok(service.getTasksByStatus(status));
+    public List<RedistributionTask> getTasks(@RequestParam(required = false) RedistributionTaskStatus status) {
+        return service.getTasks(status);
     }
 }
