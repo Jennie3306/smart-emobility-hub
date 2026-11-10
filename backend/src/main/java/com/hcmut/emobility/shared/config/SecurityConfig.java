@@ -33,7 +33,7 @@ public class SecurityConfig {
     /** Chua dang nhap ma goi API -> tra JSON 401 (frontend tu chuyen sang trang dang nhap). */
     private final AuthenticationEntryPoint apiEntryPoint = (req, res, e) ->
             writeJsonError(res, HttpServletResponse.SC_UNAUTHORIZED,
-                    "UNAUTHENTICATED", "Ban chua dang nhap");
+                    "UNAUTHENTICATED", "Sign in to continue");
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -44,8 +44,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/**", "/ws/**").permitAll()
                 // Swagger: can du 3 duong dan - "/swagger-ui.html" chuyen huong sang "/swagger-ui/index.html"
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                .requestMatchers("/api/m7/**", "/api/m8/**").hasRole("OPERATOR")
-                .requestMatchers("/api/m1/dashboard/**", "/api/m6/incidents/**").hasRole("OPERATOR")
+                // M6-D08 (TV2 duyet 21/10): toan bo /api/m6/** chi danh cho OPERATOR
+                .requestMatchers("/api/m6/**", "/api/m7/**", "/api/m8/**").hasRole("OPERATOR")
+                .requestMatchers("/api/m1/dashboard/**", "/api/m1/alerts/**").hasRole("OPERATOR")
                 .anyRequest().authenticated())
             // Loi 401/403 do bo loc Security nem ra KHONG di qua GlobalExceptionHandler,
             // nen phai tu ghi JSON o day - neu khong Spring tra ve trang HTML "Whitelabel Error Page".
@@ -54,13 +55,15 @@ public class SecurityConfig {
                 .defaultAuthenticationEntryPointFor(apiEntryPoint, new AntPathRequestMatcher("/api/**"))
                 .accessDeniedHandler((req, res, e) ->
                         writeJsonError(res, HttpServletResponse.SC_FORBIDDEN,
-                                "ACCESS_DENIED", "Ban khong co quyen thuc hien thao tac nay")))
+                                "ACCESS_DENIED", req.getRequestURI().startsWith("/api/m8/")
+                                    ? "What-if Studio requires an Operator account. Sign in with operator1 for the demo."
+                                    : "You do not have permission to perform this action")))
             .formLogin(form -> form
                 .loginProcessingUrl("/api/auth/login")
                 .successHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK))
                 .failureHandler((req, res, ex) ->
                         writeJsonError(res, HttpServletResponse.SC_UNAUTHORIZED,
-                                "LOGIN_FAILED", "Sai tai khoan hoac mat khau")))
+                                "LOGIN_FAILED", "Invalid username or password")))
             .logout(out -> out
                 .logoutUrl("/api/auth/logout")
                 .logoutSuccessHandler((req, res, auth) -> res.setStatus(HttpServletResponse.SC_OK)));

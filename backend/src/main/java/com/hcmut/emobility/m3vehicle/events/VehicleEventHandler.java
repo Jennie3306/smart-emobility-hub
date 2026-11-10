@@ -3,19 +3,17 @@ package com.hcmut.emobility.m3vehicle.events;
 import com.hcmut.emobility.m3vehicle.domain.RentalVehicle;
 import com.hcmut.emobility.m3vehicle.domain.VehicleState;
 import com.hcmut.emobility.m3vehicle.repository.RentalVehicleRepository;
+import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * MAU cho moi module: module tu xu ly su kien cua nguoi khac TRONG package cua minh.
- * Ben phat (M6, M2) khong duoc dong vao code cua M3.
- */
 @Component
 public class VehicleEventHandler {
 
@@ -30,29 +28,59 @@ public class VehicleEventHandler {
     }
 
     @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;   // chong xu ly trung
+        if (!processed.markIfNew("M3",event.getEventId())) return;
         try {
-            repository.findById(event.getVehicleId()).ifPresent(v ->
-                    v.changeState(VehicleState.MAINTENANCE));
+            repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
+                vehicle.changeState(VehicleState.MAINTENANCE);
+                vehicle.clearReservation();
+                log.info("[M3] VehicleFailed: vehicle={} -> MAINTENANCE", event.getVehicleId());
+            });
         } catch (Exception ex) {
             log.error("[M3] Xu ly VehicleFailed that bai: {}", ex.getMessage(), ex);
         }
     }
 
     @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onReservationExpired(ReservationExpiredEvent event) {
-        if (!processed.markIfNew(event.getEventId())) return;
+        if (!processed.markIfNew("M3",event.getEventId())) return;
         if (!"VEHICLE".equals(event.getResourceType())) return;
         try {
             RentalVehicle vehicle = repository.findById(event.getResourceId()).orElse(null);
             if (vehicle != null && vehicle.getState() == VehicleState.RESERVED) {
                 vehicle.changeState(VehicleState.AVAILABLE);
+                vehicle.clearReservation();
+                log.info("[M3] ReservationExpired: vehicle={} -> AVAILABLE", event.getResourceId());
             }
         } catch (Exception ex) {
             log.error("[M3] Xu ly ReservationExpired that bai: {}", ex.getMessage(), ex);
         }
     }
+
+    @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
+    @Transactional
+    public void onDispatchCompleted(DispatchCompletedEvent event) {
+        if (!processed.markIfNew("M3",event.getEventId())) return;
+        try {
+            repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
+                vehicle.setCurrentHubId(event.getToHubId());
+                if (vehicle.getState() == VehicleState.IN_TRANSIT) {
+                    vehicle.changeState(VehicleState.AVAILABLE);
+                }
+                log.info("[M3] DispatchCompleted: vehicle={} hub {} -> {}",
+                        event.getVehicleId(), event.getFromHubId(), event.getToHubId());
+            });
+        } catch (Exception ex) {
+            log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
+        }
+    }
+
+    // ReservationConfirmed / ReservationCancelled / ReservationCheckedIn: xu ly tai
+    // ReservationVehicleHandler (fail-fast de M2 rollback khi khong giu duoc xe).
+    // Tranh hai listener cung doi trang thai mot xe.
 }

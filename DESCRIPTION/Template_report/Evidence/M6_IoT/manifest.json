@@ -1,0 +1,228 @@
+{
+  "curated_on": "2026-10-29",
+  "new_execution": true,
+  "items": [
+    {
+      "path": "decisions/tv2-20261028.md",
+      "source": "DESCRIPTION/Template_report/responses/m6-severity-active-incident.md",
+      "sha256": "d05e6a64392279e66eb1a912cb1b7357fcf3ba669596a37b519024158ccff35c",
+      "bytes": 7181
+    },
+    {
+      "path": "decisions/tv3-received-20261029.md",
+      "source": "DESCRIPTION/Template_report/responses/m3.md",
+      "sha256": "f83df69295f52fdce586f91491c46192c0e5097c2bb7e41c53c58ee6a9d10f1a",
+      "bytes": 3167
+    },
+    {
+      "path": "screenshots/prototype/01-closed-filter.png",
+      "source": "output/playwright/m6-prototype-review/01-closed-filter.png",
+      "sha256": "7fec4d528ca800331b697c6eb948786f757ae68486c0fe46edb57c732a5bf7e7",
+      "bytes": 159297
+    },
+    {
+      "path": "screenshots/prototype/02-resolved-no-reopen.png",
+      "source": "output/playwright/m6-prototype-review/02-resolved-no-reopen.png",
+      "sha256": "059a4df4c8fc024189d38c7df3b449a47c705fa77cda7d9ee930cbfa1c47dc80",
+      "bytes": 161348
+    },
+    {
+      "path": "screenshots/prototype/03-report-form.png",
+      "source": "output/playwright/m6-prototype-review/03-report-form.png",
+      "sha256": "bd11e025b44264b2b3a1cb4efef5b7680eed311070e34eac89d5f1e3a1ac84c6",
+      "bytes": 168556
+    },
+    {
+      "path": "screenshots/prototype/04-simulator-contract.png",
+      "source": "output/playwright/m6-prototype-review/04-simulator-contract.png",
+      "sha256": "3f02543980df0a1b90c7d1fad177b843f0975a82382b4daf5a3cebb2e55cce71",
+      "bytes": 152362
+    },
+    {
+      "path": "screenshots/prototype/05-demo-run.png",
+      "source": "output/playwright/m6-prototype-review/05-demo-run.png",
+      "sha256": "a8669a0f9ff185816beeb6a7c360d4a260a2260b8406f0d92c8848f30e891f98",
+      "bytes": 162047
+    },
+    {
+      "path": "screenshots/ui/02-student-forbidden.png",
+      "source": "output/playwright/m6-ui-20261028/02-student-forbidden.png",
+      "sha256": "8efd4749176c9affa8b25aa47bdbe7940eff9dde8ee9072014d0b51d3fc52577",
+      "bytes": 91078
+    },
+    {
+      "path": "screenshots/ui/05-simulator-live.png",
+      "source": "output/playwright/m6-ui-20261028/05-simulator-live.png",
+      "sha256": "092b16986590a514708f21cba62735aeac4a9d4eca4d4e2aaee23ca051b258f1",
+      "bytes": 114861
+    },
+    {
+      "path": "screenshots/ui/08-incident-fixture.png",
+      "source": "output/playwright/m6-ui-20261028/08-incident-fixture.png",
+      "sha256": "02a34b6123cea2b27adc32004f0d5e27d98ac3ce6e7153288c071a83e69fb350",
+      "bytes": 175012
+    },
+    {
+      "path": "screenshots/ui/09-mobile-simulator.png",
+      "source": "output/playwright/m6-ui-20261028/09-mobile-simulator.png",
+      "sha256": "51ff85b09e6b93c41c8ecda64560539a378079d345c2d668002197451831157d",
+      "bytes": 121198
+    },
+    {
+      "path": "screenshots/ui/10-mobile-fixture.png",
+      "source": "output/playwright/m6-ui-20261028/10-mobile-fixture.png",
+      "sha256": "5fe32b25b85eb624d4d086bb02ed760363b3307cb8056b84d20a6750946d269c",
+      "bytes": 146713
+    },
+    {
+      "path": "screenshots/ui/12-injected-409.png",
+      "source": "output/playwright/m6-ui-20261028/12-injected-409.png",
+      "sha256": "f674d22b7e6aa9531aec739bf9d3f5c023bc0bdaef7395f079ceba45af16f4da",
+      "bytes": 126301
+    },
+    {
+      "path": "records/d07-focused.log",
+      "source": "output/validation/m6-d07/focused.log",
+      "sha256": "a3dccd6ffd51c7347f23b757061c2475e76371ca1e72866636a7225c6cd60bf1",
+      "bytes": 3333,
+      "sha256_before_normalization": "2a5a8675723dad33daa41a0c7f049d04f5f1b0bf0e1dcfa5a5a94daf4bf9987a",
+      "local_original": "output/validation/m6-curated-originals/records/d07-focused.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    },
+    {
+      "path": "records/backend-verify-20261028.log",
+      "source": "output/validation/m6-ui/backend-verify.log",
+      "sha256": "caf662faf038d90ea751e77ef125af3aee54fcbcd09644b0e47c40b1cd5c8888",
+      "bytes": 55978,
+      "sha256_before_normalization": "e3e30373680e349a03e63dc5e991492d022dd2b7cc87dffdeccf3f6c443bcef5",
+      "local_original": "output/validation/m6-curated-originals/records/backend-verify-20261028.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged.",
+      "sha256_before_redaction": "de2e42b237b5f53f120d99ef77fd9d1950b616de23c4e8e6e6c670f2fea676a1",
+      "redaction": "Ephemeral Spring test-generated password only; results unchanged."
+    },
+    {
+      "path": "records/frontend-tests-20261028.log",
+      "source": "output/validation/m6-ui/frontend-tests.log",
+      "sha256": "32489d16b89178077147977c5da95d50ace92bd43322170ce62bad7d43f6bfb3",
+      "bytes": 571,
+      "sha256_before_normalization": "09203d6eff01591d608c960bb5dfb76042d4dc6846d931bb8bb9b54162a11b6e",
+      "local_original": "output/validation/m6-curated-originals/records/frontend-tests-20261028.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    },
+    {
+      "path": "records/frontend-build-20261028.log",
+      "source": "output/validation/m6-ui/frontend-build.log",
+      "sha256": "449dafa3cbb6b76a469c5ea20c70847f73fe36b2ad2d35413b0af31e854965f8",
+      "bytes": 725
+    },
+    {
+      "path": "records/ui-source-sha256.txt",
+      "source": "output/validation/m6-ui/source-sha256.txt",
+      "sha256": "276c08ea64aeb8ddec87433898aa714359bcd05db7da710809aeb1dcf3ee07c3",
+      "bytes": 1519
+    },
+    {
+      "path": "records/domain-source-sha256.txt",
+      "source": "output/validation/m6-d07/source-sha256.txt",
+      "sha256": "e9cc5aa1311fb941cd6c1c522633f333845d2b174a35c37d13da6e39e9d39a4d",
+      "bytes": 749
+    },
+    {
+      "path": "records/compose-override.yml",
+      "source": "output/validation/m6-ui/compose-override.yml",
+      "sha256": "f552d1d62600968ddac24fa43c2452163499d591545c4ed862d4ed20a5f97ed6",
+      "bytes": 307
+    },
+    {
+      "path": "records/verification-excerpts-20261028.txt",
+      "source": "curated verbatim excerpts; per-source hashes are embedded",
+      "sha256": "cfda09aef4f306cbd7705d8ddfd88603cc64487b7699a58c0e73efa622c5d953",
+      "bytes": 63911,
+      "sha256_before_normalization": "4ed155a044ef3e731014861578160df9d0fd38921123b757ef5748b7a4745938",
+      "local_original": "output/validation/m6-curated-originals/records/verification-excerpts-20261028.txt",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    },
+    {
+      "path": "records/backend-verify-20261027.log",
+      "source": "output/validation/m6-d07/verify.log",
+      "sha256": "175131113d67d6a2cbf71929aa935a8e6367ccfc90d8b739e94d711ef42fa538",
+      "bytes": 56109,
+      "sha256_before_normalization": "c654546efcaba01534e6464aa0e2821cf057e2f4938f83fe732c9d3b4921351a",
+      "local_original": "output/validation/m6-curated-originals/records/backend-verify-20261027.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged.",
+      "sha256_before_redaction": "691a8e7a1dc9d9582866e7b6e066e562ebc9b4ab08c3fb8521e123823500ef7a",
+      "redaction": "Ephemeral Spring test-generated password only; results unchanged."
+    },
+    {
+      "path": "records/policy-20261029/focused-backend.log",
+      "source": "output/validation/m6-policy-20261029/focused-backend.log",
+      "sha256": "7706e7d5a8f10560355734cb0cf53d40afbddff198ecacca7e17bcf26b745a79",
+      "bytes": 17991,
+      "sha256_before_normalization": "7bda7561043480532524196393116d3911f76eee3fe4b3ee6090154e34341670",
+      "local_original": "output/validation/m6-curated-originals/records/policy-20261029/focused-backend.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    },
+    {
+      "path": "records/policy-20261029/backend-verify.log",
+      "source": "output/validation/m6-policy-20261029/backend-verify.log",
+      "sha256": "16a1a6e81abcaf2fdeaa5a1296147dd37effac54add0a6f5fd5f560c6b19cd81",
+      "bytes": 57884,
+      "sha256_before_normalization": "e3b55398187b5358f9bc2ab1b6d1883662cd16485a61c07dbf605d7264482f0d",
+      "local_original": "output/validation/m6-curated-originals/records/policy-20261029/backend-verify.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged.",
+      "sha256_before_redaction": "242fbc1c1799992a22e9b1f941c77383e2eb218deb2e3941f1b4f73fb78c7e6a",
+      "redaction": "Ephemeral Spring test-generated password only; results unchanged."
+    },
+    {
+      "path": "records/policy-20261029/frontend-tests.log",
+      "source": "output/validation/m6-policy-20261029/frontend-tests.log",
+      "sha256": "fc792261fdd9e3737849dceba20b647a9d86168299d634b42852f9f337bd55ae",
+      "bytes": 571,
+      "sha256_before_normalization": "94fc5dcbb8770c6f6e0943fe74bb4a343fd58aa0d41aa80465e5b536dea00591",
+      "local_original": "output/validation/m6-curated-originals/records/policy-20261029/frontend-tests.log",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    },
+    {
+      "path": "records/policy-20261029/frontend-build.log",
+      "source": "output/validation/m6-policy-20261029/frontend-build.log",
+      "sha256": "ad4132e29689d897dd6342cc89d20aed4c1c9dec80c8c523014197612dbc8185",
+      "bytes": 725
+    },
+    {
+      "path": "screenshots/ui/policy-20261029/02-severity-required.png",
+      "source": "output/playwright/m6-policy-20261029/02-severity-required.png",
+      "sha256": "72f597ab39e4bb8fd8f9f83e09f0d67b8eb0392eb553b7e51985d062dfae304a",
+      "bytes": 61239
+    },
+    {
+      "path": "screenshots/ui/policy-20261029/03-severity-preview.png",
+      "source": "output/playwright/m6-policy-20261029/03-severity-preview.png",
+      "sha256": "512c19c16a91dc0e881f9b368cb042c7dea7bafd9b724ed344af0b0f7c2d4da2",
+      "bytes": 81099
+    },
+    {
+      "path": "screenshots/ui/policy-20261029/04-severity-mobile.png",
+      "source": "output/playwright/m6-policy-20261029/04-severity-mobile.png",
+      "sha256": "639264bd9eb53509350439a9957609df236c42fd2ea4991085d43d27c0055d53",
+      "bytes": 72877
+    },
+    {
+      "path": "records/policy-20261029/source-sha256.txt",
+      "source": "output/validation/m6-policy-20261029/source-sha256.txt",
+      "sha256": "819153a7ebae91a5320766162c2266d150c5e08b5a6e22d8df6abebe7d037b83",
+      "bytes": 2727
+    },
+    {
+      "path": "records/policy-20261029/browser-checks.txt",
+      "source": "output/validation/m6-policy-20261029/browser-checks.txt",
+      "sha256": "54f43a87677a64656beb93546d012b9fe37d92d3d0622ada1e1b00ea81b35d8d",
+      "bytes": 15115,
+      "sha256_before_normalization": "bb7e6e0c26657061cd74bb179703dbe203dff847ff7ae1e74f4b1a7e3a681762",
+      "local_original": "output/validation/m6-curated-originals/records/policy-20261029/browser-checks.txt",
+      "normalization": "Trailing whitespace and blank lines at EOF removed; test results/content unchanged."
+    }
+  ],
+  "latest_execution_date": "2026-10-29",
+  "backend_code_revision": "7edb551cf230850b7718c6413e215afdba4080a4",
+  "frontend_code_revision": "b1563443abdb49817a63bfda9e8535981e265c43"
+}

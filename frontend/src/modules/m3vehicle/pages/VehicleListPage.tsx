@@ -10,14 +10,14 @@ export default function VehicleListPage() {
     vehicleApi.list().then(setVehicles).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Dang tai...</p>;
+  if (loading) return <p>Loading…</p>;
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-brand mb-4">Danh sach xe thue (M3)</h1>
+      <h1 className="text-xl font-bold text-brand mb-4">Rental vehicles (M3)</h1>
       <table className="w-full bg-white rounded shadow text-sm">
         <thead className="bg-slate-100 text-left">
-          <tr><th className="p-2">Ma xe</th><th>Loai</th><th>Pin</th><th>Trang thai</th><th>Hub</th></tr>
+          <tr><th className="p-2">Vehicle code</th><th>Type</th><th>Battery</th><th>State</th><th>Hub</th></tr>
         </thead>
         <tbody>
           {vehicles.map((v) => (

@@ -8,3 +8,8 @@ dist/
 .vscode/
 .DS_Store
 .env
+.local/
+
+# Harness core maintenance binary
+scripts/bin/harness
+scripts/bin/harness.exe

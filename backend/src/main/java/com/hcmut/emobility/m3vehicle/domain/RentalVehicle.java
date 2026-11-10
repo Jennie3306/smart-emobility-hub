@@ -28,27 +28,33 @@ public class RentalVehicle {
     @Column(name = "current_hub_id")
     private Long currentHubId;
 
+    @Column(name = "reserved_by_user_id")
+    private Long reservedByUserId;
+
     @Version
     private Long version;   // optimistic lock - chong cap nhat dong thoi
 
     protected RentalVehicle() { }
 
-    /**
-     * Doi trang thai xe, chi cho phep cac chuyen hop le trong state machine.
-     * Tien dieu kien: trang thai moi khac null.
-     * Hau dieu kien: state = newState neu hop le.
-     * Ngoai le: BusinessException INVALID_STATE_TRANSITION.
-     */
     public void changeState(VehicleState newState) {
         if (!this.state.canMoveTo(newState)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Khong the chuyen xe tu " + state + " sang " + newState);
+                    "Cannot transition vehicle from " + state + " to " + newState);
         }
         this.state = newState;
     }
 
     public void updateBattery(int level) {
         this.batteryLevel = Math.max(0, Math.min(100, level));
+    }
+
+    public void reserve(Long userId) {
+        changeState(VehicleState.RESERVED);
+        this.reservedByUserId = userId;
+    }
+
+    public void clearReservation() {
+        this.reservedByUserId = null;
     }
 
     public Long getId() { return id; }
@@ -58,4 +64,6 @@ public class RentalVehicle {
     public VehicleState getState() { return state; }
     public Long getCurrentHubId() { return currentHubId; }
     public void setCurrentHubId(Long hubId) { this.currentHubId = hubId; }
+    public Long getReservedByUserId() {return reservedByUserId; }
+    public void setReservedByUserId(Long userId) { this.reservedByUserId = userId; }
 }
