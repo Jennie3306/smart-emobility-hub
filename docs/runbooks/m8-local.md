@@ -83,11 +83,13 @@ English display labels for seeded hubs do not change live Hub rows.
 - TV2: booking persistence and the accepted-booking read contract are integrated;
   total attempted demand remains unavailable.
 - TV3: review the local rental lifecycle/event and snapshot contract changes.
-- TV4: review V20 M2 persistence migration already applied locally; approve the separate
-  M8 schema, operational hub state and M4 parking validation contract. M4 remains a stub.
-- TV7: Apply contract with live revalidation, deduplication and execution status.
-  RecommendationApprovedEvent currently lacks dispatch details.
-- M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
+- TV4 / M4: the parking integration is the remaining dependency for Apply. When M4
+  publishes the code, map its existing API to `DispatchParking` in M8. A capacity read
+  alone does not reserve a space. M8 scenario history is still stored locally.
+- TV7 / M7: M8 already calls the existing per-vehicle task API. Keep that API unless
+  verification uncovers a contract issue. M8 owns the recommendation and its task IDs.
+- TV1 / M1 and TV3 / M3: verify dashboard counts and vehicle location after M7 emits
+  `DispatchCompletedEvent`. Showing newly created tasks on the dashboard is separate.
 
 ### Apply dispatch contract
 
@@ -108,6 +110,22 @@ English display labels for seeded hubs do not change live Hub rows.
   after each task reaches `DONE`; M3 moves the vehicle and M1 updates the dashboard.
   AI plan cards apply individual dispatch actions. Their displayed KPI is for the full
   tested plan. Rerouting remains a simulation setting.
+
+### Final integration checklist
+
+1. Review the latest M4 and M7 commits. Identify the actual M4 operations for holding
+   a destination space, associating the hold with an M7 task, and releasing or completing
+   it. Check operator authorization, concurrent holds, expiry and retry behavior.
+2. Add the adapter in M8 against those operations. Reuse M7 `GET /api/m7/redistributions`
+   for active tasks and `POST /api/m7/redistributions` with `vehicleId`, `sourceHubId` and
+   `destinationHubId` to create each task. Enable Apply only with the real parking adapter.
+3. In an isolated environment, verify successful Apply, a full destination, partial
+   creation, duplicate Apply, a lost response, and parking cleanup after failure. Follow
+   a created task through `IN_PROGRESS` and `DONE`, then check M3 location and M1 counts.
+4. Keep final formatting and integration edits in M8 and its documentation. If a teammate's
+   module needs a change for a verified integration issue, keep that diff limited to the
+   affected API or event and avoid reformatting adjacent code. Follow repository ownership
+   rules for shared events and migrations.
 
 ## Verify
 
