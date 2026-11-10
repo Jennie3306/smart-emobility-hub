@@ -9,21 +9,25 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.springframework.http.HttpStatus;
 
+import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.hcmut.emobility.m4parking.domain.ParkingSpace.Status.BLOCKED;
 import static com.hcmut.emobility.m4parking.domain.ParkingSpace.Status.FREE;
 import static com.hcmut.emobility.m4parking.domain.ParkingSpace.Status.OCCUPIED;
 import static com.hcmut.emobility.m4parking.domain.ParkingSpace.Status.RESERVED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Muc domain cua M4: vong doi trang thai cua ParkingSpace (muc 4.1 cua report).
  * Ky thuat: state transition testing.
- * Lien quan: BR-M4-05, BR-M4-06, BR-M4-07.
+ * Lien quan: BR-M4-05, BR-M4-06, BR-M4-07; TC-M4-08..13, TC-M4-16; loi D-M4-01..03.
  */
 class ParkingSpaceStateTest {
 
@@ -199,6 +203,28 @@ class ParkingSpaceStateTest {
         space.unblock();
 
         assertState(space, FREE, null);
+    }
+
+    @Test
+    @DisplayName("unblock() tren cho khong BLOCKED bi chan, chi cho BLOCKED moi duoc mo khoa")
+    void unblockOnFreeSpaceIsRejected() {
+        ParkingSpace space = newSpace();
+
+        assertRejected(INVALID_TRANSITION, space::unblock);
+
+        assertState(space, FREE, null);
+    }
+
+    @Test
+    @DisplayName("TC-M4-16 (S14): khong con setStatus() / setCurrentReservationId() public de bo qua state machine (D-M4-03)")
+    void noPublicSetterCanBypassStateMachine() {
+        Set<String> publicMethods = Arrays.stream(ParkingSpace.class.getMethods())
+                .map(Method::getName)
+                .collect(Collectors.toSet());
+
+        assertFalse(publicMethods.contains("setStatus"), "setStatus() public di vong qua canMoveTo");
+        assertFalse(publicMethods.contains("setCurrentReservationId"),
+                "setCurrentReservationId() public di vong qua canMoveTo");
     }
 
     private static ParkingSpace newSpace() {
