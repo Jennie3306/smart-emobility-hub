@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class ParkingSpaceStateTest {
 
     private static final String INVALID_TRANSITION = "INVALID_STATE_TRANSITION";
+    private static final String SPACE_STILL_IN_USE = "SPACE_STILL_IN_USE";
 
     @Test
     @DisplayName("TC-M4-08: Vong doi hop le FREE -> RESERVED -> OCCUPIED -> FREE")
@@ -175,6 +176,29 @@ class ParkingSpaceStateTest {
         assertState(free, FREE, null);
         assertState(reserved, RESERVED, 9009L);
         assertState(occupied, OCCUPIED, 9010L);
+    }
+
+    @Test
+    @DisplayName("TC-M4-13 (S12): unblock() khi cho con gan reservation bi tu choi, khong de lai cho FREE mang reservation cu (D-M4-01)")
+    void unblockWithAttachedReservationIsRejected() {
+        ParkingSpace space = reservedSpace(8008L);
+        space.block();
+
+        assertRejected(SPACE_STILL_IN_USE, space::unblock);
+
+        assertState(space, BLOCKED, 8008L);
+    }
+
+    @Test
+    @DisplayName("TC-M4-13: sau detachReservation(), unblock() tra cho ve FREE va khong con reservation")
+    void unblockAfterDetachFreesSpace() {
+        ParkingSpace space = reservedSpace(8008L);
+        space.block();
+        space.detachReservation();
+
+        space.unblock();
+
+        assertState(space, FREE, null);
     }
 
     private static ParkingSpace newSpace() {
