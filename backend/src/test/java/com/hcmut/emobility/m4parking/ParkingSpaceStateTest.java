@@ -103,6 +103,26 @@ class ParkingSpaceStateTest {
         assertState(space, OCCUPIED, 3003L);
     }
 
+    @Test
+    @DisplayName("TC-M4-09 (S08): RESERVED + book() bi chan, khong dat chong len cho da co chu (BR-M4-07)")
+    void bookOnReservedSpaceIsRejected() {
+        ParkingSpace space = reservedSpace(4004L);
+
+        assertRejected(INVALID_TRANSITION, () -> space.book(4005L));
+
+        assertState(space, RESERVED, 4004L);
+    }
+
+    @Test
+    @DisplayName("TC-M4-10 (muc domain, S09): release() tren cho FREE bi chan, handler phai kiem tra trang thai truoc khi goi")
+    void releaseOnFreeSpaceIsRejected() {
+        ParkingSpace space = newSpace();
+
+        assertRejected(INVALID_TRANSITION, space::release);
+
+        assertState(space, FREE, null);
+    }
+
     private static ParkingSpace newSpace() {
         return new ParkingSpace(1L, "P-01", Type.BIKE);
     }
