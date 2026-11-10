@@ -123,6 +123,33 @@ class ParkingSpaceStateTest {
         assertState(space, FREE, null);
     }
 
+    @Test
+    @DisplayName("TC-M4-11, TC-M4-12 (S10, S11): block() giu reservation de xu ly sau (BR-M4-06)")
+    void blockKeepsReservation() {
+        ParkingSpace free = newSpace();
+        free.block();
+        assertState(free, BLOCKED, null);
+
+        ParkingSpace reserved = reservedSpace(6006L);
+        reserved.block();
+        assertState(reserved, BLOCKED, 6006L);
+
+        ParkingSpace occupied = occupiedSpace(7007L);
+        occupied.block();
+        assertState(occupied, BLOCKED, 7007L);
+    }
+
+    @Test
+    @DisplayName("TC-M4-12 (S13): release() tren cho BLOCKED bi chan, check-out khong tra cho hong ve FREE (D-M4-02)")
+    void releaseOnBlockedSpaceIsRejected() {
+        ParkingSpace space = occupiedSpace(7007L);
+        space.block();
+
+        assertRejected(INVALID_TRANSITION, space::release);
+
+        assertState(space, BLOCKED, 7007L);
+    }
+
     private static ParkingSpace newSpace() {
         return new ParkingSpace(1L, "P-01", Type.BIKE);
     }
