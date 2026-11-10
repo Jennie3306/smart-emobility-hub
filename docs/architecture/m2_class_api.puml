@@ -1,0 +1,111 @@
+@startuml m2_class_api
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F4E79
+  ArrowColor #1F4E79
+  StereotypeFontColor #555555
+}
+skinparam package {
+  BorderColor #8EA9C1
+  FontColor #1F4E79
+}
+hide empty members
+title M2 – Tầng API (package com.hcmut.emobility.m2reservation)
+
+package "controller" {
+  class VehicleSearchController <<RestController /api/m2>> {
+    - service: VehicleSearchService
+    + search(query: VehicleSearchQuery): List<VehicleSummary>
+    + detail(id: Long): VehicleDetail
+    + suggestHubs(query: VehicleSearchQuery): List<HubSuggestion>
+  }
+  class ReservationController <<RestController /api/m2/reservations>> {
+    - service: ReservationService
+    - vehicles: VehicleSearchService
+    - users: AppUserRepository
+    - clock: Clock
+    + reserve(request: ReserveVehicleRequest, auth: Authentication): ResponseEntity<ReservationResponse>
+    + current(auth: Authentication): ResponseEntity<ReservationResponse>
+    + get(id: Long, auth: Authentication): ReservationResponse
+    + cancel(id: Long, auth: Authentication): ReservationResponse
+    + checkIn(id: Long, auth: Authentication): ReservationResponse
+    - currentUserId(auth: Authentication): Long
+    - toResponse(r: Reservation): ReservationResponse
+  }
+}
+package "dto" {
+  class VehicleSearchQuery <<record>> {
+    hubId: Long
+    type: VehicleType
+    {field} minBattery: Integer  {@Min(0) @Max(100)}
+    + minBatteryOrZero(): int
+  }
+  class VehicleSummary <<record>> {
+    id: Long
+    code: String
+    type: String
+    batteryLevel: int
+    hubId: Long
+    + {static} from(v: RentalVehicle): VehicleSummary
+  }
+  class VehicleDetail <<record>> {
+    id: Long
+    code: String
+    type: String
+    batteryLevel: int
+    hubId: Long
+    state: String
+    holdMinutes: int
+    + {static} from(v: RentalVehicle, holdMinutes: int): VehicleDetail
+  }
+  class HubSuggestion <<record>> {
+    hubId: Long
+    availableCount: long
+  }
+  class ReserveVehicleRequest <<record>> {
+    vehicleId: Long  {@NotNull}
+  }
+  class ReservationResponse <<record>> {
+    id: Long
+    resourceType: String
+    resourceId: Long
+    vehicleCode: String
+    hubId: Long
+    state: String
+    cancelReason: String
+    expiresAt: OffsetDateTime
+    remainingSeconds: long
+    + {static} from(r: Reservation, now: OffsetDateTime, vehicleCode: String): ReservationResponse
+  }
+}
+package "service" {
+  class ReservationService <<Service>>
+  class VehicleSearchService <<Service>>
+}
+package "shared" #F3F6F9 {
+  class AppUserRepository <<shared.auth>>
+  class Clock <<java.time – bean ReservationClockConfig>>
+}
+VehicleSearchController -down-> VehicleSearchService
+ReservationController -down-> ReservationService
+ReservationController -down-> VehicleSearchService : findCode()
+ReservationController --> AppUserRepository : findByUsername()
+ReservationController --> Clock
+ReservationController ..> ReserveVehicleRequest
+ReservationController ..> ReservationResponse
+VehicleSearchController ..> VehicleSearchQuery
+VehicleSearchController ..> VehicleSummary
+VehicleSearchController ..> VehicleDetail
+VehicleSearchController ..> HubSuggestion
+note bottom of ReservationController
+  POST /             -> 201 (reserve)
+  GET  /current      -> 200 hoặc 204 khi không có đặt chỗ
+  GET  /{id}         -> 200; 403 ACCESS_DENIED, 404 RESERVATION_NOT_FOUND
+  POST /{id}/cancel, POST /{id}/check-in -> 200 hoặc 409
+end note
+@enduml

@@ -1,0 +1,191 @@
+@startuml m2_class_core
+!pragma layout smetana
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F4E79
+  ArrowColor #1F4E79
+  StereotypeFontColor #555555
+}
+skinparam package {
+  BorderColor #8EA9C1
+  FontColor #1F4E79
+}
+hide empty members
+left to right direction
+title M2 – Lõi nghiệp vụ (package com.hcmut.emobility.m2reservation)
+
+package "service" {
+  interface ReservationCore {
+    + reserve(userId: Long, type: ResourceType, resourceId: Long, hubId: Long): Reservation
+    + cancel(reservationId: Long, requesterId: Long): Reservation
+    + checkIn(reservationId: Long, requesterId: Long): Reservation
+    + completeByResource(type: ResourceType, resourceId: Long): Optional<Reservation>
+    + findActive(userId: Long, type: ResourceType): Optional<Reservation>
+  }
+  class ReservationService <<Service>> {
+    - repository: ReservationRepository
+    - vehicles: VehicleSearchRepository
+    - publisher: EventPublisher
+    - clock: Clock
+    - holdMinutes: int
+    + reserveVehicle(userId: Long, vehicleId: Long): Reservation
+    + reserve(userId: Long, type: ResourceType, resourceId: Long, hubId: Long): Reservation
+    + cancel(reservationId: Long, requesterId: Long): Reservation
+    + checkIn(reservationId: Long, requesterId: Long): Reservation
+    + completeByResource(type: ResourceType, resourceId: Long): Optional<Reservation>
+    + findActive(userId: Long, type: ResourceType): Optional<Reservation>
+    + getOwned(reservationId: Long, requesterId: Long): Reservation
+    + findOverdueIds(): List<Long>
+    + expire(reservationId: Long): boolean
+    + handleVehicleFailed(vehicleId: Long): Optional<Reservation>
+    - saveActive(reservation: Reservation): Reservation
+    - now(): OffsetDateTime
+  }
+  class VehicleSearchService <<Service>> {
+    - {static} MAX_SUGGESTIONS: int = 3
+    - vehicles: VehicleSearchRepository
+    - holdMinutes: int
+    + search(query: VehicleSearchQuery): List<VehicleSummary>
+    + getDetail(vehicleId: Long): VehicleDetail
+    + suggestHubs(query: VehicleSearchQuery): List<HubSuggestion>
+    + findCode(vehicleId: Long): String
+    - findOrThrow(id: Long): RentalVehicle
+  }
+  class ReservationExpiryJob <<Component>> {
+    - service: ReservationService
+    + run(): void
+  }
+  class ReservationClockConfig <<Configuration>> {
+    + clock(): Clock
+  }
+}
+package "events" {
+  class ReservationEventHandler <<Component>> {
+    - service: ReservationService
+    + onVehicleFailed(event: VehicleFailedEvent): void
+    + onVehicleReturned(event: VehicleReturnedEvent): void
+  }
+}
+package "domain" {
+  class Reservation <<Entity>> {
+    - id: Long
+    - userId: Long
+    - resourceType: ResourceType
+    - resourceId: Long
+    - hubId: Long
+    - state: ReservationState
+    - startAt: OffsetDateTime
+    - endAt: OffsetDateTime
+    - createdAt: OffsetDateTime
+    - expiresAt: OffsetDateTime
+    - checkedInAt: OffsetDateTime
+    - closedAt: OffsetDateTime
+    - cancelReason: CancelReason
+    - activeResourceKey: String
+    - activeUserKey: String
+    - version: Long
+    + {static} create(userId: Long, type: ResourceType, resourceId: Long, hubId: Long, now: OffsetDateTime): Reservation
+    + confirm(now: OffsetDateTime, holdMinutes: int): void
+    + checkIn(now: OffsetDateTime): void
+    + cancel(reason: CancelReason, now: OffsetDateTime): void
+    + expire(now: OffsetDateTime): void
+    + complete(now: OffsetDateTime): void
+    + reassignResource(newResourceId: Long): void
+    + isOwnedBy(userId: Long): boolean
+    + isOverdue(now: OffsetDateTime): boolean
+    + remainingSeconds(now: OffsetDateTime): long
+    + {static} resourceKeyOf(type: ResourceType, resourceId: Long): String
+    + {static} userKeyOf(userId: Long, type: ResourceType): String
+    - moveTo(target: ReservationState, now: OffsetDateTime): void
+  }
+  enum ReservationState {
+    PENDING
+    CONFIRMED
+    CHECKED_IN
+    COMPLETED
+    CANCELLED
+    EXPIRED
+    --
+    + {static} ACTIVE: Set<ReservationState>
+    + canMoveTo(target: ReservationState): boolean
+    + isActive(): boolean
+    + isTerminal(): boolean
+  }
+  enum ResourceType {
+    VEHICLE
+    PARKING_SPACE
+  }
+  enum CancelReason {
+    USER_REQUEST
+    VEHICLE_FAILED
+    RESOURCE_BLOCKED
+    REJECTED_CONFLICT
+  }
+}
+package "repository" {
+  interface ReservationRepository <<JpaRepository<Reservation, Long>>> {
+    + findFirstByUserIdAndResourceTypeAndStateIn(userId: Long, type: ResourceType, states: Collection<ReservationState>): Optional<Reservation>
+    + findFirstByResourceTypeAndResourceIdAndStateIn(type: ResourceType, resourceId: Long, states: Collection<ReservationState>): Optional<Reservation>
+    + findOverdueIds(now: OffsetDateTime): List<Long>
+  }
+  interface VehicleSearchRepository <<Repository, read-only>> {
+    + findById(id: Long): Optional<RentalVehicle>
+    + searchAvailable(hubId: Long, type: VehicleType, minBattery: int): List<RentalVehicle>
+    + countAvailableByHub(type: VehicleType, minBattery: int): List<HubAvailability>
+    + findReplacements(hubId: Long, type: VehicleType, excludeId: Long): List<RentalVehicle>
+  }
+  interface HubAvailability <<projection>> {
+    + getHubId(): Long
+    + getAvailableCount(): long
+  }
+}
+package "shared / module khác" #F3F6F9 {
+  class EventPublisher <<shared.events>> {
+    + publish(event: DomainEvent): void
+  }
+  class ReservationConfirmedEvent <<shared.events – chờ merge (TV3)>>
+  class ReservationCancelledEvent <<shared.events>>
+  class ReservationExpiredEvent <<shared.events>>
+  class VehicleFailedEvent <<shared.events – M6 phát>>
+  class VehicleReturnedEvent <<shared.events – M3 phát>>
+  class RentalVehicle <<m3vehicle.domain>>
+  class AppUser <<shared.auth>>
+  class "M4 (m4parking)" as M4 <<module>>
+}
+ReservationService .right.|> ReservationCore
+M4 ..> ReservationCore : <<use>>
+VehicleSearchService --> VehicleSearchRepository
+ReservationService -down-> ReservationRepository
+ReservationService --> VehicleSearchRepository
+ReservationService --> EventPublisher
+ReservationExpiryJob --> ReservationService
+ReservationEventHandler --> ReservationService
+ReservationEventHandler ..> VehicleFailedEvent : <<listen>>
+ReservationEventHandler ..> VehicleReturnedEvent : <<listen>>
+ReservationService ..> ReservationConfirmedEvent : <<publish>>\n(chờ merge)
+ReservationService ..> ReservationCancelledEvent : <<publish>>
+ReservationService ..> ReservationExpiredEvent : <<publish>>
+ReservationRepository .down.> Reservation
+VehicleSearchRepository ..> RentalVehicle : <<read>>
+VehicleSearchRepository ..> HubAvailability
+Reservation --> "1" ReservationState
+Reservation --> "1" ResourceType
+Reservation --> "0..1" CancelReason
+Reservation "0..*" --> "1" AppUser : userId
+note bottom of Reservation
+  activeResourceKey = "VEHICLE:12" và activeUserKey = "7:VEHICLE"
+  khi state ∈ {PENDING, CONFIRMED, CHECKED_IN}; = NULL khi ở trạng thái kết thúc.
+  Hai cột này có UNIQUE (BR-M2-01, BR-M2-03). @Version chống ghi đè đồng thời.
+  cancelReason chỉ có giá trị khi state = CANCELLED. Getter không vẽ.
+end note
+note bottom of ReservationClockConfig
+  Bean java.time.Clock dùng chung cho
+  ReservationService và ReservationController;
+  test thay bằng đồng hồ giả lập.
+end note
+
+@enduml

@@ -1,0 +1,52 @@
+@startuml m2_usecase
+left to right direction
+skinparam shadowing false
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam actorStyle default
+skinparam usecase {
+  BackgroundColor #FFF2CC
+  BorderColor #1F4E79
+  ArrowColor #1F4E79
+}
+skinparam actor {
+  BorderColor #1F4E79
+}
+title Use case M2 – Tìm, đặt xe và lõi đặt chỗ
+
+actor "Sinh viên" as SV
+actor "Timer" as TM <<hệ thống>>
+actor "IoT Simulator (M6)" as IOT <<hệ thống>>
+actor "M3 – Vòng đời xe" as M3 <<hệ thống>>
+
+rectangle "Smart E-Mobility Hub – M2 Reservation core" {
+  usecase "UC-M2-01\nTìm xe" as UC1
+  usecase "UC-M2-02\nXem chi tiết xe & pin" as UC2
+  usecase "UC-M2-03\nĐặt xe" as UC3
+  usecase "UC-M2-04\nHủy đặt xe" as UC4
+  usecase "Xem đặt chỗ hiện tại\n(FR-M2-07)" as UC7
+  usecase "Gợi ý Hub thay thế\n(FR-M2-10)" as UC10
+  usecase "Kiểm tra xung đột\n& giới hạn (FR-M2-06)" as UC6
+  usecase "UC-M2-05\nTự hủy đặt chỗ quá hạn" as UC5 #DAE8FC
+  usecase "Xử lý đặt chỗ\nkhi xe hỏng (FR-M2-08)" as UC8 #DAE8FC
+  usecase "Đóng đặt chỗ\nkhi trả xe (FR-M2-09)" as UC9 #DAE8FC
+}
+
+SV -- UC1
+SV -- UC2
+SV -- UC3
+SV -- UC7
+SV -- UC4
+
+UC10 .> UC1 : <<extend>>\n(không còn xe phù hợp)
+UC3 .> UC6 : <<include>>
+
+UC5 -- TM
+UC8 -- IOT
+UC9 -- M3
+
+note bottom of UC6
+  M4 dùng lại cùng bước kiểm tra này
+  khi giữ chỗ đỗ, qua interface ReservationCore.
+end note
+@enduml
