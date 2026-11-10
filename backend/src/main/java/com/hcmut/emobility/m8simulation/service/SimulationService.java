@@ -52,18 +52,16 @@ public class SimulationService {
         Run run=new Run(UUID.randomUUID().toString(),Instant.now(),scenario,snapshot,result.kpi(),baseline,result.timeline(),proposals.items(),proposals.source(),List.copyOf(warnings),agent);
         store.save(run); return run;
     }
-    public synchronized Run discard(String runId,String recommendationId) throws IOException {
+    public Run discard(String runId,String recommendationId) throws IOException {
+        synchronized (store) { return discardLocked(runId, recommendationId); }
+    }
+    private Run discardLocked(String runId,String recommendationId) throws IOException {
         Run r=store.get(runId);
         Recommendation item=r.recommendations().stream().filter(a -> a.id().equals(recommendationId)).findFirst().orElseThrow();
         if(!item.status().equals("PENDING")) throw new BusinessException("ALREADY_RESOLVED","This proposal has already been resolved");
         var items=r.recommendations().stream().map(a -> a.id().equals(recommendationId)?new Recommendation(a.id(),a.action(),a.fromHubId(),a.toHubId(),a.amount(),a.reason(),"DISCARDED",a.projectedFailurePercent()):a).toList();
         Run updated=new Run(r.id(),r.createdAt(),r.scenario(),r.snapshot(),r.kpi(),r.baseline(),r.timeline(),items,r.recommendationSource(),r.warnings(),r.agent());
         store.save(updated); return updated;
-    }
-    public void apply(String runId,String recommendationId) {
-        Run r=store.get(runId);
-        r.recommendations().stream().filter(a -> a.id().equals(recommendationId)).findFirst().orElseThrow();
-        throw new BusinessException("DISPATCH_NOT_CONNECTED","M7 execution and live-state revalidation are not connected. The proposal has not been applied.",HttpStatus.CONFLICT);
     }
     public ParseResult parse(String text) { return assistant.parse(text,snapshots.capture()); }
     public boolean aiConfigured() { return assistant.configured(); }
@@ -72,15 +70,25 @@ public class SimulationService {
         if(!planning.add(runId)) throw new BusinessException("PLANNING_IN_PROGRESS","This run is already being planned.",HttpStatus.CONFLICT);
         try {
             Run r=store.get(runId);
+            ensurePlanningEditable(r);
             if(expectedRounds!=(r.agent()==null?0:r.agent().totalRounds())) throw new BusinessException("STALE_AGENT_STATE","Reload this saved run before retrying.",HttpStatus.CONFLICT);
             AgentState next=planner.extend(r.snapshot(),r.scenario(),r.agent());
             return saveAgent(runId,next);
         } finally {planning.remove(runId);}
     }
-    private synchronized Run saveAgent(String runId,AgentState agent) throws IOException {
+    private Run saveAgent(String runId,AgentState agent) throws IOException {
+        synchronized (store) { return saveAgentLocked(runId, agent); }
+    }
+    private Run saveAgentLocked(String runId,AgentState agent) throws IOException {
         // Re-read after the network calls so a concurrent Discard is preserved.
         Run r=store.get(runId);
+        ensurePlanningEditable(r);
         Run updated=new Run(r.id(),r.createdAt(),r.scenario(),r.snapshot(),r.kpi(),r.baseline(),r.timeline(),r.recommendations(),"TOOL_AGENT",r.warnings(),agent);
         store.save(updated);return updated;
+    }
+    private void ensurePlanningEditable(Run run) {
+        if (run.recommendations().stream().anyMatch(r -> List.of("PARTIAL", "APPLIED", "NEEDS_REVIEW").contains(r.status()))) {
+            throw new BusinessException("DISPATCH_ALREADY_STARTED", "Start a new scenario to explore another plan after dispatch has started.");
+        }
     }
 }

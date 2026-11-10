@@ -99,8 +99,46 @@ export default function SimulationPage() {
               </div>
               {active&&<AgentPanel run={active} busy={busy} configured={!!monitor?.aiConfigured} onRetry={()=>task(async()=>{const updated=await api.retry(active.id,active.agent?.totalRounds??0);setActive(current=>acceptPlanningResult(current,updated));setRuns(await api.list());setNotice(`AI planning saved for ${updated.scenario.name}. The original snapshot and scenario are unchanged.`);})}/>}
               {!active?.agent&&<div className="m8-panel"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">3</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. Parking observations are provisional; M4/M7 must revalidate before execution.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
-                {active?.recommendations.length?active.recommendations.map(r=><div className="m8-recommendation" key={r.id}><div className="m8-rec-icon"><StudioIcon kind="network"/></div><div><h3>{r.action==="reroute"?"Route requests to available hubs":`Dispatch ${r.amount} vehicles`}</h3>{r.action==="dispatch"&&<p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}<p className="m8-footnote">{r.reason}</p><strong className="m8-benefit">Projected failure rate: {number(r.projectedFailurePercent)}%</strong><div className="m8-actions">{r.action==="reroute"?<button className="m8-button primary" disabled={busy||r.status!=="PENDING"} onClick={()=>{const plan=draftFromPlan(active);edit();setScenario(plan.scenario);setReuse(plan.reuse);setRepeatBookings(plan.repeatBookings);setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot; live operations are unchanged.");}}>Try this plan</button>:<button className="m8-button primary" disabled={busy||r.status!=="PENDING"||!monitor?.applyEnabled} onClick={()=>task(async()=>{await api.apply(active.id,r.id);await refresh();})}>Approve & execute</button>}<button className="m8-button secondary" disabled={busy||r.status!=="PENDING"} onClick={()=>task(async()=>{setActive(await api.discard(active.id,r.id));setRuns(await api.list());})}>{r.status==="DISCARDED"?"Discarded":"Discard"}</button></div></div></div>):<p className="m8-muted">{active?"No feasible dispatch reduces failed requests. Try reopening the hub or allowing rerouting.":"Run a scenario to find a plan that fits available resources."}</p>}
-                <div className="m8-integration-note">M7 execution is not connected. Review or discard proposals; approval becomes available after integration.</div>
+                {active?.recommendations.length ? active.recommendations.map(r => (
+                  <div className="m8-recommendation" key={r.id}>
+                    <div className="m8-rec-icon"><StudioIcon kind="network"/></div>
+                    <div>
+                      <h3>{r.action === "reroute" ? "Route requests to available hubs" : `Dispatch ${r.amount} vehicles`}</h3>
+                      {r.action === "dispatch" && <p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}
+                      <p className="m8-footnote">{r.reason}</p>
+                      <strong className="m8-benefit">{r.id.startsWith("agent-") ? "Full plan failure rate" : "Projected failure rate"}: {number(r.projectedFailurePercent)}%</strong>
+                      {r.dispatch && <>
+                        <p role="status">{r.dispatch.tasks.length}/{r.amount} tasks created{r.status === "NEEDS_REVIEW" ? " · Needs review" : ""}</p>
+                        {r.dispatch.tasks.length > 0 && <ul>{r.dispatch.tasks.map(task => <li key={task.taskId}>Task #{task.taskId} · Vehicle #{task.vehicleId}</li>)}</ul>}
+                        {r.dispatch.message && <p className="m8-footnote">{r.dispatch.message}</p>}
+                        {r.dispatch.unconfirmedVehicleId != null && <p className="m8-footnote">Review vehicle #{r.dispatch.unconfirmedVehicleId}.</p>}
+                      </>}
+                      <div className="m8-actions">
+                        {r.action === "reroute" ? (
+                          <button className="m8-button primary" disabled={busy || r.status !== "PENDING"} onClick={() => {
+                            const plan = draftFromPlan(active);
+                            edit(); setScenario(plan.scenario); setReuse(plan.reuse); setRepeatBookings(plan.repeatBookings);
+                            setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot.");
+                          }}>Try this plan</button>
+                        ) : (
+                          <button className="m8-button primary" disabled={busy || !monitor?.applyEnabled || !["PENDING", "PARTIAL"].includes(r.status)}
+                            onClick={() => task(async () => {
+                              const updated = await api.apply(active.id, r.id);
+                              setActive(updated);
+                              setRuns(current => current.map(run => run.id === updated.id ? updated : run));
+                            })}>{r.status === "PARTIAL" ? "Create remaining tasks" : "Apply dispatch"}</button>
+                        )}
+                        <button className="m8-button secondary" disabled={busy || r.status !== "PENDING"}
+                          onClick={() => task(async () => { setActive(await api.discard(active.id, r.id)); setRuns(await api.list()); })}>
+                          {r.status === "DISCARDED" ? "Discarded" : "Discard"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )) : <p className="m8-muted">{active ? "No actionable recommendation for this run." : "Run a scenario to find a plan that fits available resources."}</p>}
+                <div className="m8-integration-note">{monitor?.applyEnabled
+                  ? "Apply creates M7 tasks. Vehicles change hubs after the tasks are completed."
+                  : "Apply requires destination parking holds from M4."}</div>
               </div>}
               {active && <details className="m8-panel">
                 <summary>Model assumptions & limitations</summary>

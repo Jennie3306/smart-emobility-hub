@@ -44,7 +44,8 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
   These RAM observations are not transactionally synchronized with the database snapshot
   and do not overwrite authoritative M3 vehicle state in the engine.
 - Independently verified proposals and persistent Discard.
-- Apply returns 409 DISPATCH_NOT_CONNECTED until M7 provides execution and revalidation.
+- Apply requires an M4 parking adapter. Without one, the UI disables Apply and the API
+  returns `409 PARKING_NOT_CONNECTED` for a pending dispatch recommendation.
 - Accepted M2 bookings from the captured 30-minute window can supply the scenario volume.
   The saved snapshot retains that window, so editing an old run repeats its original volume.
 - A 30-minute network check repeats recent accepted bookings against current resources,
@@ -88,17 +89,25 @@ English display labels for seeded hubs do not change live Hub rows.
   RecommendationApprovedEvent currently lacks dispatch details.
 - M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
 
-### Proposed Apply contract for TV7 review
+### Apply dispatch contract
 
-- M8 submits the saved dispatch recommendation ID, source hub, destination hub and
-  vehicle count. A reroute proposal remains a simulation setting.
-- M7 selects specific vehicles from current eligible inventory at the source and
-  coordinates destination parking with M4 before creating one task per vehicle.
-  Create the full batch or reject it when there is insufficient inventory or parking.
-- Use the recommendation ID as the idempotency key. A repeat approval returns the
-  original task IDs. M8 can display those IDs and the status returned by M7.
-- M7 publishes the shared `DispatchCompletedEvent` per completed task for M1 and M3.
-  Agree on the batch contract and parking reservation lifecycle before enabling Apply.
+- M8 reads fresh inventory and active M7 tasks. It selects available source vehicles
+  with at least 20% battery in ID order, leaving one eligible vehicle at the source.
+- `DispatchParking` is the M8 port for the M4 integration. Its adapter must hold a
+  destination space per attempt, link it to the created M7 task and release it after a
+  definitive rejection. M4 must handle completion, cancellation and failed tasks.
+  An adapter may return a business rejection from `hold` only if it created no hold.
+- After a hold, M8 calls `POST /api/m7/redistributions` once per vehicle with the
+  operator session. Each returned task ID is recorded under the saved recommendation.
+  A definitive rejection can leave a partial result. Retry skips confirmed task IDs.
+- An intent is saved before calling M4 or M7. If a response is lost, that recommendation
+  requires manual review in M7 and M4. There is no automatic retry for an uncertain
+  outcome because the per-vehicle M7 endpoint accepts no idempotency key. The local
+  run file serializes requests in one process. Shared deployment needs durable storage.
+- Apply creates tasks in `CREATED`. M7 publishes the shared `DispatchCompletedEvent`
+  after each task reaches `DONE`; M3 moves the vehicle and M1 updates the dashboard.
+  AI plan cards apply individual dispatch actions. Their displayed KPI is for the full
+  tested plan. Rerouting remains a simulation setting.
 
 ## Verify
 

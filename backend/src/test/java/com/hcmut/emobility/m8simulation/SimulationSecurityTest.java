@@ -22,6 +22,12 @@ class SimulationSecurityTest {
     @Test void anonymousIsRejected() throws Exception { mvc.perform(get("/api/m8/snapshot")).andExpect(status().isUnauthorized()); }
     @Test @WithMockUser(roles="STUDENT") void studentIsRejected() throws Exception { mvc.perform(get("/api/m8/snapshot")).andExpect(status().isForbidden()); }
     @Test @WithMockUser(roles="STUDENT") void studentCannotExtendPlanning() throws Exception {mvc.perform(post("/api/m8/runs/run/agent/retry?expectedRounds=0")).andExpect(status().isForbidden());}
+    @Test @WithMockUser(roles="STUDENT") void studentCannotApplyDispatch() throws Exception {
+        mvc.perform(post("/api/m8/runs/run/recommendations/rec/apply")).andExpect(status().isForbidden());
+    }
+    @Test @WithMockUser(roles="OPERATOR") void applyRemainsDisabledWithoutParkingAdapter() throws Exception {
+        mvc.perform(get("/api/m8/status")).andExpect(status().isOk()).andExpect(jsonPath("$.applyEnabled").value(false));
+    }
     @Test void anonymousCannotExtendPlanning() throws Exception {mvc.perform(post("/api/m8/runs/run/agent/retry?expectedRounds=0")).andExpect(status().isUnauthorized());}
     @Test @WithMockUser(roles="OPERATOR") void operatorCanReadSnapshot() throws Exception {
         when(snapshots.capture()).thenReturn(new Snapshot("fixture",Instant.EPOCH,List.of(new Hub(1,"A",10,2)),List.of(),List.of(),"test"));

@@ -13,6 +13,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
     ? "Serve rental requests at other open hubs"
     : `Move ${count.format(a.amount)} vehicles from ${hub(a.fromHubId)} to ${hub(a.toHubId)}`;
   const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
+  const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "NEEDS_REVIEW"].includes(item.status));
 
   return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={busy}>
     <div className="m8-section-head">
@@ -39,10 +40,11 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
       : "AI can test rerouting requests or moving vehicles, read the calculated KPIs, and refine its next proposal."}</p></div>}
     <div className="m8-retry-bar">
       <div><strong>{state ? "Continue This Saved Scenario" : "Start Plan Exploration"}</strong><p>Up to 3 more rounds. AI may stop early.</p></div>
-      <button className="m8-button primary" disabled={busy || !configured} onClick={onRetry}>{busy ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
+      <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{busy ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
     </div>
     <p className="m8-footnote m8-run-context">{run.scenario.name} · {count.format(run.kpi.requests)} requests · seed {run.scenario.seed}. Retry uses this saved scenario and snapshot, including previous attempts. Form edits apply only when you run a new scenario.</p>
     {!configured && <p className="m8-alert">AI is unavailable until a provider is configured.</p>}
+    {dispatchStarted && <p className="m8-footnote">Dispatch has started. Run a new scenario to explore a different plan.</p>}
     {state?.rounds.length ? <details className="m8-planning-history"><summary>Review Planning History <span>{state.totalRounds} rounds{state.totalRounds > state.rounds.length ? " · latest 60 shown" : ""}</span></summary>
       <ol className="m8-agent-rounds">{state.rounds.map(r => <li key={r.number}><details>
         <summary><span>Round {r.number}</span><span className={`m8-round-status ${r.valid ? "tested" : ""}`}>{r.valid ? "Simulated" : r.tool ? "Rejected" : "No tool call"}</span>{r.valid && r.kpi && <span className="m8-round-kpi">{count.format(r.kpi.served)} served · {count.format(r.kpi.failed)} unserved</span>}</summary>

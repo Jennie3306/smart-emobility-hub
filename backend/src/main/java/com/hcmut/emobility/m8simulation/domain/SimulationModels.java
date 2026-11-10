@@ -1,8 +1,11 @@
 package com.hcmut.emobility.m8simulation.domain;
 
 import jakarta.validation.constraints.*;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public final class SimulationModels {
     private SimulationModels() {}
@@ -32,14 +35,47 @@ public final class SimulationModels {
                       int peakQueue, List<HubKpi> hubs) {}
     public record Point(int minute, int served, int waiting, int failed) {}
     public record EngineResult(Kpi kpi, List<Point> timeline) {}
+    public record DispatchTask(long vehicleId, long taskId) {}
+    public record DispatchProgress(List<DispatchTask> tasks, Long unconfirmedVehicleId, String attemptId, String message) {
+        public DispatchProgress { tasks = List.copyOf(tasks); }
+    }
     public record Recommendation(String id, String action, long fromHubId, long toHubId, int amount,
-                                 String reason, String status, double projectedFailurePercent) {}
+                                 String reason, String status, double projectedFailurePercent, DispatchProgress dispatch) {
+        public Recommendation(String id, String action, long fromHubId, long toHubId, int amount,
+                              String reason, String status, double projectedFailurePercent) {
+            this(id, action, fromHubId, toHubId, amount, reason, status, projectedFailurePercent, null);
+        }
+        public Recommendation withDispatch(String status, DispatchProgress progress) {
+            return new Recommendation(id, action, fromHubId, toHubId, amount, reason, status, projectedFailurePercent, progress);
+        }
+    }
     public record Run(String id, Instant createdAt, Scenario scenario, Snapshot snapshot, Kpi kpi,
                       Kpi baseline, List<Point> timeline, List<Recommendation> recommendations,
                       String recommendationSource, List<String> warnings,AgentModels.AgentState agent) {
+        public Run {
+            if (agent != null && agent.best() != null && agent.best().valid() && agent.best().kpi() != null) {
+                var items = new ArrayList<>(recommendations.stream().filter(r -> !r.id().startsWith("agent-")).toList());
+                var actions = agent.best().actions();
+                for (int i = 0; i < actions.size(); i++) {
+                    var action = actions.get(i);
+                    if (!"dispatch".equals(action.action())) continue;
+                    String key = id + ":" + i + ":" + action.fromHubId() + ":" + action.toHubId() + ":" + action.amount();
+                    String actionId = "agent-" + UUID.nameUUIDFromBytes(key.getBytes(StandardCharsets.UTF_8));
+                    items.add(recommendations.stream().filter(r -> r.id().equals(actionId)
+                                    && (r.dispatch() != null || !"PENDING".equals(r.status())))
+                            .findFirst().orElseGet(() -> new Recommendation(actionId, "dispatch", action.fromHubId(),
+                                    action.toHubId(), action.amount(), action.reason(), "PENDING", agent.best().kpi().failurePercent())));
+                }
+                recommendations = List.copyOf(items);
+            }
+        }
+
         public Run(String id,Instant createdAt,Scenario scenario,Snapshot snapshot,Kpi kpi,Kpi baseline,List<Point> timeline,
                    List<Recommendation> recommendations,String recommendationSource,List<String> warnings) {
             this(id,createdAt,scenario,snapshot,kpi,baseline,timeline,recommendations,recommendationSource,warnings,null);
+        }
+        public Run withRecommendations(List<Recommendation> items) {
+            return new Run(id, createdAt, scenario, snapshot, kpi, baseline, timeline, items, recommendationSource, warnings, agent);
         }
     }
     public record ParseRequest(@NotBlank @Size(max=4000) String text) {}

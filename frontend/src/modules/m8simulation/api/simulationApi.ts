@@ -6,7 +6,11 @@ export interface CapacityState {hubId:number;totalSlots:number;usedSlots:number;
 export interface Snapshot { id: string; capturedAt: string; hubs: Hub[]; vehicles: Vehicle[]; deviceStates: {hubId:number;type:string;resourceId:number;state:string;observedAt:string}[]; demandSource: string; bookingWindow?:BookingWindow|null; capacities?:CapacityState[] }
 export interface Scenario { name:string; hubId:number; disabled:boolean; injectedRequests:number; durationMins:number; arrivalWindowMins:number; tripMins:number; reroute:boolean; seed:number }
 export interface Kpi { requests:number; served:number; failed:number; failurePercent:number; meanWaitMins:number; peakQueue:number; hubs:{hubId:number;name:string;requests:number;served:number;failed:number;meanWaitMins:number;availableVehicles:number;peakParkingPercent:number}[] }
-export interface Recommendation { id:string;action:string;fromHubId:number;toHubId:number;amount:number;reason:string;status:string;projectedFailurePercent:number }
+export interface Recommendation {
+  id: string; action: string; fromHubId: number; toHubId: number; amount: number;
+  reason: string; status: string; projectedFailurePercent: number;
+  dispatch?: { tasks: { vehicleId: number; taskId: number }[]; unconfirmedVehicleId: number | null; message: string | null } | null;
+}
 export interface PlanAction {action:"reroute"|"dispatch";fromHubId:number;toHubId:number;amount:number;reason:string}
 export interface PlanEvaluation {valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string}
 export interface AgentRound {number:number;tool:string;valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string}
@@ -22,6 +26,6 @@ export const simulationApi = {
   check: () => api.post<Monitor>("/m8/monitor/check").then(r=>r.data),
   retry: (runId:string,expectedRounds:number) => api.post<Run>(`/m8/runs/${runId}/agent/retry`,null,{params:{expectedRounds}}).then(r=>r.data),
   discard: (runId:string,id:string) => api.post<Run>(`/m8/runs/${runId}/recommendations/${id}/discard`).then(r=>r.data),
-  apply: (runId:string,id:string) => api.post(`/m8/runs/${runId}/recommendations/${id}/apply`),
+  apply: (runId:string,id:string) => api.post<Run>(`/m8/runs/${runId}/recommendations/${id}/apply`).then(r=>r.data),
   iot: () => api.post("/m6/simulator/scenarios/NORMAL_TICK",{seed:42}),
 };
