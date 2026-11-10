@@ -118,7 +118,22 @@ public class ParkingSpace {
      * Giai phong cho do (UC-M4-03, UC-M4-04): tra cho ve FREE khi check-out hoac no-show/huy reservation.
      */
     public void release() {
+        if (status != Status.RESERVED && status != Status.OCCUPIED) {
+            throw new BusinessException("INVALID_STATE_TRANSITION",
+                    "Chi giai phong cho dang RESERVED hoac OCCUPIED, hien tai: " + status);
+        }
         changeStatus(Status.FREE);
+        this.currentReservationId = null;
+    }
+
+    /**
+     * Cho dang BLOCKED: reservation da ket thuc (check-out, huy, het han) nhung cho van khoa (BR-M4-06).
+     */
+    public void detachReservation() {
+        if (status != Status.BLOCKED) {
+            throw new BusinessException("INVALID_STATE_TRANSITION",
+                    "Chi bo lien ket khi cho dang BLOCKED, hien tai: " + status);
+        }
         this.currentReservationId = null;
     }
 
