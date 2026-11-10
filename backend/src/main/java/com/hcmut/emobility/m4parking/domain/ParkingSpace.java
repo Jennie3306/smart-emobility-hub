@@ -16,6 +16,7 @@ import jakarta.persistence.*;
  *   - BR-M4-04: Giai phong cho do neu no-show qua 15 phut
  *   - BR-M4-05: Chi chuyen sang OCCUPIED khi co reservation hop le
  *   - BR-M4-06: Chuyen sang BLOCKED khi gap su co, khong cho phep dat cho hoac check-in
+ *   - BR-M4-07: Chan cac chuyen trang thai khong hop le theo state machine
  */
 @Entity
 @Table(name = "parking_space")
@@ -116,6 +117,7 @@ public class ParkingSpace {
 
     /**
      * Giai phong cho do (UC-M4-03, UC-M4-04): tra cho ve FREE khi check-out hoac no-show/huy reservation.
+     * Chi cho phep giai phong tu RESERVED hoac OCCUPIED (D-M4-02, BR-M4-06).
      */
     public void release() {
         if (status != Status.RESERVED && status != Status.OCCUPIED) {
@@ -127,12 +129,12 @@ public class ParkingSpace {
     }
 
     /**
-     * Cho dang BLOCKED: reservation da ket thuc (check-out, huy, het han) nhung cho van khoa (BR-M4-06).
+     * Cho dang BLOCKED: reservation da ket thuc (check-out, huy, het han) nhung cho van khoa (BR-M4-06, D-M4-02).
      */
     public void detachReservation() {
         if (status != Status.BLOCKED) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Chi bo lien ket khi cho dang BLOCKED, hien tai: " + status);
+                    "Chi bo lien ket khi cho dang BLOCKED");
         }
         this.currentReservationId = null;
     }
@@ -146,6 +148,7 @@ public class ParkingSpace {
 
     /**
      * Mo khoa cho do sau khi bao tri hoan tat: chuyen ve FREE.
+     * Chi mo khoa khi khong con reservation nao gan voi cho (D-M4-01, BR-M4-06).
      */
     public void unblock() {
         if (currentReservationId != null) {
@@ -158,10 +161,6 @@ public class ParkingSpace {
     // Getters and Setters
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public Long getHubId() {
@@ -192,16 +191,8 @@ public class ParkingSpace {
         return status;
     }
 
-    public void setStatus(Status status) {
-        this.status = status;
-    }
-
     public Long getCurrentReservationId() {
         return currentReservationId;
-    }
-
-    public void setCurrentReservationId(Long currentReservationId) {
-        this.currentReservationId = currentReservationId;
     }
 
     public Long getChargerPointId() {
@@ -214,9 +205,5 @@ public class ParkingSpace {
 
     public Long getVersion() {
         return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
     }
 }
