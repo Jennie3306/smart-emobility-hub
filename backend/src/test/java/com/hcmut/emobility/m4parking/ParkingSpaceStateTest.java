@@ -82,8 +82,41 @@ class ParkingSpaceStateTest {
         assertState(space, BLOCKED, null);
     }
 
+    @Test
+    @DisplayName("TC-M4-09 (S06): BLOCKED + checkIn() bi chan, cho bi khoa sau khi da duoc dat (BR-M4-06)")
+    void checkInOnBlockedSpaceIsRejected() {
+        ParkingSpace space = reservedSpace(5005L);
+        space.block();
+
+        assertRejected(INVALID_TRANSITION, space::checkIn);
+
+        assertState(space, BLOCKED, 5005L);
+    }
+
+    @Test
+    @DisplayName("TC-M4-09 (S07): OCCUPIED + book() bi chan, khong dat chong len cho dang co xe (BR-M4-07)")
+    void bookOnOccupiedSpaceIsRejected() {
+        ParkingSpace space = occupiedSpace(3003L);
+
+        assertRejected(INVALID_TRANSITION, () -> space.book(3004L));
+
+        assertState(space, OCCUPIED, 3003L);
+    }
+
     private static ParkingSpace newSpace() {
         return new ParkingSpace(1L, "P-01", Type.BIKE);
+    }
+
+    private static ParkingSpace reservedSpace(long reservationId) {
+        ParkingSpace space = newSpace();
+        space.book(reservationId);
+        return space;
+    }
+
+    private static ParkingSpace occupiedSpace(long reservationId) {
+        ParkingSpace space = reservedSpace(reservationId);
+        space.checkIn();
+        return space;
     }
 
     private static void assertRejected(String expectedCode, Executable action) {
