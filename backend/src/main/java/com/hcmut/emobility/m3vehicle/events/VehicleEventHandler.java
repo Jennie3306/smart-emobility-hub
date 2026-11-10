@@ -75,4 +75,8 @@ public class VehicleEventHandler {
             log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
         }
     }
+
+    // ReservationConfirmed / ReservationCancelled / ReservationCheckedIn: xu ly tai
+    // ReservationVehicleHandler (fail-fast de M2 rollback khi khong giu duoc xe).
+    // Tranh hai listener cung doi trang thai mot xe.
 }
