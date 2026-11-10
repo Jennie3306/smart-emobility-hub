@@ -160,6 +160,10 @@ public class ParkingSpace {
         return id;
     }
 
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Long getHubId() {
         return hubId;
     }
@@ -188,6 +192,10 @@ public class ParkingSpace {
         return status;
     }
 
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
     public Long getCurrentReservationId() {
         return currentReservationId;
     }
@@ -206,5 +214,9 @@ public class ParkingSpace {
 
     public Long getVersion() {
         return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }
