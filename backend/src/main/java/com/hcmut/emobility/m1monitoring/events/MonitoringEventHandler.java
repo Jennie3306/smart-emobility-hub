@@ -6,15 +6,15 @@ import com.hcmut.emobility.m1monitoring.service.DashboardPublisher;
 import com.hcmut.emobility.m1monitoring.service.MonitoringService;
 import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
+import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
-import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
-import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
 import com.hcmut.emobility.shared.events.VehiclePickedUpEvent;
-import org.springframework.core.annotation.Order;
+import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,13 +26,16 @@ import java.util.Optional;
  *
  * Buoc dau tien luon la kiem tra eventId: hop dong su kien o Phu luc A khong
  * bao dam moi su kien chi den dung mot lan, ma ap dung hai lan thi so lieu sai.
+ * Khoa chong trung la ("M1", eventId): M3 cung nghe mot so su kien nay, neu
+ * dung chung mot khoa thi ben nao xu ly truoc se lam ben kia bo qua.
+ *
+ * Thu tu: moi listener o day mang @Order(100). Module so huu trang thai (M3 voi
+ * xe) cap nhat o @Order(0) truoc, M1 dem lai sau, nen so day xuong khong bi cu.
  */
 @Component
 public class MonitoringEventHandler {
-    @EventListener @Order(100) @Transactional(readOnly=true)
-    public void onReservationConfirmed(ReservationConfirmedEvent e) { pushHub(e.getHubId()); }
-    @EventListener @Order(100) @Transactional(readOnly=true)
-    public void onVehiclePickedUp(VehiclePickedUpEvent e) { pushHub(e.getHubId()); }
+
+    private static final String CONSUMER = "M1";
 
     private static final Logger log = LoggerFactory.getLogger(MonitoringEventHandler.class);
 
@@ -57,16 +60,15 @@ public class MonitoringEventHandler {
      * cap nhat bang cua minh o day thi so lieu tren dashboard se dung yen.
      */
     @EventListener
+    @Order(100)
     @Transactional
     public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
-        if (!processed.markIfNew("M1",event.getEventId())) {
-            log.debug("[M1] Dismiss su kien da xu ly {}", event.getEventId());
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) {
+            log.debug("[M1] Bo qua su kien da xu ly {}", event.getEventId());
             return;
         }
 
         String type = event.getResourceType();
-        String normalizedState=MonitoringService.CHARGING.equals(type) && "AVAILABLE".equals(event.getNewState())
-                ? "FREE" : event.getNewState();
         if (!MonitoringService.PARKING.equals(type) && !MonitoringService.CHARGING.equals(type)) {
             // VEHICLE do M3 giu; M1 chi dem lai so xe kha dung.
             pushHub(event.getHubId());
@@ -76,13 +78,14 @@ public class MonitoringEventHandler {
         try {
             Optional<ResourceState> existing =
                     resources.findByResourceTypeAndResourceId(type, event.getResourceId());
+            String state = normalise(type, event.getNewState());
 
             if (existing.isPresent()) {
-                existing.get().applyState(normalizedState);
+                existing.get().applyState(state);
             } else {
                 // Tai nguyen moi do M6 sinh them: ghi nhan de lan sau dem dung.
                 resources.save(new ResourceState(type, event.getResourceId(),
-                        event.getHubId(), normalizedState));
+                        event.getHubId(), state));
                 log.info("[M1] Ghi nhan tai nguyen moi {} {} o hub {}",
                         type, event.getResourceId(), event.getHubId());
             }
@@ -98,27 +101,75 @@ public class MonitoringEventHandler {
      * Khong co listener nay thi dashboard phai cho het chu ky 30 giay moi thay.
      */
     @EventListener
+    @Order(100)
     @Transactional(readOnly = true)
     public void onVehicleReturned(VehicleReturnedEvent event) {
-        if (!processed.markIfNew("M1",event.getEventId())) return;
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
         pushHub(event.getHubId());
     }
 
     /** M3 bao xe hong -> xe chuyen sang MAINTENANCE nen khong con tinh la kha dung. */
     @EventListener
+    @Order(100)
     @Transactional(readOnly = true)
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew("M1",event.getEventId())) return;
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
         pushHub(event.getHubId());
     }
 
     /** M7 dieu chuyen xe xong -> ca hub di va hub den deu doi so xe kha dung. */
     @EventListener
+    @Order(100)
     @Transactional(readOnly = true)
     public void onDispatchCompleted(DispatchCompletedEvent event) {
-        if (!processed.markIfNew("M1",event.getEventId())) return;
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
         pushHub(event.getFromHubId());
         pushHub(event.getToHubId());
+    }
+
+    /** M2 giu xe cho sinh vien -> hub mat mot xe kha dung. M3 doi trang thai xe o @Order(0). */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onReservationConfirmed(ReservationConfirmedEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getHubId());
+    }
+
+    /** M3 giao xe cho sinh vien -> hub xuat phat mat mot xe kha dung. */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onVehiclePickedUp(VehiclePickedUpEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getHubId());
+    }
+
+    /**
+     * M6 va M1 dung tu vung trang thai khac nhau cho cung mot thiet bi:
+     * M6 phat "AVAILABLE" cho tru sac con rong, V10 cua M1 ghi "FREE".
+     * Khong quy doi thi tru do khong duoc dem la con trong, nen so tru trong
+     * tren dashboard giam sai sau moi NORMAL_TICK. M1 la ben nhan nen quy doi
+     * tai day, khong bat M6 doi tu vung. Gia tri la thi giu nguyen.
+     */
+    public static String normalise(String type, String state) {
+        if (state == null) return null;
+        String s = state.trim().toUpperCase();
+        if (MonitoringService.CHARGING.equals(type)) {
+            return switch (s) {
+                case "AVAILABLE", "IDLE" -> "FREE";
+                case "OCCUPIED", "CHARGING" -> "IN_USE";
+                default -> s;
+            };
+        }
+        if (MonitoringService.PARKING.equals(type)) {
+            return switch (s) {
+                case "AVAILABLE", "EMPTY" -> "FREE";
+                case "IN_USE" -> "OCCUPIED";
+                default -> s;
+            };
+        }
+        return s;
     }
 
     private void pushHub(Long hubId) {

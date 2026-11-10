@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 
 /**
  * Thuc the duy nhat module M1 so huu. M1 tao, luu va chuyen trang thai no.
- * State tai nguyen (xe, cho do, tru sac) thuoc M6; M1 chi doc.
+ * Trang thai tai nguyen (xe, cho do, tru sac) thuoc M6; M1 chi doc.
  */
 @Entity
 @Table(name = "alert")
@@ -28,7 +28,7 @@ public class Alert {
     @Column(nullable = false, length = 20)
     private AlertState state;
 
-    /** Value gay ra canh bao: % su dung, hoac so xe con lai. */
+    /** Chi so gay ra canh bao: % su dung, hoac so xe con lai. */
     @Column(name = "trigger_value", nullable = false)
     private int triggerValue;
 
@@ -70,7 +70,7 @@ public class Alert {
         this.acknowledgedAt = OffsetDateTime.now();
     }
 
-    /** FR-M1-11. Dismiss canh bao, bat buoc co ly do. */
+    /** FR-M1-11. Bo qua canh bao, bat buoc co ly do. */
     public void dismiss(String reason) {
         moveTo(AlertState.DISMISSED);
         this.dismissReason = reason;
@@ -91,7 +91,7 @@ public class Alert {
     private void moveTo(AlertState target) {
         if (!state.canMoveTo(target)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Cannot transition alert from " + state + " sang " + target);
+                    "Cannot move alert from " + state + " to " + target);
         }
         this.state = target;
     }
