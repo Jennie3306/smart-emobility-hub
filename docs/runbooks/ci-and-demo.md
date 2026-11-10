@@ -132,8 +132,13 @@ reactions are not implied by an event appearing in M6's response/log.
 Vehicle and ChargingPoint failure readings accept only the uppercase reason
 codes recorded under M6-D04/D12. The current scenarios use `MECHANICAL` and
 `OFFLINE`. They publish the existing failure events; Incident persistence/API
-is not yet enabled because TV2's severity and duplicate-Incident decisions and
-TV4's latest-state schema/migration are outstanding.
+is not yet enabled. TV2 accepted severity/duplicate rules on 28 Oct (received
+29 Oct), but the policy/service implementation and TV4 latest-state schema /
+Incident migrations are still pending. TV3 must also review the new ordering /
+race mechanism proposed by TV2. On feature as of 29 Oct, device readings now reject MANUAL_REPORT with
+INVALID_DEVICE_PAYLOAD before writing/completing/publishing; Operator report
+reasons have a separate helper. This does not implement the Incident API or
+automatic severity mapping. Preserve the old allowlist result as historical proof.
 
 Look for `M6_SIMULATION_STARTED`, `M6_DEVICE_EVENT_PUBLISHED`,
 `M6_DEVICE_READING_DUPLICATE`, `M6_DEVICE_READING_REJECTED`, and
@@ -196,3 +201,21 @@ before rebuilding or deleting data. Do not treat repeated rebuilds as diagnosis.
 - CI: `.github/workflows/ci.yml` invokes backend and frontend validation for
   pushes and pull requests targeting `main`.
 - Branch protection: external and unverified until inspected in GitHub settings.
+
+## M6 UI And Curated Evidence
+
+On the feature worktree, `/m6/operations` connects simulator status and all three
+scenario endpoints to the real backend. Incident is explicitly local fixtures;
+it neither persists nor emits events. The 29 Oct fixture UI displays/filters
+LOW/MEDIUM/HIGH/CRITICAL and requires an explicit draft selection with no default;
+no severity-edit endpoint, auto-assignment or duplicate-admission behavior was added.
+The [curated M6 evidence](../../DESCRIPTION/Template_report/Evidence/M6_IoT/README.md)
+keeps screenshots, selected logs, source hashes and instructions for missing
+SQL/API/test images. Browser-injected 409 is UI proof only. Runtime originals in
+`output/` are local scratch; report links use the curated bundle for portability.
+No command in this runbook turns fixture results into Incident API/DB Pass.
+
+Validation 29 Oct on feature: focused backend 47, full backend 71 and frontend 32
+tests passed, plus production frontend build and Compose config. Browser checking
+used Vite preview with GET status stubbed to isolate fixture UI, not a new live
+backend/DB smoke. Policy records are in Evidence/M6_IoT/records/policy-20261029.

@@ -1,0 +1,15 @@
+
+> smart-emobility-hub-frontend@0.1.0 test
+> vitest --run
+
+
+ RUN  v2.1.9 /Users/hieu/.codex/worktrees/m6-feature-sync/smart-emobility-hub/frontend
+
+ ✓ src/modules/m6simulator/api/simulatorApi.test.ts (12 tests) 6ms
+ ✓ src/modules/m6simulator/components/IncidentFixturePanel.test.tsx (3 tests) 384ms
+ ✓ src/modules/m6simulator/components/SimulatorPanel.test.tsx (13 tests) 407ms
+
+ Test Files  3 passed (3)
+      Tests  28 passed (28)
+   Start at  08:32:12
+   Duration  1.36s (transform 147ms, setup 0ms, collect 468ms, tests 797ms, environment 651ms, prepare 175ms)

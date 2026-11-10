@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 class SimulatorSchedulerTest {
@@ -31,8 +32,7 @@ class SimulatorSchedulerTest {
                 "app.simulator.interval-ms=3600000",
                 "app.simulator.seed=17").run(context -> {
             assertFalse(context.getBeansOfType(SimulatorScheduler.class).isEmpty());
-            context.getBean(SimulatorScheduler.class).scheduledTick();
-            verify(context.getBean(DeviceSimulatorService.class))
+            verify(context.getBean(DeviceSimulatorService.class), timeout(5_000))
                     .runScenario(SimulatorScenario.NORMAL_TICK, 17L);
         });
     }

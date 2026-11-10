@@ -1,0 +1,13 @@
+services:
+  db:
+    container_name: m6-ui-proof-20261028-db
+    ports: !override
+      - "127.0.0.1:55438:5432"
+  backend:
+    ports: !override
+      - "127.0.0.1:18089:8080"
+    environment:
+      APP_CORS_ALLOWEDORIGIN: http://127.0.0.1:18088
+  frontend:
+    ports: !override
+      - "127.0.0.1:18088:80"
