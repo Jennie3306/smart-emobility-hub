@@ -148,6 +148,10 @@ public class ParkingSpace {
      * Mo khoa cho do sau khi bao tri hoan tat: chuyen ve FREE.
      */
     public void unblock() {
+        if (currentReservationId != null) {
+            throw new BusinessException("SPACE_STILL_IN_USE",
+                    "Cho do van gan reservation " + currentReservationId);
+        }
         changeStatus(Status.FREE);
     }
 
@@ -182,10 +186,6 @@ public class ParkingSpace {
 
     public Status getStatus() {
         return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
     }
 
     public Long getCurrentReservationId() {
