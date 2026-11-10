@@ -4,6 +4,8 @@ import com.hcmut.emobility.m8simulation.service.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Validation;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import java.time.Instant;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
@@ -46,5 +48,24 @@ class RecommendationTest {
         var parsed=assistant.parse("Mưa ngập Hub Ga Metro, 500 sinh viên trong 120 phút",snapshot);
         assertEquals("LOCAL_RULES",parsed.source()); assertEquals(500,parsed.scenario().injectedRequests());assertTrue(parsed.scenario().disabled());
         assertThrows(IllegalArgumentException.class,()->assistant.parse("Hub Ga Metro 10001 request",snapshot));
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "Bách Khoa Hub has 20 requests, false",
+        "Metro Hub đông sinh viên, false",
+        "Metro Hub near the office has 20 requests, false",
+        "Đóng Bách Khoa Hub, true",
+        "Khóa Metro Hub, true",
+        "Dong cua Metro Hub, true",
+        "Metro Hub is closed, true",
+        "Flooding at Metro Hub, true"
+    })
+    void localParserDetectsClosureWithoutMatchingUnrelatedText(String description, boolean closed) {
+        var snapshot = new Snapshot("s", Instant.EPOCH,
+                List.of(new Hub(1, "Metro Hub", 40, 8), new Hub(2, "Bách Khoa Hub", 40, 8)),
+                List.of(), List.of(), "test");
+
+        assertEquals(closed, assistant.parse(description, snapshot).scenario().disabled());
     }
 }

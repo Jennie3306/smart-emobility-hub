@@ -61,6 +61,8 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
 ## Modeling assumptions
 
 - Requests arrive within arrivalWindowMins using a seeded random schedule.
+- Only the affected hub generates requests. Donor and alternate hubs have no independent
+  demand in a scenario, so moving vehicles or rerouting can overstate the real benefit.
 - Only AVAILABLE vehicles with battery >=20% serve requests; full M2 reservation behavior is not modeled.
 - Accepted bookings are not total demand: rejected attempts and searches are excluded.
   Cancelled or completed bookings still count as historical accepted arrivals.
@@ -83,8 +85,20 @@ English display labels for seeded hubs do not change live Hub rows.
 - TV4: review V20 M2 persistence migration already applied locally; approve the separate
   M8 schema, operational hub state and M4 parking validation contract. M4 remains a stub.
 - TV7: Apply contract with live revalidation, deduplication and execution status.
-  RecommendationApprovedEvent currently lacks dispatch details; M8 does not alter it.
+  RecommendationApprovedEvent currently lacks dispatch details.
 - M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
+
+### Proposed Apply contract for TV7 review
+
+- M8 submits the saved dispatch recommendation ID, source hub, destination hub and
+  vehicle count. A reroute proposal remains a simulation setting.
+- M7 selects specific vehicles from current eligible inventory at the source and
+  coordinates destination parking with M4 before creating one task per vehicle.
+  Create the full batch or reject it when there is insufficient inventory or parking.
+- Use the recommendation ID as the idempotency key. A repeat approval returns the
+  original task IDs. M8 can display those IDs and the status returned by M7.
+- M7 publishes the shared `DispatchCompletedEvent` per completed task for M1 and M3.
+  Agree on the batch contract and parking reservation lifecycle before enabling Apply.
 
 ## Verify
 

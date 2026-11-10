@@ -15,6 +15,11 @@ import java.util.regex.*;
 /** Optional chat-completions-compatible provider. Credentials stay on the server. */
 @Service
 public class ScenarioAssistant {
+    // Keep accents for closure detection: đóng (close) and đông (crowded) are different words.
+    private static final Pattern CLOSURE = Pattern.compile(
+            "\\b(?:đóng|khóa|khoá|ngập|sập|ngap|dong\\s+cua|khoa\\s+cua|"
+            + "disable[ds]?|off|flood(?:ed|ing|s)?|clos(?:e[ds]?|ing|ure)|outages?|shut\\s+down)\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
     private final ObjectMapper mapper; private final Validator validator;
     private final String url,key,model;
     private final HttpClient client=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
@@ -70,7 +75,7 @@ public class ScenarioAssistant {
         int requests=count.find()?Integer.parseInt(count.group(1)):100;
         Matcher duration=Pattern.compile("(\\d+)\\s*(?:phut|mins|minutes)").matcher(normalized);
         int mins=duration.find()?Integer.parseInt(duration.group(1)):120;
-        boolean disabled=normalized.matches("(?s).*(ngap|dong|sap|disable|off|khoa|flood|close|outage).*" );
+        boolean disabled = CLOSURE.matcher(Normalizer.normalize(text, Normalizer.Form.NFC)).find();
         Scenario scenario=new Scenario("Scenario from description",hub.id(),disabled,requests,mins,Math.min(60,mins),30,false,42);
         validate(scenario,snapshot);
         warnings.add("Unspecified arrival window, trip duration and seed use editable defaults.");
