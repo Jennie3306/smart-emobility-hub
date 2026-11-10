@@ -40,6 +40,9 @@ class DeviceEventM3IntegrationTest {
     @Test
     void m6VehicleFailedEventReachesM3AndMovesVehicleToMaintenance() {
         long vehicleId = 1L;
+        // Cac test khong @Transactional (vd. ReservationConcurrencyTest) co the de lai dong id 1
+        // trong H2 dung chung; xoa truoc cho chac. Test nay @Transactional nen se rollback.
+        jdbc.update("delete from rental_vehicle where id = ?", vehicleId);
         jdbc.update("insert into rental_vehicle(id,code,type,battery_level,state,current_hub_id,version) "
                 + "values(?,'M6-TEST-VEHICLE','E_BIKE',80,'AVAILABLE',1,0)", vehicleId);
 
