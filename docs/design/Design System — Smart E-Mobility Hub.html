@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design System — Smart E-Mobility Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --brand-900:#1f4e79; --brand-700:#2f6aa0; --brand-500:#4a8fc7; --brand-100:#eaf1f8;
+  --accent-600:#b4690e; --accent-100:#fff4e0;
+  --ink-900:#1f2d3d; --ink-700:#44546a; --ink-500:#6b7a8f; --ink-300:#aebac8; --ink-100:#eef2f6; --ink-0:#ffffff;
+  --success-700:#1e7a46; --success-100:#e9f7ef;
+  --warning-700:#9a6b00; --warning-100:#fff3d6;
+  --danger-700:#b3261e; --danger-100:#fdecea;
+  --info-700:#2a5db0; --info-100:#e8f0fd;
+  --neutral-700:#5b6572; --neutral-100:#eef1f4;
+  --radius:10px; --radius-sm:6px;
+  --font-ui:'Be Vietnam Pro',system-ui,sans-serif; --font-mono:'JetBrains Mono',monospace;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ink-0:#15191f; --ink-100:#1d2531; --ink-900:#eef2f6; } }
+:root[data-theme="dark"]{ --ink-0:#15191f; --ink-100:#1d2531; --ink-900:#eef2f6; }
+*{box-sizing:border-box;}
+body{margin:0;font-family:var(--font-ui);background:var(--ink-100);color:var(--ink-900);line-height:1.5;}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 20px 80px;}
+h1{font-size:26px;margin:0 0 4px;}
+.sub{color:var(--ink-500);margin:0 0 28px;font-size:14px;}
+section{background:var(--ink-0);border:1px solid var(--ink-300);border-radius:14px;padding:22px 24px;margin-bottom:20px;}
+h2{font-size:16px;margin:0 0 4px;color:var(--brand-900);}
+h2 .tag{font-size:11px;font-weight:500;color:var(--ink-500);margin-left:6px;}
+.note{font-size:13px;color:var(--ink-700);margin:0 0 16px;}
+.grid{display:grid;gap:10px;}
+.g4{grid-template-columns:repeat(4,1fr);} .g3{grid-template-columns:repeat(3,1fr);} .g2{grid-template-columns:repeat(2,1fr);}
+.swatch{border-radius:var(--radius-sm);overflow:hidden;border:1px solid var(--ink-300);font-size:12px;}
+.swatch .fill{height:46px;}
+.swatch .label{padding:6px 8px;background:var(--ink-0);}
+.swatch .label b{display:block;font-size:12px;}
+.swatch .label code{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-500);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--ink-100);vertical-align:top;}
+th{color:var(--ink-500);font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.02em;}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
+.type-row{display:flex;align-items:baseline;gap:14px;padding:8px 0;border-bottom:1px solid var(--ink-100);}
+.type-row code{font-family:var(--font-mono);font-size:11px;color:var(--ink-500);width:150px;flex:none;}
+.btn{font-family:var(--font-ui);font-weight:600;font-size:14px;border-radius:var(--radius-sm);padding:9px 16px;border:1px solid transparent;cursor:pointer;}
+.btn-primary{background:var(--brand-900);color:#fff;}
+.btn-secondary{background:#fff;color:var(--brand-900);border-color:var(--brand-900);}
+.btn-ghost{background:transparent;color:var(--ink-700);}
+.btn-danger{background:var(--danger-700);color:#fff;}
+.row-demo{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:10px;}
+input,select{font-family:var(--font-ui);font-size:14px;padding:8px 10px;border:1px solid var(--ink-300);border-radius:var(--radius-sm);background:#fff;}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--ink-700);}
+.field.err input{border-color:var(--danger-700);}
+.field .msg-err{color:var(--danger-700);font-size:11.5px;}
+.card-demo{border:1px solid var(--ink-300);border-radius:var(--radius);padding:14px;background:#fff;}
+.card-demo .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.card-demo .title{font-weight:700;font-size:14px;}
+.card-demo .meta{font-size:12px;color:var(--ink-500);}
+.toast{border-radius:var(--radius-sm);padding:10px 14px;font-size:13px;font-weight:500;display:flex;gap:8px;align-items:center;}
+.skeleton{height:14px;border-radius:4px;background:linear-gradient(90deg,var(--ink-100) 25%,var(--ink-300) 37%,var(--ink-100) 63%);background-size:400% 100%;animation:sk 1.4s ease infinite;}
+@keyframes sk{0%{background-position:100% 0}100%{background-position:0 0}}
+.empty{border:1.5px dashed var(--ink-300);border-radius:var(--radius);padding:24px;text-align:center;color:var(--ink-500);font-size:13px;}
+.navcols{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.navcols h3{font-size:13px;margin:0 0 6px;}
+.navcols ul{margin:0;padding-left:18px;font-size:13px;line-height:1.7;}
+.navcols .tagm{color:var(--ink-500);font-size:11px;}
+.pill-student{color:var(--brand-900);} .pill-op{color:var(--accent-600);}
+code.inline{background:var(--ink-100);padding:1px 5px;border-radius:4px;font-family:var(--font-mono);font-size:12px;}
+@media (max-width:640px){ .g4{grid-template-columns:repeat(2,1fr);} .g3{grid-template-columns:1fr 1fr;} .navcols{grid-template-columns:1fr;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Design System — Smart E-Mobility Hub</h1>
+  <p class="sub">TV5 · dùng chung cho 8 module · nền React 18 + TypeScript + Tailwind CSS. Mỗi token dưới đây có tên biến để khai báo thẳng trong <code class="inline">tailwind.config</code>.</p>
+
+  <section>
+    <h2>1. Màu sắc <span class="tag">2 chế độ dùng chung 1 bảng màu</span></h2>
+    <p class="note">Brand xanh <code class="inline">#1f4e79</code> đã dùng xuyên suốt UML/report của nhóm (use-case diagram, navigation map) nên giữ nguyên làm màu chủ đạo cho khu Sinh viên; khu Operator dùng cam làm điểm nhấn để phân biệt 2 khu vực khi nhìn nhanh.</p>
+    <div class="grid g4">
+      <div class="swatch"><div class="fill" style="background:var(--brand-900)"></div><div class="label"><b>brand-900</b><code>#1F4E79</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brand-500)"></div><div class="label"><b>brand-500</b><code>#4A8FC7</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--brand-100)"></div><div class="label"><b>brand-100</b><code>#EAF1F8</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--accent-600)"></div><div class="label"><b>accent-600</b><code>#B4690E</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--ink-900)"></div><div class="label"><b>ink-900 (text)</b><code>#1F2D3D</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--ink-500)"></div><div class="label"><b>ink-500 (muted)</b><code>#6B7A8F</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--ink-300)"></div><div class="label"><b>ink-300 (border)</b><code>#AEBAC8</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--ink-100)"></div><div class="label"><b>ink-100 (bg)</b><code>#EEF2F6</code></div></div>
+    </div>
+    <p class="note" style="margin-top:14px">Semantic — dùng cho toast, viền input lỗi, banner cảnh báo (không dùng cho trạng thái thực thể, xem mục 3):</p>
+    <div class="grid g4">
+      <div class="swatch"><div class="fill" style="background:var(--success-700)"></div><div class="label"><b>success-700</b><code>#1E7A46</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--warning-700)"></div><div class="label"><b>warning-700</b><code>#9A6B00</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--danger-700)"></div><div class="label"><b>danger-700</b><code>#B3261E</code></div></div>
+      <div class="swatch"><div class="fill" style="background:var(--info-700)"></div><div class="label"><b>info-700</b><code>#2A5DB0</code></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Typography</h2>
+    <p class="note">Font <b>Be Vietnam Pro</b> (Google Fonts, miễn phí) — chọn vì dấu tiếng Việt rõ nét ở cỡ nhỏ, khác với Inter/Roboto hay vỡ dấu trên màn hình mật độ thấp. Mono dùng cho mã (FR-M5-01, BR-M5-02…) và số liệu kỹ thuật.</p>
+    <div class="type-row"><code>text-3xl / 700</code><span style="font-size:28px;font-weight:700">Lập lịch & ưu tiên sạc</span></div>
+    <div class="type-row"><code>text-xl / 700</code><span style="font-size:20px;font-weight:700">Tên màn hình / tiêu đề thẻ</span></div>
+    <div class="type-row"><code>text-base / 600</code><span style="font-size:15px;font-weight:600">Nhãn trường, tên mục trong danh sách</span></div>
+    <div class="type-row"><code>text-sm / 400</code><span style="font-size:13.5px">Nội dung mô tả, văn bản phụ</span></div>
+    <div class="type-row"><code>text-xs / 500</code><span style="font-size:11.5px;color:var(--ink-500)">Nhãn phụ, timestamp, mã tham chiếu</span></div>
+    <div class="type-row"><code>font-mono</code><span style="font-family:var(--font-mono);font-size:12.5px">FR-M5-01 · UC-M5-03 · SoC 18.4%</span></div>
+  </section>
+
+  <section>
+    <h2>3. Màu trạng thái dùng chung <span class="tag">áp cho mọi entity, mọi module</span></h2>
+    <p class="note">Hệ thống có 7 entity vòng đời (Reservation, RentalVehicle, ParkingSpace, ChargingSession, ChargingPoint, Incident, RedistributionTask, SimulationRun) với tên trạng thái khác nhau nhưng <b>cùng một nhóm ý nghĩa</b>. Badge trạng thái ở mọi màn hình phải tô theo nhóm dưới đây — không tự chọn màu riêng cho từng module, để tránh lỗi "report không nhất quán" khi review chéo.</p>
+    <table>
+      <tr><th>Nhóm ý nghĩa</th><th>Màu badge</th><th>Trạng thái cụ thể thuộc nhóm (tên đúng như state machine)</th></tr>
+      <tr><td>Nháp / chờ xử lý</td><td><span class="badge" style="background:var(--neutral-100);color:var(--neutral-700)">● Chờ</span></td><td>Pending, Requested, Queued, Created, Draft</td></tr>
+      <tr><td>Đã xác nhận / đã lên lịch</td><td><span class="badge" style="background:var(--info-100);color:var(--info-700)">● Đã lên lịch</span></td><td>Confirmed, Scheduled, Reserved, Assigned</td></tr>
+      <tr><td>Đang diễn ra</td><td><span class="badge" style="background:var(--brand-100);color:var(--brand-900)">● Đang chạy</span></td><td>InUse, Occupied, Charging, InProgress, Running, InTransit</td></tr>
+      <tr><td>Hoàn thành</td><td><span class="badge" style="background:var(--success-100);color:var(--success-700)">● Hoàn thành</span></td><td>Completed, CheckedIn, Done, Resolved, Closed, Applied, Available*</td></tr>
+      <tr><td>Cần chú ý</td><td><span class="badge" style="background:var(--warning-100);color:var(--warning-700)">● Cần chú ý</span></td><td>LowBattery, UnderRepair, HIGH (ưu tiên)</td></tr>
+      <tr><td>Lỗi / sự cố</td><td><span class="badge" style="background:var(--danger-100);color:var(--danger-700)">● Sự cố</span></td><td>Faulty, Interrupted, Failed, Blocked, URGENT (ưu tiên)</td></tr>
+      <tr><td>Đã hủy / bỏ</td><td><span class="badge" style="background:var(--ink-100);color:var(--ink-500);text-decoration:line-through">● Đã hủy</span></td><td>Cancelled, Expired, Discarded</td></tr>
+    </table>
+    <p class="note" style="margin-top:8px">* <code class="inline">Available</code> của ChargingPoint/ParkingSpace/RentalVehicle dùng màu "Hoàn thành" (xanh lá) vì mang nghĩa "sẵn sàng, tốt" — khác với <code class="inline">Completed</code> nhưng cùng nhóm cảm quan "ổn, không cần chú ý".</p>
+  </section>
+
+  <section>
+    <h2>4. Component cốt lõi</h2>
+    <p class="note">Nút bấm:</p>
+    <div class="row-demo">
+      <button class="btn btn-primary">Xác nhận</button>
+      <button class="btn btn-secondary">Hủy</button>
+      <button class="btn btn-ghost">Xem chi tiết</button>
+      <button class="btn btn-danger">Hủy đặt chỗ</button>
+    </div>
+    <p class="note">Trường nhập liệu (trạng thái thường & lỗi):</p>
+    <div class="row-demo">
+      <div class="field"><label>Khung giờ sạc</label><input placeholder="09:00 – 09:30"></div>
+      <div class="field err"><label>Mức pin (%)</label><input value="150"><span class="msg-err">Giá trị phải từ 0–100</span></div>
+      <div class="field"><label>Hub</label><select><option>Ga Metro ĐHQG</option></select></div>
+    </div>
+    <p class="note">Thẻ xe / Hub (card) và bảng dữ liệu kiểu Operator:</p>
+    <div class="grid g2">
+      <div class="card-demo">
+        <div class="top"><span class="title">Xe máy điện · VNU-042</span><span class="badge" style="background:var(--warning-100);color:var(--warning-700)">● Cần chú ý</span></div>
+        <div class="meta">Hub: Ký túc xá khu A · Pin: 18%</div>
+      </div>
+      <table>
+        <tr><th>Cổng</th><th>Trạng thái</th><th>Xe</th></tr>
+        <tr><td>CP-05</td><td><span class="badge" style="background:var(--brand-100);color:var(--brand-900)">● Đang chạy</span></td><td>VNU-019</td></tr>
+        <tr><td>CP-06</td><td><span class="badge" style="background:var(--danger-100);color:var(--danger-700)">● Sự cố</span></td><td>—</td></tr>
+      </table>
+    </div>
+    <p class="note" style="margin-top:14px">Toast phản hồi hệ thống, trạng thái rỗng và trạng thái đang tải (bắt buộc theo G-07):</p>
+    <div class="row-demo">
+      <div class="toast" style="background:var(--success-100);color:var(--success-700)">✓ Đã gửi yêu cầu sạc — vị trí hàng đợi: 3</div>
+      <div class="toast" style="background:var(--danger-100);color:var(--danger-700)">✕ Không thể đặt lịch — khung giờ đã đủ</div>
+    </div>
+    <div class="grid g2" style="margin-top:10px">
+      <div class="empty">Chưa có lịch sạc nào. Nhấn "Đặt lịch sạc" để bắt đầu.</div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div class="skeleton" style="width:70%"></div><div class="skeleton" style="width:90%"></div><div class="skeleton" style="width:50%"></div></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. Spacing, bố cục & 2 nền tảng</h2>
+    <table>
+      <tr><th>Thuộc tính</th><th>Giá trị</th></tr>
+      <tr><td>Đơn vị cách đều</td><td>Thang Tailwind mặc định, gốc 4px (<code class="inline">p-1</code>=4px … <code class="inline">p-6</code>=24px)</td></tr>
+      <tr><td>Bo góc</td><td>6px (control nhỏ) / 10px (card, modal)</td></tr>
+      <tr><td>Khu Sinh viên</td><td>Mobile-first, max-width 480px, điều hướng top-nav 5 mục cố định</td></tr>
+      <tr><td>Khu Operator</td><td>Desktop ≥1024px, sidebar trái cố định 7 mục, vùng nội dung dạng bảng/dashboard</td></tr>
+      <tr><td>Realtime</td><td>Màn hình nhận cập nhật qua WebSocket/STOMP (dashboard M1, hàng đợi sạc M5) gắn chấm nhỏ <span class="badge" style="background:var(--success-100);color:var(--success-700)">● Live</span> cạnh tiêu đề khi kết nối còn sống, chuyển xám khi mất kết nối</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>6. Icon</h2>
+    <p class="note"><b>lucide-react</b> — bộ icon duy nhất cho toàn app, outline 1.5px, cùng stroke với border component (<code class="inline">var(--ink-300)</code> khi tĩnh, màu brand khi active). Không trộn icon từ nguồn khác để tránh lệch độ dày nét.</p>
+  </section>
+
+  <section>
+    <h2>7. Sơ đồ điều hướng (tóm tắt)</h2>
+    <p class="note">Bản đầy đủ: file <code class="inline">m5_navmap.png</code> / <code class="inline">m5_navmap.drawio</code> gửi kèm. Vào hệ thống qua 1 màn hình đăng nhập chung, điều hướng theo vai trò (role trả về từ session Spring Security).</p>
+    <div class="navcols">
+      <div>
+        <h3 class="pill-student">Khu Sinh viên — top-nav 5 mục</h3>
+        <ul>
+          <li>Trang chủ — Tìm xe & Hub <span class="tagm">(M2)</span> → Chi tiết xe/Hub → Đặt xe</li>
+          <li>Chuyến đi hiện tại — Nhận/trả xe <span class="tagm">(M3)</span></li>
+          <li>Chỗ đỗ & Sạc của tôi <span class="tagm">(M4/M5)</span>: đặt chỗ đỗ, đăng ký xe cá nhân, yêu cầu/đặt lịch sạc, xem hàng đợi</li>
+          <li>Thông báo</li>
+          <li>Hồ sơ cá nhân</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="pill-op">Khu Operator — sidebar 7 mục</h3>
+        <ul>
+          <li>Dashboard mạng lưới Hub <span class="tagm">(M1)</span> → Chi tiết Hub & tài nguyên</li>
+          <li>Sự cố & thiết bị <span class="tagm">(M6)</span></li>
+          <li>Sạc & ưu tiên — hàng đợi, điều chỉnh <span class="tagm">(M5)</span></li>
+          <li>Điều chuyển xe — khuyến nghị & nhiệm vụ <span class="tagm">(M7)</span></li>
+          <li>What-if Simulation <span class="tagm">(M8)</span></li>
+          <li>Đặt chỗ đỗ — giám sát sức chứa <span class="tagm">(M4)</span></li>
+          <li>Hồ sơ / Cài đặt tài khoản</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>8. Lý do thiết kế <span class="tag">cho §3.4 report</span></h2>
+    <p class="note" style="margin-bottom:0">
+      Tách 2 nền tảng (mobile cho Sinh viên, desktop cho Operator) vì hai tác vụ khác bản chất: sinh viên thao tác nhanh, một việc một lúc, nên dùng top-nav gọn; Operator theo dõi nhiều luồng dữ liệu đồng thời (Hub, sự cố, hàng đợi sạc, điều chuyển) nên cần sidebar và bảng dày thông tin. Bảng màu trạng thái dùng chung (mục 3) là quyết định quan trọng nhất của hệ thống này vì có 7 entity vòng đời khác tên nhưng cùng ý nghĩa — nhóm theo ý nghĩa thay vì theo tên trạng thái giúp người dùng đọc nhanh trạng thái bất kỳ màn hình nào mà không cần học lại, đồng thời giảm rủi ro 8 module tự chọn 8 bảng màu khác nhau khi cài đặt độc lập.
+    </p>
+  </section>
+</div>
+</body>
+</html>
