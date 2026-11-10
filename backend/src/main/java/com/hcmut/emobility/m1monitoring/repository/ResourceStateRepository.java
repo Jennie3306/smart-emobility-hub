@@ -37,8 +37,6 @@ public interface ResourceStateRepository
 
     Optional<ResourceState> findByResourceTypeAndResourceId(String resourceType, Long resourceId);
 
-    List<ResourceState> findByHubIdAndResourceTypeOrderByResourceId(Long hubId, String resourceType);
-
     @Query("""
            SELECT r FROM ResourceState r
            WHERE r.hubId = :hubId AND r.resourceType = :resourceType

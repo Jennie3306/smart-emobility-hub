@@ -124,7 +124,7 @@ public class DeviceEventService {
             return "INVALID_DEVICE_PAYLOAD";
         }
         if (reading.failureReason() != null
-                && !FailureReasonCodes.allows(reading.resourceType(), reading.failureReason())) {
+                && !FailureReasonCodes.allowsDeviceReading(reading.resourceType(), reading.failureReason())) {
             return "INVALID_DEVICE_PAYLOAD";
         }
         return null;

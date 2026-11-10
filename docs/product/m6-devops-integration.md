@@ -29,61 +29,82 @@ records, or move vehicles to maintenance inside another module. It publishes the
 fact; M2, M3, M4, M5, M1, and M8 own their reactions.
 
 Do not infer thresholds, retry policy, or failure probabilities from examples
-or configuration defaults. TV2 has approved a 5,000 ms demo interval (D02), and
-TV6 has selected D04/D11/D12 proposals as M6 implementation baselines. D04
-charger-failure behavior, D11 retention scope, and D12 cross-module contract
-still need the owner/consumer confirmations recorded in the decision log before
-they are described as whole-system agreements.
+or configuration defaults. The decision log separates accepted business rules,
+implementation proposals and physical-schema delivery.
 
-The selected M6 implementation baselines, remaining cross-module questions,
-required approvers, and copy-ready messages for each teammate are in
-`docs/proposals/m6-open-decisions.md`. Proposed values there are not product
-authority for other modules until the named approvers/consumers accept them.
-Before Incident creation from Operator or failure readings is enabled, TV2 must
-select severity values, automatic severity mapping, and the BR-M6-06 active
-duplicate behavior. The generic latest-state table is a D11 schema addendum
-beyond D10; TV4 must approve it and provide the Flyway migration before
-persistent latest-state behavior is enabled.
+## Decisions Received 29 October 2026
 
-TV6 recorded these TV3 decisions on 2026-10-20: M6-D03 uses one shared service
-with manual and automatic adapters; M6-D05 keeps M6 on the event-publisher side
-of module boundaries; M6-D06 separates M6-owned device health from M5-owned
-charging allocation/session state; and M6-D09 uses system-wide 400/404/409
-errors plus consumer-key/event-ID deduplication and isolated consumer error
-handling. On 2026-10-21, TV2 accepted M6-D01 (Operator reports manually, internal
-Sensor/Simulator adapter, no Student incident creation), D02 (5,000 ms demo
-interval), and D07 (Incident lifecycle with reopen only from Resolved to
-InProgress and terminal Closed). TV2 and TV3 accepted D08: all `/api/m6/**`
-routes require `OPERATOR`, except a specifically justified read-only route
-needed by Students. No such Student route is currently identified. On
-2026-10-21, TV6 selected the M6 proposals for D04 (failure reason set), D11
-(latest state plus Incident, no raw tick history), and D12 (uppercase String
-reason codes and current event payloads) as M6 implementation baselines. TV3/M5
-confirmation for ChargerFailed semantics, TV3/TV4 confirmation for D11, and TV3
-plus consumer payload acknowledgements for D12 remain outstanding; these choices
-are not recorded as whole-system approvals.
-For low battery, M6 publishes its resource-state update; M3 owns
-`VehicleLowBattery` on its vehicle-return flow below the configured threshold
-(currently 20%).
-TV6 selected the M6-D10 entity proposal as its baseline, and TV4 accepted that
-proposal on 2026-10-21. The Flyway migration is still a delivery task and is not
-present in the current code. The decision proposal records the accepted scope
-and remaining follow-up.
+Sources: [TV2 dated 28 Oct](../../DESCRIPTION/Template_report/Evidence/M6_IoT/decisions/tv2-20261028.md),
+[TV3 received 29 Oct, source undated](../../DESCRIPTION/Template_report/Evidence/M6_IoT/decisions/tv3-received-20261029.md).
+These are source decisions, not executable proof that the new rules exist.
+
+- Severity is LOW/MEDIUM/HIGH/CRITICAL, uppercase, mandatory for Operator report
+  with no default. Missing/null/empty/unknown/lowercase returns 400
+  VALIDATION_FAILED with severity details. It affects display/filter/priority,
+  not workflow or auto-assignment; no edit-severity endpoint in this version.
+- Automatic mapping is VEHICLE: MECHANICAL→HIGH, SENSOR_OFFLINE→MEDIUM;
+  CHARGING_POINT: OFFLINE→MEDIUM, POWER_FAULT→HIGH, OVERHEAT→CRITICAL. Adapter
+  payload does not gain severity. MANUAL_REPORT is Operator-only; adapter use
+  or unknown reason must be INVALID_DEVICE_PAYLOAD, no write/publication/fallback.
+- Active statuses are REPORTED/ASSIGNED/IN_PROGRESS, keyed by resource type+ID
+  regardless of reason. Manual duplicate is 409 ACTIVE_INCIDENT_EXISTS with
+  existingIncidentId/existingStatus and no mutation/event. A new reading ID on
+  an active resource yields non-error ACTIVE_INCIDENT_EXISTS, marks the ID
+  processed and does not update Incident/re-emit failure; unchanged state emits
+  no ResourceStateUpdated. Re-delivery of the same processed ID is DUPLICATE first.
+- Concurrent creation must leave one active and one post-commit failure-event
+  set; loser follows its manual/reading outcome. Reports after RESOLVED/CLOSED
+  create a new Incident, leaving the old one unchanged and adding no linkage
+  column. Reopen validates source RESOLVED first, then active conflict; conflict
+  returns 409 with existingIncidentId, leaving the old Incident RESOLVED.
+- TV3 accepts D11's latest-state + Incident / no raw-history architecture and
+  uppercase String reasons. Current payload is sufficient for M3; other
+  consumer acknowledgements, M5 usage/recovery contract and TV4 D11 schema remain.
+- TV3 requires compatibility with markIfNew(eventId) and new M3 handlers;
+  shared/events/store/security changes need owner review, preferably a separate
+  PR. The TV2-proposed active/transition ordering and active_resource_key unique
+  mechanism are **not** approved by this TV3 reply; coordinate TV3+TV4 first.
+
+D01/D02/D07/D08 remain accepted (Operator, 5,000 ms demo, lifecycle and namespace
+security). D10 schema was accepted on 21 Oct; migration still awaits TV4. New
+severity/state columns/constraints and the D11 generic snapshot table require
+physical-schema confirmation. Reopen timestamp semantics remain unanswered.
+M6 publishes resource-state updates for low battery; M3 owns VehicleLowBattery.
+
+**Gap fixes implemented 29 Oct:** feature commit `7edb551` separates
+allowsDeviceReading from allowsOperatorReport. Adapter MANUAL_REPORT is rejected
+as INVALID_DEVICE_PAYLOAD before state write/dedupe completion/publication, while
+Operator reason validation still permits it. Commit `b156344` updates Incident
+fixtures to LOW/MEDIUM/HIGH/CRITICAL in list/detail/filter and mandatory draft
+selection with no default. Fixture data is not automatic severity mapping and
+the draft does not create an Incident or apply duplicate admission.
+
+Fresh proof: 47 focused backend tests (35 D07 + 12 DeviceEventService), full
+backend verify 71 tests and frontend 32 tests passed; TypeScript/Vite build and
+Compose config passed. Browser proof isolates fixture UI with a stubbed GET
+status and is not new live simulator/API/DB proof. See report §8.10 and curated
+policy-20261029 records. Historical 27/28 Oct evidence remains unchanged.
+
+**Remaining work:** Incident severity mapping/application, service/API/JPA,
+version/concurrency/after-commit and TV4 migrations; TV3 ordering/race review and
+M5 health/recovery contract. Root's ProcessedEventStore prototype removes the
+one-argument markIfNew(UUID) and must not be copied into the feature/shared PR
+as-is. Preserve compatibility and newer M3 handlers under TV3 review.
 
 ## Current Repository State
 
 | Capability | Evidence | Status |
 | --- | --- | --- |
-| M6 package structure | `backend/.../m6simulator/` | In-memory simulator walking skeleton; `NORMAL_TICK` uses ParkingSpace `FREE`; selected uppercase failure codes are validated by resource type; no Incident JPA workflow or persistent latest-state table |
+| M6 package structure | `backend/.../m6simulator/` | In-memory simulator walking skeleton; `NORMAL_TICK` uses ParkingSpace `FREE`; source-specific uppercase reasons reject adapter MANUAL_REPORT; Operator reason helper remains separate; no Incident JPA workflow or persistent latest-state table |
 | M6 event contracts | `shared/events/*FailedEvent`, `ResourceStateUpdatedEvent` | Present |
 | In-process event publisher | `shared/events/EventPublisher.java` | Present |
 | M6 inbound duplicate aid | `m6simulator/service/InboundDeviceReadingStore.java` | Separate producer-side bounded process-memory store; not durable |
 | Consumer duplicate aid | `shared/events/ProcessedEventStore.java` | Integration branch implements bounded in-memory `(consumerKey, eventId)` dedupe; M3 handlers use stable keys and separate transactions, catching/logging failures. Focused 14-test run and full 37-test verify passed. The feature branch does not yet contain these shared/M3 changes |
-| M6 incident domain/service/API | `m6simulator` | Not implemented. D01/D07/D10 are accepted; TV2 severity/duplicate-policy gate and TV4 migration remain. D11 latest-state schema addendum also awaits TV4 approval |
+| M6 incident domain/service/API | `m6simulator/domain/Incident{Action,Status,Lifecycle}` | Feature branch has immutable, unpersisted D07 transition graph: 35 domain tests; historical backend verify 69 tests passed 27 Oct; current verify 71 passed 29 Oct (Java 21), code committed as 7edb551/b156344. No Incident service/API/JPA or pipeline wiring. Assignee/version/timestamps and policy application remain outside the domain slice. TV2 severity/duplicate rules are now accepted; implementation and TV3 race/ordering review + TV4 migrations/D11 schema remain |
 | Simulator API | `m6simulator/controller/SimulatorController.java`, `shared/config/SecurityConfig.java` | Scenario/status endpoints require Operator. Catch-all `/api/m6/**` OPERATOR rule is implemented on integration branch; feature branch sync is pending. No Student read-only exception is identified |
 | Simulator and scheduler | `DeviceSimulatorService`, `SimulatorScheduler`, `application.yml` | Deterministic scenarios implemented; D02 interval configured to 5,000 ms; scheduler remains disabled by default and still requires an explicit seed when enabled |
 | M6 consumer integration | M3 `VehicleEventHandler` | Integration branch H2 proof covers `VehicleFailed` → `MAINTENANCE`, duplicate delivery, and handler isolation; feature branch retains its prior M3 handler. M2/M4/M5/M8 runtime reaction is not proven here |
-| M6 operator UI | No implementation found | Not implemented |
+| M6 operator UI | `/m6/operations`, `frontend/src/modules/m6simulator/`; [UI proof](../reviews/m6-ui-validation-20261028.md) | Live simulator status/three scenarios/Long seed/run output and 400/401/403/409 handling implemented on feature; 28 frontend tests and production Compose browser smoke passed 28 Oct. Incident UI is explicitly local fixtures, with D07/filter/detail/draft only; fixtures now show four approved severities with filtering and required draft choice (32 frontend tests on 29 Oct); no real Incident policy/application/health/API/DB completion inferred |
 | Backend CI | `.github/workflows/ci.yml` | Configured |
 | Frontend CI | `.github/workflows/ci.yml` | Configured |
 | Demo containers | Dockerfiles and Compose overlay | Configured; verify per runbook |

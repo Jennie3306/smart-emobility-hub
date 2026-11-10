@@ -1,0 +1,91 @@
+@startuml m2_seq_concurrent
+skinparam shadowing false
+skinparam defaultFontSize 11
+skinparam sequenceMessageAlign left
+skinparam responseMessageBelowArrow true
+skinparam ArrowColor #1F4E79
+skinparam sequence {
+  ParticipantBorderColor #1F4E79
+  ParticipantBackgroundColor #FFFFFF
+  ActorBorderColor #1F4E79
+  ActorBackgroundColor #FFFFFF
+  LifeLineBorderColor #8EA9C1
+  GroupBorderColor #C55A11
+  GroupHeaderFontColor #C55A11
+}
+skinparam note {
+  BackgroundColor #FFFDE7
+  BorderColor #B8A100
+}
+title Sequence "Hai người đặt cùng một xe cuối cùng" (BR-M2-01, TC-M2-02)
+
+actor SinhVienA as A
+actor SinhVienB as B
+participant ReservationController as C
+participant ReservationService as S
+participant VehicleSearchRepository as V
+participant ReservationRepository as R
+database PostgreSQL as DB
+participant EventPublisher as E
+
+note over A, B : EB-001 (id = 1) là xe AVAILABLE cuối cùng ở Hub Ga Metro.\nHai sinh viên bấm "Đặt xe" gần như cùng lúc.
+
+par Yêu cầu của SinhVienA
+  A -> C : POST /api/m2/reservations {vehicleId: 1}
+  C -> S : reserveVehicle(userA, 1)
+  S -> V : findById(1)
+  V --> S : RentalVehicle (AVAILABLE)
+  S -> R : findFirstByUserIdAndResourceTypeAndStateIn(userA, VEHICLE, ACTIVE)
+  R --> S : Optional.empty
+  S -> R : findFirstByResourceTypeAndResourceIdAndStateIn(VEHICLE, 1, ACTIVE)
+  R --> S : Optional.empty
+  S -> S : Reservation.create(...)\nconfirm(now, holdMinutes)
+  S -> R : saveAndFlush(reservationA)
+  R -> DB : INSERT reservation\n(active_resource_key = 'VEHICLE:1')
+  alt INSERT thành công
+    DB --> R : 1 row
+    R --> S : reservationA (CONFIRMED)
+    S -> E : publish(ReservationConfirmedEvent)
+    note right of E : Phát sau INSERT, trước COMMIT.\nM3 nhận: xe → RESERVED.\n(Event đã có trên nhánh M3, chờ merge.)
+    S -> DB : COMMIT
+    S --> C : reservationA
+    C --> A : 201 Created {state: CONFIRMED, expiresAt}
+  else DataIntegrityViolationException
+    DB --> R : unique_violation
+    R --> S : DataIntegrityViolationException
+    S -> DB : ROLLBACK
+    S --> C : BusinessException("RESOURCE_CONFLICT")
+    C --> A : 409 {code: RESOURCE_CONFLICT}
+  end
+else Yêu cầu của SinhVienB
+  B -> C : POST /api/m2/reservations {vehicleId: 1}
+  C -> S : reserveVehicle(userB, 1)
+  S -> V : findById(1)
+  V --> S : RentalVehicle (AVAILABLE)
+  S -> R : findFirstByUserIdAndResourceTypeAndStateIn(userB, VEHICLE, ACTIVE)
+  R --> S : Optional.empty
+  S -> R : findFirstByResourceTypeAndResourceIdAndStateIn(VEHICLE, 1, ACTIVE)
+  R --> S : Optional.empty
+  note right of S : Cả hai yêu cầu đều qua kiểm tra trước,\nvì chưa bên nào commit.
+  S -> S : Reservation.create(...)\nconfirm(now, holdMinutes)
+  S -> R : saveAndFlush(reservationB)
+  R -> DB : INSERT reservation\n(active_resource_key = 'VEHICLE:1')
+  note right of DB : Chỉ mục UNIQUE đang bị giữ bởi INSERT\nchưa commit của bên kia → INSERT này chờ.\nBên kia COMMIT → INSERT này lỗi.
+  alt INSERT thành công
+    DB --> R : 1 row
+    R --> S : reservationB (CONFIRMED)
+    S -> E : publish(ReservationConfirmedEvent)
+    S -> DB : COMMIT
+    S --> C : reservationB
+    C --> B : 201 Created {state: CONFIRMED, expiresAt}
+  else DataIntegrityViolationException
+    DB --> R : unique_violation
+    R --> S : DataIntegrityViolationException
+    S -> DB : ROLLBACK
+    S --> C : BusinessException("RESOURCE_CONFLICT")
+    C --> B : 409 {code: RESOURCE_CONFLICT}
+  end
+end
+
+note over A, E : Kết quả: đúng 1 bên nhận 201, bên còn lại nhận 409. Bảng reservation chỉ có 1 dòng CONFIRMED cho xe 1.\nBên thua rollback trước khi tới publish, nên chỉ có 1 ReservationConfirmedEvent.
+@enduml

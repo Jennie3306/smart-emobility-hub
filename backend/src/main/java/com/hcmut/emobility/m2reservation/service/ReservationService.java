@@ -15,6 +15,7 @@ import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
 import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
 import com.hcmut.emobility.shared.events.ReservationCheckedInEvent;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
@@ -221,6 +222,10 @@ public class ReservationService implements ReservationCore {
             throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         } catch (OptimisticLockingFailureException e) {
             throw new BusinessException("CONCURRENT_UPDATE", "Reservation changed. Please refresh.");
+        } catch (ConcurrencyFailureException e) {
+            // Hai giao dich cung chen vao mot khoa UNIQUE: tuy CSDL co the bao khoa/timeout
+            // (H2) thay vi trung khoa (PostgreSQL). Ca hai deu la tranh chap tai nguyen.
+            throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         }
     }
 

@@ -2,6 +2,7 @@ package com.hcmut.emobility.m1monitoring;
 
 import com.hcmut.emobility.m1monitoring.domain.*;
 import com.hcmut.emobility.m1monitoring.dto.Dtos.UtilisationDto;
+import com.hcmut.emobility.m1monitoring.events.MonitoringEventHandler;
 import com.hcmut.emobility.m1monitoring.repository.AlertRepository;
 import com.hcmut.emobility.m1monitoring.repository.HubRepository;
 import com.hcmut.emobility.m1monitoring.repository.ResourceStateRepository;
@@ -202,8 +203,24 @@ class M1MonitoringTest {
         ResourceStateUpdatedEvent event =
                 new ResourceStateUpdatedEvent(1L, "PARKING_SPACE", 5L, "OCCUPIED");
 
-        assertTrue(store.markIfNew(event.getEventId()));    // lan dau: xu ly
-        assertFalse(store.markIfNew(event.getEventId()));   // lan hai: bo qua
+        assertTrue(store.markIfNew("M1", event.getEventId()));    // lan dau: xu ly
+        assertFalse(store.markIfNew("M1", event.getEventId()));   // lan hai: bo qua
+        // M3 nghe cung su kien voi khoa rieng, khong bi M1 lam bo qua
+        assertTrue(store.markIfNew("M3", event.getEventId()));
+    }
+
+    @Test
+    @DisplayName("TC-M1-13 quy doi tu vung trang thai cua M6 sang tu vung cua M1")
+    void tc13_normaliseM6Vocabulary() {
+        // Lop tuong duong 1: tu vung M6 cho tru sac -> tu vung M1
+        assertEquals("FREE", MonitoringEventHandler.normalise("CHARGING_POINT", "AVAILABLE"));
+        assertEquals("IN_USE", MonitoringEventHandler.normalise("CHARGING_POINT", "charging"));
+        // Lop 2: da dung tu vung M1 -> giu nguyen
+        assertEquals("FAULTY", MonitoringEventHandler.normalise("CHARGING_POINT", "FAULTY"));
+        assertEquals("OCCUPIED", MonitoringEventHandler.normalise("PARKING_SPACE", "OCCUPIED"));
+        // Lop 3: gia tri la -> giu nguyen (khong doan), null -> null
+        assertEquals("UNKNOWN_X", MonitoringEventHandler.normalise("PARKING_SPACE", "unknown_x"));
+        assertNull(MonitoringEventHandler.normalise("PARKING_SPACE", null));
     }
 
     // ---------- tien ich ----------

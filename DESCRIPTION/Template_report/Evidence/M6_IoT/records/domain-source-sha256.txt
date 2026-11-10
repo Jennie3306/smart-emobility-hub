@@ -1,0 +1,5 @@
+f3528fcea88efb08ff152783b2b41f768615ad50ac645ffa59ce29d29db0ff8f  backend/src/main/java/com/hcmut/emobility/m6simulator/domain/IncidentAction.java
+0f7d3582410e1ca1379660f1236df73434df7867471de7f6cc6a4e3436abe45a  backend/src/main/java/com/hcmut/emobility/m6simulator/domain/IncidentLifecycle.java
+c0d8dadf574ddfa202564efeb5611a39dd9778640d64240a823035522dc6424b  backend/src/main/java/com/hcmut/emobility/m6simulator/domain/IncidentStatus.java
+b195812089b4781a8d648e26544e6dad9f03bcadabe854867a558f289508523e  backend/src/test/java/com/hcmut/emobility/m6simulator/domain/IncidentLifecycleTest.java
+b98f1a7828e791dcec9b244ab1b09d8ce9d1a80f66a9845762c6d7c2ecb09563  backend/src/test/java/com/hcmut/emobility/m6simulator/domain/IncidentStatusTest.java

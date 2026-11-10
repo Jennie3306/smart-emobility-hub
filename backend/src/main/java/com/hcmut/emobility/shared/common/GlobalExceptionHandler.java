@@ -2,6 +2,7 @@ package com.hcmut.emobility.shared.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -55,6 +56,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiError.of("ACCESS_DENIED", "You do not have permission to perform this action", Map.of()));
+    }
+
+    /**
+     * Hai giao dich tranh cung mot dong (khoa lac quan @Version, khoa bi giu, timeout khoa)
+     * -> 409 de nguoi dung thu lai, thay vi 500. Vi du: M2 dat xe dung luc M6 cap nhat pin.
+     */
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    public ResponseEntity<ApiError> handleConcurrency(ConcurrencyFailureException ex) {
+        log.warn("Tranh chap dong thoi: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiError.of("RESOURCE_CONFLICT",
+                        "This resource was changed by another request. Please try again.", Map.of()));
     }
 
     /** Moi loi con lai -> 500, co ghi log day du de con debug */

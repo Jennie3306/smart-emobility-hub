@@ -10,6 +10,7 @@ import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +28,7 @@ public class VehicleEventHandler {
     }
 
     @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onVehicleFailed(VehicleFailedEvent event) {
         if (!processed.markIfNew("M3",event.getEventId())) return;
@@ -42,6 +44,7 @@ public class VehicleEventHandler {
     }
 
     @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onReservationExpired(ReservationExpiredEvent event) {
         if (!processed.markIfNew("M3",event.getEventId())) return;
@@ -59,6 +62,7 @@ public class VehicleEventHandler {
     }
 
     @EventListener
+    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onDispatchCompleted(DispatchCompletedEvent event) {
         if (!processed.markIfNew("M3",event.getEventId())) return;
@@ -75,4 +79,8 @@ public class VehicleEventHandler {
             log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
         }
     }
+
+    // ReservationConfirmed / ReservationCancelled / ReservationCheckedIn: xu ly tai
+    // ReservationVehicleHandler (fail-fast de M2 rollback khi khong giu duoc xe).
+    // Tranh hai listener cung doi trang thai mot xe.
 }

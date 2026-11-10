@@ -2,6 +2,11 @@ package com.hcmut.emobility.m8simulation.controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import java.util.*;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+
+/** Uu tien truoc GlobalExceptionHandler, neu khong loi 400 cua M8 co the thanh 500 tuy thu tu quet bean. */
+@Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(assignableTypes=SimulationController.class)
 public class SimulationErrors {
     @ExceptionHandler(IllegalArgumentException.class)

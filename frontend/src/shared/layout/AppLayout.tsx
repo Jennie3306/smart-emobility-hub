@@ -8,6 +8,7 @@ const nav = [
   { to: "/m2/search", label: "Find a vehicle (M2)" },
   { to: "/m2/my-reservation", label: "My reservation" },
   { to: "/m3/vehicles",  label: "Rental vehicles (M3)" },
+  { to: "/m6/operations", label: "Incidents & IoT (M6)" },
   // moi module tu them muc cua minh
   { to: "/m8/simulation", label: "What-if Studio (M8)" },
 ];
@@ -28,7 +29,7 @@ export function AppLayout() {
         </nav>
         <button className="ml-auto text-sm opacity-80 hover:opacity-100" onClick={async () => { await logout(); navigate("/login"); }}>Sign out</button>
       </header>
-      <main className="p-6">
+      <main className="p-4 md:p-6">
         <Outlet />
       </main>
     </div>

@@ -3,6 +3,7 @@ package com.hcmut.emobility.m2reservation;
 import com.hcmut.emobility.m2reservation.domain.CancelReason;
 import com.hcmut.emobility.m2reservation.domain.Reservation;
 import com.hcmut.emobility.m2reservation.domain.ReservationState;
+import com.hcmut.emobility.m2reservation.domain.ResourceType;
 import com.hcmut.emobility.m2reservation.events.ReservationEventHandler;
 import com.hcmut.emobility.m2reservation.repository.ReservationRepository;
 import com.hcmut.emobility.m2reservation.service.ReservationService;
@@ -205,5 +206,29 @@ class ReservationServiceTest {
         Reservation cancelled = service.cancel(r.getId(), STUDENT_A);
         assertEquals(CancelReason.USER_REQUEST, cancelled.getCancelReason());
         assertEquals(ReservationState.CONFIRMED, service.reserveVehicle(STUDENT_B, v).getState());
+    }
+
+    @Test
+    @DisplayName("TC-M2-15: Decision table - resource already held by another student -> RESOURCE_CONFLICT (BR-M2-01, M4 path)")
+    void resourceHeldByAnotherStudent() {
+        service.reserve(STUDENT_A, ResourceType.PARKING_SPACE, 5L, 1L);
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.reserve(STUDENT_B, ResourceType.PARKING_SPACE, 5L, 1L));
+        assertEquals("RESOURCE_CONFLICT", ex.getCode());
+        assertEquals(1, repository.count());
+    }
+
+    @Test
+    @DisplayName("TC-M2-16: Decision table - the one-active-reservation limit applies per resource type (BR-M2-03)")
+    void limitIsPerResourceType() {
+        long v = vehicle("EB-T18", "E_BIKE", 80, "AVAILABLE", 1);
+        service.reserve(STUDENT_A, ResourceType.PARKING_SPACE, 6L, 1L);
+
+        // A parking space does not block a vehicle reservation...
+        assertEquals(ReservationState.CONFIRMED, service.reserveVehicle(STUDENT_A, v).getState());
+        // ...but a second parking space for the same student is rejected
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.reserve(STUDENT_A, ResourceType.PARKING_SPACE, 7L, 1L));
+        assertEquals("RESERVATION_LIMIT_EXCEEDED", ex.getCode());
     }
 }

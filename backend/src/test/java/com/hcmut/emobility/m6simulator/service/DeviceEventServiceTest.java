@@ -2,6 +2,7 @@ package com.hcmut.emobility.m6simulator.service;
 
 import com.hcmut.emobility.m6simulator.domain.DeviceReading;
 import com.hcmut.emobility.m6simulator.domain.DeviceStateSnapshot;
+import com.hcmut.emobility.m6simulator.domain.FailureReasonCodes;
 import com.hcmut.emobility.m6simulator.domain.ProcessingResult;
 import com.hcmut.emobility.m6simulator.domain.ResourceType;
 import com.hcmut.emobility.m6simulator.domain.SimulatorScenario;
@@ -13,6 +14,8 @@ import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 
 import java.time.OffsetDateTime;
@@ -24,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -32,14 +36,16 @@ class DeviceEventServiceTest {
 
     private EventPublisher publisher;
     private InMemoryDeviceStateStore stateStore;
+    private InboundDeviceReadingStore inboundStore;
     private DeviceEventService service;
 
     @BeforeEach
     void setUp() {
         publisher = mock(EventPublisher.class);
         stateStore = new InMemoryDeviceStateStore();
+        inboundStore = new InboundDeviceReadingStore();
         service = new DeviceEventService(new DemoDeviceCatalog(), stateStore,
-                new InboundDeviceReadingStore(), publisher);
+                inboundStore, publisher);
     }
 
     @Test
@@ -139,8 +145,8 @@ class DeviceEventServiceTest {
 
     @Test
     void acceptsOnlyTheSelectedUppercaseReasonCodesForEachResourceType() {
-        List<String> vehicleReasons = List.of("MECHANICAL", "SENSOR_OFFLINE", "MANUAL_REPORT");
-        List<String> chargerReasons = List.of("OFFLINE", "OVERHEAT", "POWER_FAULT", "MANUAL_REPORT");
+        List<String> vehicleReasons = List.of("MECHANICAL", "SENSOR_OFFLINE");
+        List<String> chargerReasons = List.of("OFFLINE", "OVERHEAT", "POWER_FAULT");
         long id = 10;
 
         for (String reason : vehicleReasons) {
@@ -153,6 +159,31 @@ class DeviceEventServiceTest {
                     service.processReading(reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, reason, id++))
                             .status(), reason);
         }
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ResourceType.class, names = {"VEHICLE", "CHARGING_POINT"})
+    void manualReportIsOperatorOnlyAndRejectedReadingDoesNotPoisonTheEventId(ResourceType type) {
+        Integer battery = type == ResourceType.VEHICLE ? 65 : null;
+        service.processReading(reading(type, 1L, "AVAILABLE", battery, null, 30));
+        var before = stateStore.snapshot();
+        clearInvocations(publisher);
+        DeviceReading manual = reading(type, 1L, "FAULTY", battery, "MANUAL_REPORT", 31);
+
+        ProcessingResult result = service.processReading(manual);
+
+        assertEquals(ProcessingResult.Status.REJECTED, result.status());
+        assertEquals("INVALID_DEVICE_PAYLOAD", result.reasonCode());
+        assertTrue(result.outboundEvents().isEmpty());
+        assertEquals(before, stateStore.snapshot());
+        assertTrue(inboundStore.find(manual.eventId()).isEmpty());
+        verifyNoInteractions(publisher);
+        assertTrue(FailureReasonCodes.allowsOperatorReport(type, "MANUAL_REPORT"));
+
+        String deviceReason = type == ResourceType.VEHICLE ? "MECHANICAL" : "OFFLINE";
+        ProcessingResult corrected = service.processReading(reading(type, 1L, "FAULTY", battery, deviceReason, 31));
+        assertEquals(ProcessingResult.Status.PROCESSED, corrected.status());
+        assertTrue(inboundStore.find(manual.eventId()).isPresent());
     }
 
     @Test

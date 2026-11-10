@@ -8,7 +8,7 @@
         <mxCell id="title" value="M6 — Activity: quy trình tiếp nhận và xử lý sự cố" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=27;fontStyle=1;fontColor=#17365d;" parent="1" vertex="1">
           <mxGeometry x="40" y="22" width="2300" height="44" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle" value="Tách luồng báo cáo thủ công và reading lỗi; kiểm tra idempotency riêng; chỉ publish sau commit." style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=15;fontColor=#475569;" parent="1" vertex="1">
+        <mxCell id="subtitle" value="Thiết kế mục tiêu: kiểm tra báo cáo trùng và phát sự kiện sau khi lưu thành công." style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=15;fontColor=#475569;" parent="1" vertex="1">
           <mxGeometry x="40" y="70" width="2300" height="30" as="geometry" />
         </mxCell>
         <mxCell id="lane_operator" value="" style="shape=rectangle;html=1;strokeWidth=1;fillColor=#fff7ed;strokeColor=#fdba74;" parent="1" vertex="1">
@@ -50,11 +50,11 @@
         <mxCell id="initial_to_source" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;" parent="1" edge="1" source="initial" target="source_choice">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="choose_manual" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0.5;entryY=1;" parent="1" edge="1" source="source_choice" target="operator_input">
+        <mxCell id="choose_manual" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=0.5;exitY=0;entryX=0;entryY=0.5;" parent="1" edge="1" source="source_choice" target="operator_input">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="470" y="520" />
-              <mxPoint x="470" y="203" />
+              <mxPoint x="382" y="461" />
+              <mxPoint x="290" y="461" /><mxPoint x="290" y="203" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -67,7 +67,7 @@
           </mxGeometry>
         </mxCell>
         <mxCell id="lbl_manual" value="[báo cáo thủ công]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="428" y="330" width="150" height="22" as="geometry" />
+          <mxGeometry x="266" y="330" width="150" height="22" as="geometry" />
         </mxCell>
         <mxCell id="lbl_sensor" value="[reading lỗi thiết bị]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
           <mxGeometry x="795" y="400" width="170" height="22" as="geometry" />
@@ -88,7 +88,7 @@
         <mxCell id="manual_validate_to_decision" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="validate_manual" target="manual_valid_decision">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="manual_reject" value="Từ chối; không ghi state/Incident, không publish&#10;Payload sai: HTTP 400 · Resource thiếu: HTTP 404&#10;Quyền sai: từ chối; status chưa chốt (M6-D08)" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
+        <mxCell id="manual_reject" value="Từ chối, không ghi state/Incident hay phát event.&lt;br&gt;400: payload sai · 404: thiếu resource&lt;br&gt;401: chưa đăng nhập · 403: thiếu quyền" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
           <mxGeometry x="620" y="770" width="310" height="94" as="geometry" />
         </mxCell>
         <mxCell id="manual_invalid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b91c1c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="manual_valid_decision" target="manual_reject">
@@ -105,7 +105,7 @@
         <mxCell id="manual_valid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="manual_valid_decision" target="manual_active_decision">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="manual_active_reject" value="409 ACTIVE_INCIDENT_EXISTS&#10;Theo baseline BR-M6-06; chờ TV2 duyệt&#10;Không ghi/publish" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
+        <mxCell id="manual_active_reject" value="409 ACTIVE_INCIDENT_EXISTS&lt;br&gt;existingIncidentId / existingStatus&lt;br&gt;Không ghi hoặc phát event" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
           <mxGeometry x="965" y="770" width="290" height="88" as="geometry" />
         </mxCell>
         <mxCell id="manual_active_yes" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b91c1c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="manual_active_decision" target="manual_active_reject">
@@ -115,14 +115,14 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="manual_state_decision" value="State transition&#10;hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1220" y="577" width="120" height="90" as="geometry" />
+        <mxCell id="manual_state_decision" value="Đổi tình trạng&lt;br&gt;thiết bị hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1187" y="577" width="186" height="90" as="geometry" />
         </mxCell>
         <mxCell id="manual_no_active" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="manual_active_decision" target="manual_state_decision">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="manual_state_reject" value="409 INVALID_STATE_TRANSITION&#10;Không ghi/publish" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1260" y="770" width="260" height="78" as="geometry" />
+        <mxCell id="manual_state_reject" value="409 INVALID_STATE_TRANSITION&lt;br&gt;Chuyển tình trạng thiết bị không hợp lệ&lt;br&gt;Giữ dữ liệu, không phát sự kiện" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1260" y="770" width="300" height="84" as="geometry" />
         </mxCell>
         <mxCell id="manual_state_invalid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b91c1c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="manual_state_decision" target="manual_state_reject">
           <mxGeometry relative="1" as="geometry">
@@ -145,7 +145,7 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="reading_valid_decision" value="Schema/resource&#10;hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
+        <mxCell id="reading_valid_decision" value="Schema và&lt;br&gt;resource hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
           <mxGeometry x="785" y="1022" width="120" height="90" as="geometry" />
         </mxCell>
         <mxCell id="reading_validate_check" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="validate_reading" target="reading_valid_decision">
@@ -179,37 +179,37 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="reading_state_decision" value="State transition&#10;hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
+        <mxCell id="reading_state_decision" value="Có Incident&lt;br&gt;active?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
           <mxGeometry x="1285" y="1022" width="120" height="90" as="geometry" />
         </mxCell>
         <mxCell id="event_new" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="event_duplicate_decision" target="reading_state_decision">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="reading_state_reject" value="Transition sai: reject + log&#10;Không ghi/publish" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1160" y="1195" width="245" height="78" as="geometry" />
+        <mxCell id="reading_state_reject" value="ACTIVE_INCIDENT_EXISTS (không lỗi)&lt;br&gt;Đánh dấu reading đã xử lý&lt;br&gt;Giữ Incident, không phát lại sự kiện lỗi" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#14532d;fillColor=#dcfce7;strokeColor=#16a34a;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1160" y="1190" width="295" height="94" as="geometry" />
         </mxCell>
-        <mxCell id="reading_state_invalid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b91c1c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_state_decision" target="reading_state_reject">
+        <mxCell id="reading_state_invalid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#15803d;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_state_decision" target="reading_state_reject">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1345" y="1140" />
-              <mxPoint x="1282" y="1140" />
+              <mxPoint x="1307.5" y="1140" />
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="reading_active_decision" value="Có Incident&#10;active?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1535" y="1022" width="120" height="90" as="geometry" />
+        <mxCell id="reading_active_decision" value="Đổi tình trạng&lt;br&gt;thiết bị hợp lệ?" style="rhombus;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#713f12;fillColor=#fef3c7;strokeColor=#d97706;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1502" y="1022" width="186" height="90" as="geometry" />
         </mxCell>
         <mxCell id="reading_state_valid" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#334155;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="reading_state_decision" target="reading_active_decision">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="active_sensor_gap" value="Chưa có outcome được duyệt cho reading mới khi Incident đang active.&#10;BR-M6-06 cần TV2 xác nhận." style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#9a3412;fillColor=#fff7ed;strokeColor=#f97316;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1400" y="1190" width="330" height="90" as="geometry" />
+        <mxCell id="active_sensor_gap" value="Chuyển tình trạng thiết bị không hợp lệ&lt;br&gt;Từ chối, ghi log và giữ dữ liệu" style="rounded=1;arcSize=12;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#7f1d1d;fillColor=#fee2e2;strokeColor=#dc2626;strokeWidth=2;" parent="1" vertex="1">
+          <mxGeometry x="1480" y="1190" width="280" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="reading_active_yes" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#c2410c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_active_decision" target="active_sensor_gap">
+        <mxCell id="reading_active_yes" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#b91c1c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_active_decision" target="active_sensor_gap">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
               <mxPoint x="1595" y="1140" />
-              <mxPoint x="1565" y="1140" />
+              <mxPoint x="1602.5" y="1140" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -232,11 +232,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="lbl_merge_manual" value="[valid]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1450" y="590" width="70" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="lbl_merge_sensor" value="[không có Incident active]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1660" y="1080" width="175" height="20" as="geometry" />
+        <mxCell id="lbl_merge_sensor" value="[transition hợp lệ]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1690" y="1080" width="175" height="20" as="geometry" />
         </mxCell>
         <mxCell id="transaction_action" value="Trong cùng transaction:&#10;• tạo Incident Reported&#10;• cập nhật health/latest state M6 nếu áp dụng&#10;• đánh dấu eventId đã xử lý (chỉ reading thiết bị)" style="rounded=1;arcSize=14;whiteSpace=wrap;html=1;align=center;verticalAlign=middle;fontFamily=Arial;fontSize=15;fontColor=#1f2937;fillColor=#dbeafe;strokeColor=#3b82f6;strokeWidth=2;" parent="1" vertex="1">
           <mxGeometry x="1640" y="1515" width="460" height="112" as="geometry" />
@@ -333,22 +330,22 @@
           <mxGeometry x="963" y="1320" width="144" height="20" as="geometry" />
         </mxCell>
         <mxCell id="final_reading_state_reject_outer" value="" style="ellipse;aspect=fixed;html=1;fillColor=#ffffff;strokeColor=#111827;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1268" y="1290" width="28" height="28" as="geometry" />
+          <mxGeometry x="1294" y="1302" width="28" height="28" as="geometry" />
         </mxCell>
         <mxCell id="final_reading_state_reject_inner" value="" style="ellipse;aspect=fixed;html=1;fillColor=#111827;strokeColor=#111827;" parent="1" vertex="1">
-          <mxGeometry x="1276" y="1298" width="12" height="12" as="geometry" />
+          <mxGeometry x="1302" y="1310" width="12" height="12" as="geometry" />
         </mxCell>
         <mxCell id="final_reading_state_reject_label" value="Kết thúc reading" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=11;fontColor=#475569;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1210" y="1320" width="144" height="20" as="geometry" />
+          <mxGeometry x="1236" y="1332" width="144" height="20" as="geometry" />
         </mxCell>
         <mxCell id="final_active_policy_outer" value="" style="ellipse;aspect=fixed;html=1;fillColor=#ffffff;strokeColor=#111827;strokeWidth=2;" parent="1" vertex="1">
-          <mxGeometry x="1551" y="1300" width="28" height="28" as="geometry" />
+          <mxGeometry x="1589" y="1300" width="28" height="28" as="geometry" />
         </mxCell>
         <mxCell id="final_active_policy_inner" value="" style="ellipse;aspect=fixed;html=1;fillColor=#111827;strokeColor=#111827;" parent="1" vertex="1">
-          <mxGeometry x="1559" y="1308" width="12" height="12" as="geometry" />
+          <mxGeometry x="1597" y="1308" width="12" height="12" as="geometry" />
         </mxCell>
-        <mxCell id="final_active_policy_label" value="Chờ quyết định" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=11;fontColor=#475569;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1493" y="1330" width="144" height="20" as="geometry" />
+        <mxCell id="final_active_policy_label" value="Kết thúc lỗi" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=11;fontColor=#475569;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1531" y="1330" width="144" height="20" as="geometry" />
         </mxCell>
         <mxCell id="end_reading_reject" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#64748b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_reject" target="final_reading_reject_outer">
           <mxGeometry relative="1" as="geometry" />
@@ -359,7 +356,7 @@
         <mxCell id="end_reading_state" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#64748b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="reading_state_reject" target="final_reading_state_reject_outer">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="end_active_gap" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#c2410c;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="active_sensor_gap" target="final_active_policy_outer">
+        <mxCell id="end_active_gap" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#64748b;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" parent="1" edge="1" source="active_sensor_gap" target="final_active_policy_outer">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="final_rollback_outer" value="" style="ellipse;aspect=fixed;html=1;fillColor=#ffffff;strokeColor=#111827;strokeWidth=2;" parent="1" vertex="1">
@@ -402,7 +399,7 @@
           <mxGeometry x="1320" y="710" width="55" height="20" as="geometry" />
         </mxCell>
         <mxCell id="lbl_manual_state_valid" value="[đúng]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1350" y="590" width="70" height="20" as="geometry" />
+          <mxGeometry x="1375" y="590" width="70" height="20" as="geometry" />
         </mxCell>
         <mxCell id="lbl_reading_invalid" value="[schema/resource sai]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
           <mxGeometry x="660" y="1140" width="200" height="20" as="geometry" />
@@ -413,16 +410,16 @@
         <mxCell id="lbl_duplicate_no" value="[eventId mới]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
           <mxGeometry x="1165" y="995" width="110" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="lbl_reading_state_invalid" value="[sai]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1260" y="1140" width="55" height="20" as="geometry" />
+        <mxCell id="lbl_reading_state_invalid" value="[đang active]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1210" y="1140" width="110" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="lbl_reading_state_valid" value="[đúng]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
+        <mxCell id="lbl_reading_state_valid" value="[chưa có]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
           <mxGeometry x="1405" y="1035" width="70" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="lbl_active_yes" value="[đang active]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
-          <mxGeometry x="1500" y="1140" width="110" height="20" as="geometry" />
+        <mxCell id="lbl_active_yes" value="[sai]" style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=12;fontColor=#334155;align=center;" parent="1" vertex="1">
+          <mxGeometry x="1530" y="1140" width="55" height="20" as="geometry" />
         </mxCell>
-        <mxCell id="consumer_note" value="Ngoài phạm vi M6 — consumer tự xử lý trong module của mình:&#10;• ResourceStateUpdated → M1/M8&#10;• VehicleFailed → M2/M3&#10;• ChargerFailed → M4/M5&#10;&#10;Mapping là đề xuất M6-D12, chờ consumer xác nhận." style="shape=note;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#334155;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;size=20;" parent="1" vertex="1">
+        <mxCell id="consumer_note" value="Consumer xử lý trong module của mình:&lt;br&gt;• ResourceStateUpdated → M1/M8&lt;br&gt;• VehicleFailed → M2/M3&lt;br&gt;• ChargerFailed → M4/M5&lt;br&gt;&lt;br&gt;Các mũi tên nêu bên nhận theo hợp đồng, không xác nhận mọi phản ứng đã chạy." style="shape=note;whiteSpace=wrap;html=1;align=left;verticalAlign=middle;fontFamily=Arial;fontSize=14;fontColor=#334155;fillColor=#f8fafc;strokeColor=#64748b;strokeWidth=2;size=20;" parent="1" vertex="1">
           <mxGeometry x="2230" y="1510" width="310" height="300" as="geometry" />
         </mxCell>
         <mxCell id="consumer_note_link" value="" style="edgeStyle=orthogonalEdgeStyle;orthogonalLoop=1;jettySize=auto;rounded=1;html=1;endArrow=block;endFill=1;strokeWidth=2;strokeColor=#94a3b8;dashed=1;endArrow=none;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" parent="1" edge="1" source="publish_action" target="consumer_note">
@@ -435,7 +432,10 @@
             </Array>
           </mxGeometry>
         </mxCell>
-      </root>
+      <mxCell id="active_outcome_note" value="Reading mới khi có Incident active: snapshot giữ nguyên thì không phát ResourceStateUpdated. Sơ đồ chưa đặc tả nhánh snapshot thay đổi.&lt;br&gt;Các ô chuyển trạng thái xét tình trạng kỹ thuật khi có áp dụng. Vòng đời Incident nằm ở sơ đồ riêng." style="text;html=1;whiteSpace=wrap;strokeColor=none;fillColor=none;fontFamily=Arial;align=left;verticalAlign=middle;fontSize=15;fontColor=#475569;" parent="1" vertex="1">
+          <mxGeometry x="260" y="1365" width="1820" height="66" as="geometry" />
+        </mxCell>
+        </root>
     </mxGraphModel>
   </diagram>
 </mxfile>

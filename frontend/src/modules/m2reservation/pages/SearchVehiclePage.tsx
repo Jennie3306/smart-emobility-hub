@@ -106,7 +106,7 @@ export default function SearchVehiclePage() {
               <span>Try another hub:</span>
               {suggestions.map((s) => (
                 <button key={s.hubId} className="text-brand underline" onClick={() => chooseHub(s.hubId)}>
-                  {hubName(s.hubId)} ({s.availableCount} xe)
+                  {hubName(s.hubId)} ({s.availableCount} vehicles)
                 </button>
               ))}
             </div>
