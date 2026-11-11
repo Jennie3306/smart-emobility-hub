@@ -14,6 +14,7 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+    out-of-order: true   # cho phep chay V40, V50 sau V70 (quy uoc V(n×10))
   jackson:
     serialization:
       write-dates-as-timestamps: false   # ngay gio dang ISO-8601

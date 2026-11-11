@@ -46,7 +46,7 @@ par Yêu cầu của SinhVienA
     DB --> R : 1 row
     R --> S : reservationA (CONFIRMED)
     S -> E : publish(ReservationConfirmedEvent)
-    note right of E : Phát sau INSERT, trước COMMIT.\nM3 nhận: xe → RESERVED.\n(Event đã có trên nhánh M3, chờ merge.)
+    note right of E : Phát sau INSERT, trước COMMIT.\nM3 nhận: xe → RESERVED.
     S -> DB : COMMIT
     S --> C : reservationA
     C --> A : 201 Created {state: CONFIRMED, expiresAt}

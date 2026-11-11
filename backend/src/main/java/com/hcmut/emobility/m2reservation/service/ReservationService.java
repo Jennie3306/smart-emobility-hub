@@ -20,6 +20,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -187,8 +188,10 @@ public class ReservationService implements ReservationCore {
      * Post-condition: switched to a vehicle at the same hub with the same type, expiresAt kept (BR-M2-08);
      *                 with no replacement, CANCELLED with VEHICLE_FAILED and ReservationCancelledEvent published.
      * Throws: nothing - returns an empty Optional when no reservation matches (handling the same event again changes nothing).
+     * Runs in its own transaction (REQUIRES_NEW): the listener calls it after the publisher's transaction has committed,
+     * so a failure here rolls back only M2's work and is never reported back to M6.
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Optional<Reservation> handleVehicleFailed(Long vehicleId) {
         Optional<Reservation> found = repository.findFirstByResourceTypeAndResourceIdAndStateIn(
                 ResourceType.VEHICLE, vehicleId, EnumSet.of(ReservationState.CONFIRMED));
@@ -199,7 +202,9 @@ public class ReservationService implements ReservationCore {
             if (replacement.isPresent()) {
                 reservation.reassignResource(replacement.get().getId());
                 saveActive(reservation);
-                publisher.publish(new ReservationConfirmedEvent(reservation.getId(),reservation.getUserId(),ResourceType.VEHICLE.name(),replacement.get().getId(),reservation.getHubId()));
+                // M3 marks the replacement RESERVED; the failed vehicle was already moved to MAINTENANCE by M3
+                publisher.publish(new ReservationConfirmedEvent(reservation.getId(), reservation.getUserId(),
+                        ResourceType.VEHICLE.name(), replacement.get().getId(), reservation.getHubId()));
             } else {
                 reservation.cancel(CancelReason.VEHICLE_FAILED, now());
                 saveActive(reservation);
@@ -223,22 +228,33 @@ public class ReservationService implements ReservationCore {
         } catch (OptimisticLockingFailureException e) {
             throw new BusinessException("CONCURRENT_UPDATE", "Reservation changed. Please refresh.");
         } catch (ConcurrencyFailureException e) {
-            // Hai giao dich cung chen vao mot khoa UNIQUE: tuy CSDL co the bao khoa/timeout
-            // (H2) thay vi trung khoa (PostgreSQL). Ca hai deu la tranh chap tai nguyen.
+            // Two transactions inserting the same UNIQUE key: depending on the database this surfaces as a
+            // lock wait / timeout (H2) instead of a duplicate key (PostgreSQL). Both mean the resource was taken.
             throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         }
     }
 
+    /**
+     * Reconciles a pick-up made directly through M3 (VehiclePickedUpEvent): the student's CONFIRMED reservation
+     * on that vehicle becomes CHECKED_IN.
+     * Deliberately joins M3's pick-up transaction (REQUIRED, not REQUIRES_NEW): if the reservation belongs to
+     * someone else (ACCESS_DENIED) or has expired (RESERVATION_EXPIRED, BR-M2-07), the exception rolls back the
+     * pick-up as well, so the vehicle state and the reservation never disagree.
+     */
+    @Transactional
+    public void pickedUp(Long vehicleId, Long userId) {
+        repository.findFirstByResourceTypeAndResourceIdAndStateIn(
+                ResourceType.VEHICLE, vehicleId, EnumSet.of(ReservationState.CONFIRMED)).ifPresent(reservation -> {
+            if (!reservation.isOwnedBy(userId)) {
+                throw new BusinessException("ACCESS_DENIED", "This vehicle is reserved by another user",
+                        HttpStatus.FORBIDDEN);
+            }
+            reservation.checkIn(now());
+            saveActive(reservation);
+        });
+    }
+
     private OffsetDateTime now() {
         return OffsetDateTime.now(clock);
-    }
-    /** Reconcile the legacy direct M3 pickup endpoint without invoking another module's service. */
-    @Transactional
-    public void pickedUp(Long vehicleId,Long userId) {
-        var r=repository.findFirstByResourceTypeAndResourceIdAndStateIn(ResourceType.VEHICLE,vehicleId,EnumSet.of(ReservationState.CONFIRMED));
-        r.ifPresent(reservation -> {
-            if(!reservation.isOwnedBy(userId)) throw new BusinessException("ACCESS_DENIED","Reservation owner mismatch",HttpStatus.FORBIDDEN);
-            reservation.checkIn(now());saveActive(reservation);
-        });
     }
 }

@@ -47,9 +47,9 @@ class ReservationConcurrencyTest {
             start.countDown();   // release both threads at the same time
 
             List<String> results = List.of(a.get(30, TimeUnit.SECONDS), b.get(30, TimeUnit.SECONDS));
-            // Bat bien cua BR-M2-01: dung mot nguoi dat duoc, nguoi con lai bi tu choi.
-            // Ma tu choi phu thuoc thoi diem: chen trung khoa (RESOURCE_CONFLICT) hoac
-            // den sau khi M3 da giu xe (VEHICLE_NOT_AVAILABLE).
+            // BR-M2-01 invariant: exactly one student gets the vehicle, the other is rejected.
+            // The rejection code depends on timing: duplicate UNIQUE key (RESOURCE_CONFLICT) or
+            // arriving after M3 has already reserved the vehicle (VEHICLE_NOT_AVAILABLE).
             assertThat(results).filteredOn("OK"::equals).hasSize(1);
             assertThat(results).filteredOn(r -> !"OK".equals(r))
                     .allMatch(r -> r.equals("RESOURCE_CONFLICT") || r.equals("VEHICLE_NOT_AVAILABLE")
@@ -69,7 +69,7 @@ class ReservationConcurrencyTest {
             } catch (BusinessException e) {
                 return e.getCode();
             } catch (ConcurrencyFailureException e) {
-                // khoa bi giu khi M3 flush trang thai xe trong cung giao dich
+                // row lock held while M3 flushes the vehicle state inside the same transaction
                 return "LOCK_CONFLICT";
             }
         };
