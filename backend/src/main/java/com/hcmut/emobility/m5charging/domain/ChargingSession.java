@@ -158,7 +158,9 @@ public class ChargingSession {
         chargingPointId = pointId;
         assignedAt = now;
         if (startAt != null) scheduledStartAt = startAt;
-        OffsetDateTime holdFrom = scheduledStartAt == null ? now : scheduledStartAt;
+        // The 10-minute hold runs from the booked start, or from now when that start has already passed
+        // (a re-queued booking assigned late must not get a hold that has already expired).
+        OffsetDateTime holdFrom = scheduledStartAt == null || scheduledStartAt.isBefore(now) ? now : scheduledStartAt;
         holdExpiresAt = holdFrom.plusMinutes(10);
     }
 
@@ -204,13 +206,18 @@ public class ChargingSession {
         if (status != ChargingSessionStatus.CHARGING && status != ChargingSessionStatus.SCHEDULED) {
             throw invalid("Only CHARGING or SCHEDULED sessions can be interrupted");
         }
+        boolean futureBooking = status == ChargingSessionStatus.SCHEDULED && waitsForWindow(now);
         status = ChargingSessionStatus.INTERRUPTED;
         chargingPointId = null;
         holdExpiresAt = null;
-        // A failed scheduled slot is converted into an immediate queue request.
-        // Clear its old window so a past hold cannot expire the replacement assignment.
-        scheduledStartAt = null;
-        scheduledEndAt = null;
+        if (!futureBooking) {
+            // A session that was charging, or whose window has already started, becomes an immediate
+            // queue request. Its old window is cleared so a past hold cannot expire the new assignment.
+            scheduledStartAt = null;
+            scheduledEndAt = null;
+        }
+        // A booking that has not started yet keeps its time window (review PR #11): the student
+        // still expects that slot, and the dispatcher waits for it instead of holding a port now.
         failureBonus = 0; // Applied only if the failed session remains queued after reassignment.
         if (waitingSince == null) waitingSince = now;
     }
@@ -242,6 +249,38 @@ public class ChargingSession {
             throw invalid("Priority cannot be changed after charging has started or finished");
         }
         priorityLevel = next;
+    }
+
+    /** Charger failure before a booking starts: keep the same time window on a replacement port. */
+    public void moveToPort(Long nextPointId) {
+        if (status != ChargingSessionStatus.SCHEDULED) {
+            throw invalid("Only SCHEDULED sessions can move to another charging point");
+        }
+        if (nextPointId == null) throw invalid("A replacement charging point is required");
+        chargingPointId = nextPointId;
+    }
+
+    /**
+     * An automatic (system-created) session whose 10-minute hold ran out goes back to the queue
+     * instead of being cancelled: nobody else will request it again (review PR #11).
+     */
+    public void returnToQueue(OffsetDateTime now) {
+        if (status != ChargingSessionStatus.SCHEDULED) {
+            throw invalid("Only SCHEDULED sessions can return to the queue");
+        }
+        status = ChargingSessionStatus.QUEUED;
+        chargingPointId = null;
+        holdExpiresAt = null;
+        assignedAt = null;
+        if (waitingSince == null) waitingSince = now;
+    }
+
+    /** True for a low-battery request created by M5 itself from an M3 event (no student owns it). */
+    public boolean isAutomatic() { return userId == null; }
+
+    /** True while a booked time window has not started yet. */
+    public boolean waitsForWindow(OffsetDateTime now) {
+        return scheduledStartAt != null && scheduledStartAt.isAfter(now);
     }
 
     public void moveSchedule(OffsetDateTime startAt, int durationMinutes, Long nextPointId) {

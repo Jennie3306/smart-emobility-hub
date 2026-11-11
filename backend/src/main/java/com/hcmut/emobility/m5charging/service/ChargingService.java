@@ -26,6 +26,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -292,6 +293,12 @@ public class ChargingService {
         List<ChargingSession> affected = sessions.findByChargingPointIdAndStatusIn(chargingPointId, POINT_OCCUPYING);
         OffsetDateTime now = now();
         for (ChargingSession session : affected) {
+            // A booking that has not started keeps its window and moves to another free port (review PR #11).
+            if (session.getStatus() == ChargingSessionStatus.SCHEDULED && session.waitsForWindow(now)
+                    && moveFutureBookingToAnotherPort(session, chargingPointId, now)) {
+                sessions.save(session);
+                continue;
+            }
             if (session.getStatus() == ChargingSessionStatus.CHARGING) {
                 session.updateBatteryForElapsedTime(now); // persist the latest simulator value before interruption.
             }
@@ -316,15 +323,23 @@ public class ChargingService {
         queuePublisher.publish(hubId, hubSessions(hubId));
     }
 
+    /**
+     * Applies M6 equipment health to the local port. RESERVED and IN_USE belong to M5, so M5's own
+     * ResourceStateUpdatedEvent coming back here is a no-op (review PR #11).
+     * No dispatch runs here: publishing RESERVED inside this listener would reach M1 before the outer
+     * AVAILABLE event and leave the dashboard wrong. The next scheduler tick (runScheduledTasks)
+     * assigns a recovered port to the queue.
+     */
     @Transactional
     public void synchroniseChargingPoint(Long pointId, Long hubId, String state) {
         ChargingPoint point = points.findById(pointId).orElse(null);
         if (point == null || !point.getHubId().equals(hubId)) return;
-        point.applyExternalState(state);
+        ChargingPointState before = point.getState();
+        boolean recovered = point.applyExternalState(state);
+        if (point.getState() == before) return;
         points.save(point);
-        // A recovered M6 device is now eligible for the queue dispatcher.
-        if ("AVAILABLE".equalsIgnoreCase(state) || "FREE".equalsIgnoreCase(state)) {
-            recalculateHub(hubId, now());
+        if (recovered) {
+            log.info("[M5] Charging point {} at hub {} is back in service; the next queue tick will use it", pointId, hubId);
         }
     }
 
@@ -343,19 +358,42 @@ public class ChargingService {
         if (!hubs.isEmpty()) createAutomaticRentalRequest(vehicleId, hubs.get(0), batteryLevel);
     }
 
-    @Transactional
-    public void handleM4ChargingRequest(Long userId, Long hubId, Long parkingSpaceId,
-                                        VehicleKind vehicleKind, Long vehicleId, Integer batteryLevel,
-                                        OffsetDateTime expectedUseAt) {
+    /**
+     * M4 -> M5 (ChargingRequestedEvent). Runs in its own transaction after M4's booking has committed.
+     * A request M5 cannot accept is logged and reported as false instead of thrown, so M5 never
+     * rolls back or fails M4's parking booking (review PR #11).
+     *
+     * @return true when a charging session was queued.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean handleM4ChargingRequest(Long userId, Long hubId, Long parkingSpaceId,
+                                           VehicleKind vehicleKind, Long vehicleId, Integer batteryLevel,
+                                           OffsetDateTime expectedUseAt) {
         int level = batteryLevel == null ? 50 : batteryLevel;
-        validateBattery(level);
-        ensureNoActiveSession(vehicleKind, vehicleId);
-        ensureOperationalPort(hubId);
+        String rejection = null;
+        if (hubId == null || vehicleKind == null || vehicleId == null) {
+            rejection = "hubId, vehicleKind and vehicleId are required";
+        } else if (level < 0 || level > 100) {
+            rejection = "battery level " + level + " is outside 0-100";
+        } else if (level >= 90) {
+            rejection = "battery level " + level + "% is already 90% or higher";
+        } else if (sessions.existsByVehicleKindAndVehicleIdAndStatusIn(vehicleKind, vehicleId, ACTIVE)) {
+            rejection = "this vehicle already has an unfinished charging session";
+        } else if (points.findByHubIdAndStateInOrderById(hubId, OPERATIONAL).isEmpty()) {
+            rejection = "hub " + hubId + " has no operational charging point";
+        }
+        if (rejection != null) {
+            log.warn("[M5] Charging request from M4 (parking space {}, {} #{}) not queued: {}",
+                    parkingSpaceId, vehicleKind, vehicleId, rejection);
+            return false;
+        }
+        OffsetDateTime now = now();
         ChargingSession session = ChargingSession.request(userId, hubId, parkingSpaceId,
-                vehicleKind, vehicleId, level, expectedUseAt, now());
-        session.enqueue(now());
+                vehicleKind, vehicleId, level, expectedUseAt, now);
+        session.enqueue(now);
         sessions.saveAndFlush(session);
-        recalculateHub(hubId, now());
+        recalculateHub(hubId, now);
+        return true;
     }
 
     @Transactional
@@ -409,6 +447,8 @@ public class ChargingService {
         if (!waiting.isEmpty()) sessions.saveAll(waiting);
 
         for (ChargingSession session : waiting) {
+            // A booking re-queued after a charger failure waits for its own start time.
+            if (session.waitsForWindow(now)) continue;
             List<ChargingPoint> free = points.lockByHubAndState(hubId, ChargingPointState.AVAILABLE);
             ChargingPoint selected = free.stream()
                     .filter(p -> !hasOverlap(p.getId(), now, now.plusMinutes(90), now))
@@ -463,11 +503,34 @@ public class ChargingService {
                     || session.getHoldExpiresAt() == null || session.getHoldExpiresAt().isAfter(now)) continue;
             Long pointId = session.getChargingPointId();
             Long hubId = session.getHubId();
-            session.cancel(now);
+            if (session.isAutomatic()) {
+                // Nobody re-sends an automatic low-battery request, so it keeps its place in the queue
+                // (original waitingSince) until an Operator starts it (review PR #11).
+                session.returnToQueue(now);
+            } else {
+                session.cancel(now);
+            }
             sessions.save(session);
             if (pointId != null) releaseReservedPoint(pointId);
             recalculateHub(hubId, now);
         }
+    }
+
+    /** Same port rules as schedule(): a port busy now is acceptable only for a window more than 90 minutes away. */
+    private boolean moveFutureBookingToAnotherPort(ChargingSession session, Long failedPointId, OffsetDateTime now) {
+        OffsetDateTime start = session.getScheduledStartAt();
+        OffsetDateTime end = session.getScheduledEndAt();
+        if (start == null || end == null) return false;
+        ChargingPoint replacement = points.lockByHubAndStates(session.getHubId(), OPERATIONAL).stream()
+                .filter(p -> !p.getId().equals(failedPointId))
+                .filter(p -> p.getState() == ChargingPointState.AVAILABLE || start.isAfter(now.plusMinutes(90)))
+                .filter(p -> !hasOverlapExcluding(p.getId(), start, end, now, session.getId()))
+                .findFirst().orElse(null);
+        if (replacement == null) return false;
+        session.moveToPort(replacement.getId());
+        log.info("[M5] Booking CS-{} moved from failed point {} to point {} for the same window", session.getId(),
+                failedPointId, replacement.getId());
+        return true;
     }
 
     private void progressCharging(OffsetDateTime now) {

@@ -66,20 +66,36 @@ public class ChargingPoint {
 
     public void markFaulty() { state = ChargingPointState.FAULTY; }
     public void markUnderRepair() { state = ChargingPointState.UNDER_REPAIR; }
-    public void markReserved() { state = ChargingPointState.RESERVED; }
-    public void markInUse() { state = ChargingPointState.IN_USE; }
 
-    /** Synchronises the local assignment projection with M6 resource telemetry or M5's own update event. */
-    public void applyExternalState(String value) {
-        if (value == null) return;
+    /**
+     * Recovery transition: FAULTY or UNDER_REPAIR -> AVAILABLE once M6 reports the device healthy.
+     * {@link #release()} deliberately keeps a broken port broken, so recovery needs its own method.
+     *
+     * @return true when the port has just come back into service.
+     */
+    public boolean recover() {
+        if (state != ChargingPointState.FAULTY && state != ChargingPointState.UNDER_REPAIR) return false;
+        state = ChargingPointState.AVAILABLE;
+        return true;
+    }
+
+    /**
+     * Applies equipment-health telemetry from outside M5. Only health is taken from outside:
+     * RESERVED and IN_USE are M5's own assignment decisions, so an external AVAILABLE or IN_USE
+     * report (M6 telemetry, or M5's own ResourceStateUpdatedEvent coming back to it) never
+     * overwrites a port that M5 has reserved or started.
+     *
+     * @return true when a FAULTY or UNDER_REPAIR port has just become AVAILABLE again.
+     */
+    public boolean applyExternalState(String value) {
+        if (value == null) return false;
         switch (value.trim().toUpperCase()) {
-            case "AVAILABLE", "FREE", "IDLE" -> release();
-            case "RESERVED" -> markReserved();
-            case "IN_USE", "CHARGING", "OCCUPIED" -> markInUse();
+            case "AVAILABLE", "FREE", "IDLE" -> { return recover(); }
             case "FAULTY" -> markFaulty();
             case "UNDER_REPAIR" -> markUnderRepair();
-            default -> { /* Unknown shared vocabulary is intentionally ignored. */ }
+            default -> { /* RESERVED, IN_USE and unknown vocabulary: M5 owns assignment, ignore. */ }
         }
+        return false;
     }
 
     public Long getId() { return id; }

@@ -266,7 +266,7 @@ export default function ChargingPage() {
         <Metric label="Faulty points" value={selectedHub.faultyPoints} detail="Excluded from allocation" />
       </div>}
       <section className="space-y-3"><div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold text-slate-900">Hub charging queue</h2><p className="text-xs text-slate-500">Sorted by URGENT, then priority score P, then FIFO.</p></div><span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">Auto-recalculate · 60s</span></div>
-        <OperatorQueue sessions={sessions} busyId={busyId} onAdjust={session => {
+        <OperatorQueue sessions={sessions} busyId={busyId} onStart={id => actOnSession(id, "start")} onAdjust={session => {
           setPrioritySession(session); setNewPriority(session.priorityLevel); setReason("");
           setMoveStart(session.scheduledStartAt ? toDateTimeLocal(session.scheduledStartAt) : "");
           setMoveDuration(session.scheduledStartAt && session.scheduledEndAt
@@ -298,8 +298,9 @@ function Metric({ label, value, detail }: { label: string; value: string | numbe
   return <div className="rounded-lg border bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-brand">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>;
 }
 
-function OperatorQueue({ sessions, busyId, onAdjust }: {
-  sessions: ChargingSession[]; busyId: number | null; onAdjust: (session: ChargingSession) => void;
+function OperatorQueue({ sessions, busyId, onStart, onAdjust }: {
+  sessions: ChargingSession[]; busyId: number | null;
+  onStart: (id: number) => void; onAdjust: (session: ChargingSession) => void;
 }) {
   const queue = [...sessions].filter(s => ["REQUESTED", "QUEUED", "INTERRUPTED"].includes(s.status))
     .sort((a, b) => (a.priorityLevel === "URGENT" ? -1 : b.priorityLevel === "URGENT" ? 1 : b.priorityScore - a.priorityScore));
@@ -309,6 +310,6 @@ function OperatorQueue({ sessions, busyId, onAdjust }: {
       {!queue.length && <tr><td className="p-6 text-center text-slate-500" colSpan={7}>No sessions are waiting at this Hub.</td></tr>}
       {queue.map((s, i) => <tr className="border-t" key={s.id}><td className="p-3 font-mono">#{i + 1}</td><td className="p-3">{s.vehicleKind} #{s.vehicleId}<div className="text-xs text-slate-500">CS-{s.id}</div></td><td className="p-3"><Battery value={s.batteryLevel} /></td><td className="p-3 font-semibold tabular-nums">{s.priorityScore.toFixed(1)}</td><td className="p-3">{s.priorityLevel}</td><td className="p-3">{s.waitingMinutes} min</td><td className="p-3"><button disabled={busyId === s.id} className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50" onClick={() => onAdjust(s)}>Adjust</button></td></tr>)}
     </tbody></table></div>
-    <div className="grid gap-3 md:grid-cols-2">{active.map(s => <div key={s.id} className="flex items-center justify-between rounded-lg border bg-white p-4"><div><div className="font-semibold">{s.vehicleKind} #{s.vehicleId} · CS-{s.id}</div><div className="mt-1 text-xs text-slate-500">{s.chargingPointId ? `Charging point CP-${s.chargingPointId}` : "Port pending"} · {s.batteryLevel}% battery</div></div><SessionStatus status={s.status} /></div>)}</div>
+    <div className="grid gap-3 md:grid-cols-2">{active.map(s => <div key={s.id} className="flex items-center justify-between rounded-lg border bg-white p-4"><div><div className="font-semibold">{s.vehicleKind} #{s.vehicleId} · CS-{s.id}</div><div className="mt-1 text-xs text-slate-500">{s.chargingPointId ? `Charging point CP-${s.chargingPointId}` : "Port pending"} · {s.batteryLevel}% battery{s.userId == null && " · automatic request"}</div></div><div className="flex items-center gap-2"><SessionStatus status={s.status} />{s.status === "SCHEDULED" && s.userId == null && <button disabled={busyId === s.id} className="rounded bg-brand px-2 py-1 text-xs text-white disabled:opacity-50" onClick={() => onStart(s.id)}>Start</button>}</div></div>)}</div>
   </div>;
 }

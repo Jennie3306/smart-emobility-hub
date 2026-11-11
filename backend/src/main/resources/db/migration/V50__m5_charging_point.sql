@@ -1,5 +1,8 @@
 -- V50: M5 ownership of charging-point assignment.
 -- IDs are copied from M1's CHARGING_POINT projection so all modules use the same resource IDs.
+-- Only equipment health (FAULTY, UNDER_REPAIR) is copied. RESERVED and IN_USE are assignment
+-- states that M5 owns, and no charging_session exists yet to back them, so every other port
+-- starts AVAILABLE. Copying them would leave those ports locked forever (review PR #11).
 CREATE TABLE charging_point (
     id       BIGINT PRIMARY KEY,
     hub_id   BIGINT NOT NULL REFERENCES hub(id),
@@ -14,10 +17,6 @@ SELECT resource_id,
        CASE state
            WHEN 'FAULTY' THEN 'FAULTY'
            WHEN 'UNDER_REPAIR' THEN 'UNDER_REPAIR'
-           WHEN 'IN_USE' THEN 'IN_USE'
-           WHEN 'CHARGING' THEN 'IN_USE'
-           WHEN 'OCCUPIED' THEN 'IN_USE'
-           WHEN 'RESERVED' THEN 'RESERVED'
            ELSE 'AVAILABLE'
        END
 FROM m1_resource_state

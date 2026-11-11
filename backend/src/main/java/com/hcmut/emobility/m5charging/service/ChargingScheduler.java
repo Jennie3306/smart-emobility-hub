@@ -13,7 +13,8 @@ public class ChargingScheduler {
         this.charging = charging;
     }
 
-    @Scheduled(fixedDelayString = "${app.charging.recalculation-interval-ms:60000}")
+    @Scheduled(fixedDelayString = "${app.charging.recalculation-interval-ms:60000}",
+               initialDelayString = "${app.charging.initial-delay-ms:10000}") // let startup finish first, like M1
     public void run() {
         charging.runScheduledTasks();
     }

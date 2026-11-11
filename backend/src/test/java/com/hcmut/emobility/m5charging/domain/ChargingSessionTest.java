@@ -94,4 +94,78 @@ class ChargingSessionTest {
                 () -> atExpiry.start(NOW.plusMinutes(10)));
         assertEquals("CHARGING_HOLD_EXPIRED", error.getCode());
     }
+
+    // --- Review PR #11 ---
+
+    @Test
+    void chargerFailureBeforeBookingKeepsItsTimeWindow() {
+        OffsetDateTime start = NOW.plusHours(20);
+        ChargingSession booking = ChargingSession.schedule(7L, 1L, 5L, VehicleKind.PERSONAL,
+                30L, 40, start, 60, 3L, NOW);
+
+        booking.interrupt(NOW.plusMinutes(1));
+        booking.requeueAfterFailure(NOW.plusMinutes(1));
+
+        assertEquals(ChargingSessionStatus.QUEUED, booking.getStatus());
+        assertEquals(start, booking.getScheduledStartAt());
+        assertEquals(start.plusMinutes(60), booking.getScheduledEndAt());
+        assertNull(booking.getChargingPointId());
+        assertTrue(booking.waitsForWindow(NOW.plusMinutes(1)));
+    }
+
+    @Test
+    void chargerFailureDuringChargingClearsTheWindowForAnImmediateRequeue() {
+        ChargingSession booking = ChargingSession.schedule(7L, 1L, 5L, VehicleKind.PERSONAL,
+                31L, 40, NOW, 60, 3L, NOW);
+        booking.start(NOW.plusMinutes(2));
+
+        booking.interrupt(NOW.plusMinutes(20));
+
+        assertNull(booking.getScheduledStartAt());
+        assertNull(booking.getScheduledEndAt());
+    }
+
+    @Test
+    void bookingCanMoveToReplacementPortWithoutChangingItsWindow() {
+        OffsetDateTime start = NOW.plusHours(3);
+        ChargingSession booking = ChargingSession.schedule(7L, 1L, 5L, VehicleKind.PERSONAL,
+                32L, 40, start, 30, 3L, NOW);
+
+        booking.moveToPort(4L);
+
+        assertEquals(4L, booking.getChargingPointId());
+        assertEquals(start, booking.getScheduledStartAt());
+        assertEquals(ChargingSessionStatus.SCHEDULED, booking.getStatus());
+    }
+
+    @Test
+    void lateAssignmentOfAStartedWindowGetsAFreshHold() {
+        ChargingSession booking = ChargingSession.schedule(7L, 1L, 5L, VehicleKind.PERSONAL,
+                33L, 40, NOW.plusHours(2), 60, 3L, NOW);
+        booking.interrupt(NOW.plusMinutes(5));
+        booking.requeueAfterFailure(NOW.plusMinutes(5));
+
+        OffsetDateTime late = NOW.plusHours(2).plusMinutes(15);
+        booking.assign(4L, late, null);
+
+        assertEquals(late.plusMinutes(10), booking.getHoldExpiresAt());
+        assertDoesNotThrow(() -> booking.start(late.plusMinutes(1)));
+    }
+
+    @Test
+    void automaticSessionReturnsToQueueWhenItsHoldExpires() {
+        ChargingSession automatic = ChargingSession.request(null, 1L, null, VehicleKind.RENTAL,
+                24L, 12, null, NOW);
+        automatic.enqueue(NOW);
+        automatic.assign(2L, NOW.plusMinutes(1), null);
+        assertTrue(automatic.isAutomatic());
+
+        automatic.returnToQueue(NOW.plusMinutes(11));
+
+        assertEquals(ChargingSessionStatus.QUEUED, automatic.getStatus());
+        assertNull(automatic.getChargingPointId());
+        assertNull(automatic.getHoldExpiresAt());
+        assertEquals(NOW, automatic.getWaitingSince());
+        assertNotNull(automatic.getActiveVehicleKey());
+    }
 }

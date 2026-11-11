@@ -11,15 +11,20 @@ import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /** Consumes only the shared event contract in shared/events; M5 does not call other module services. */
 @Component
 public class ChargingEventHandler {
 
+    private static final Logger log = LoggerFactory.getLogger(ChargingEventHandler.class);
     private static final String CONSUMER = "M5";
     private final ChargingService charging;
     private final ProcessedEventStore processed;
@@ -29,14 +34,37 @@ public class ChargingEventHandler {
         this.processed = processed;
     }
 
-    @EventListener
+    /**
+     * M4 -> M5. Runs only after M4's parking booking has committed, and the service call has its own
+     * transaction, so a charging request M5 rejects is logged and never rolls back or fails M4
+     * (review PR #11). Not transactional itself: an exception must not mark any outer work rollback-only.
+     */
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Order(0)
-    @Transactional
     public void onChargingRequested(ChargingRequestedEvent event) {
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
-        charging.handleM4ChargingRequest(event.getUserId(), event.getHubId(), event.getParkingSpaceId(),
-                VehicleKind.valueOf(event.getVehicleKind()), event.getVehicleId(), event.getBatteryLevel(),
-                event.getLeaveAt());
+        VehicleKind kind = parseVehicleKind(event.getVehicleKind());
+        if (kind == null) {
+            log.warn("[M5] ChargingRequested {} ignored: unknown vehicleKind '{}' (expected PERSONAL or RENTAL)",
+                    event.getEventId(), event.getVehicleKind());
+            return;
+        }
+        try {
+            charging.handleM4ChargingRequest(event.getUserId(), event.getHubId(), event.getParkingSpaceId(),
+                    kind, event.getVehicleId(), event.getBatteryLevel(), event.getLeaveAt());
+        } catch (RuntimeException ex) {
+            log.error("[M5] ChargingRequested {} for parking space {} failed: {}", event.getEventId(),
+                    event.getParkingSpaceId(), ex.getMessage(), ex);
+        }
+    }
+
+    private static VehicleKind parseVehicleKind(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return VehicleKind.valueOf(value.trim().toUpperCase());
+        } catch (IllegalArgumentException ex) {
+            return null;
+        }
     }
 
     @EventListener
