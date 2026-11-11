@@ -91,8 +91,9 @@ public class ParkingSpace {
 
     /**
      * Chuyen trang thai cho do xe, chan cac chuyen trang thai khong hop le.
+     * Giu private de moi thay doi trang thai bat buoc di qua cac method nghiep vu.
      */
-    public void changeStatus(Status newStatus) {
+    private void changeStatus(Status newStatus) {
         if (!this.status.canMoveTo(newStatus)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
                     "Khong the chuyen cho do tu trang thai " + this.status + " sang " + newStatus);
@@ -104,28 +105,51 @@ public class ParkingSpace {
      * Dat cho do (UC-M4-02): chuyen sang RESERVED va luu ma reservation.
      */
     public void book(Long reservationId) {
+        requireReservationId(reservationId);
         changeStatus(Status.RESERVED);
         this.currentReservationId = reservationId;
     }
 
     /**
      * Check-in cho do (UC-M4-03 / BR-M4-05): chuyen sang OCCUPIED khi sinh vien toi Hub.
+     * Chi cho phep check-in dung reservation dang gan voi cho.
      */
-    public void checkIn() {
+    public void checkIn(Long reservationId) {
+        requireReservationId(reservationId);
+        if (this.status == Status.RESERVED) {
+            requireMatchingReservation(reservationId);
+        }
         changeStatus(Status.OCCUPIED);
     }
 
     /**
      * Giai phong cho do (UC-M4-03, UC-M4-04): tra cho ve FREE khi check-out hoac no-show/huy reservation.
-     * Chi cho phep giai phong tu RESERVED hoac OCCUPIED (D-M4-02, BR-M4-06).
+     * Chi cho phep giai phong tu RESERVED hoac OCCUPIED va phai khop ma reservation dang gan (D-M4-02, BR-M4-06).
      */
-    public void release() {
+    public void release(Long reservationId) {
+        requireReservationId(reservationId);
         if (status != Status.RESERVED && status != Status.OCCUPIED) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
                     "Chi giai phong cho dang RESERVED hoac OCCUPIED, hien tai: " + status);
         }
+        requireMatchingReservation(reservationId);
         changeStatus(Status.FREE);
         this.currentReservationId = null;
+    }
+
+    private static void requireReservationId(Long reservationId) {
+        if (reservationId == null) {
+            throw new BusinessException("INVALID_RESERVATION_ID",
+                    "Ma reservation khong duoc de trong");
+        }
+    }
+
+    private void requireMatchingReservation(Long reservationId) {
+        if (!reservationId.equals(this.currentReservationId)) {
+            throw new BusinessException("RESERVATION_MISMATCH",
+                    "Reservation " + reservationId + " khong khop voi cho do (hien tai: "
+                            + this.currentReservationId + ")");
+        }
     }
 
     /**
@@ -167,10 +191,6 @@ public class ParkingSpace {
         return hubId;
     }
 
-    public void setHubId(Long hubId) {
-        this.hubId = hubId;
-    }
-
     public String getSpaceCode() {
         return spaceCode;
     }
@@ -181,10 +201,6 @@ public class ParkingSpace {
 
     public Type getType() {
         return type;
-    }
-
-    public void setType(Type type) {
-        this.type = type;
     }
 
     public Status getStatus() {
