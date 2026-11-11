@@ -109,7 +109,6 @@ note right
   nên bên thua không bao giờ phát sự kiện.
   Phát đồng bộ, trong cùng transaction.
   Bên nhận: M3 đổi xe AVAILABLE → RESERVED.
-  (Event đã có trên nhánh M3, chờ merge vào main.)
 end note
 |ReservationService|
 :Commit transaction;

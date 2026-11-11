@@ -39,6 +39,7 @@ public class ReservationController {
     @PostMapping
     public ResponseEntity<ReservationResponse> reserve(@Valid @RequestBody ReserveVehicleRequest request,
                                                        Authentication auth) {
+        requireStudent(auth);
         Reservation reservation = service.reserveVehicle(currentUserId(auth), request.vehicleId());
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(reservation));
     }
@@ -60,13 +61,27 @@ public class ReservationController {
     /** FR-M2-04: 403 ACCESS_DENIED; 409 RESERVATION_EXPIRED / ALREADY_CHECKED_IN / INVALID_STATE_TRANSITION. */
     @PostMapping("/{id}/cancel")
     public ReservationResponse cancel(@PathVariable Long id, Authentication auth) {
+        requireStudent(auth);
         return toResponse(service.cancel(id, currentUserId(auth)));
     }
 
     /** Vehicle pick-up (option 2 of VD-07): 409 RESERVATION_EXPIRED when now >= expiresAt. */
     @PostMapping("/{id}/check-in")
     public ReservationResponse checkIn(@PathVariable Long id, Authentication auth) {
+        requireStudent(auth);
         return toResponse(service.checkIn(id, currentUserId(auth)));
+    }
+
+    /**
+     * Only students reserve, cancel and pick up vehicles (UC-M2-03 precondition, NFR-SEC-01).
+     * Operators may still search and view vehicles. Checked here because SecurityConfig belongs to shared/.
+     */
+    private static void requireStudent(Authentication auth) {
+        boolean student = auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_STUDENT".equals(a.getAuthority()));
+        if (!student) {
+            throw new BusinessException("ACCESS_DENIED", "Only students can reserve vehicles", HttpStatus.FORBIDDEN);
+        }
     }
 
     /** userId comes from the login session - NEVER from the body/header, so nobody can book for someone else (NFR-SEC-01). */
