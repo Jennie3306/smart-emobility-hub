@@ -42,6 +42,7 @@ package "service" {
     + findOverdueIds(): List<Long>
     + expire(reservationId: Long): boolean
     + handleVehicleFailed(vehicleId: Long): Optional<Reservation>
+    + pickedUp(vehicleId: Long, userId: Long): void
     - saveActive(reservation: Reservation): Reservation
     - now(): OffsetDateTime
   }
@@ -68,6 +69,7 @@ package "events" {
     - service: ReservationService
     + onVehicleFailed(event: VehicleFailedEvent): void
     + onVehicleReturned(event: VehicleReturnedEvent): void
+    + onVehiclePickedUp(event: VehiclePickedUpEvent): void
   }
 }
 package "domain" {
@@ -147,11 +149,13 @@ package "shared / module khác" #F3F6F9 {
   class EventPublisher <<shared.events>> {
     + publish(event: DomainEvent): void
   }
-  class ReservationConfirmedEvent <<shared.events – chờ merge (TV3)>>
+  class ReservationConfirmedEvent <<shared.events>>
+  class ReservationCheckedInEvent <<shared.events>>
   class ReservationCancelledEvent <<shared.events>>
   class ReservationExpiredEvent <<shared.events>>
   class VehicleFailedEvent <<shared.events – M6 phát>>
   class VehicleReturnedEvent <<shared.events – M3 phát>>
+  class VehiclePickedUpEvent <<shared.events – M3 phát>>
   class RentalVehicle <<m3vehicle.domain>>
   class AppUser <<shared.auth>>
   class "M4 (m4parking)" as M4 <<module>>
@@ -166,7 +170,9 @@ ReservationExpiryJob --> ReservationService
 ReservationEventHandler --> ReservationService
 ReservationEventHandler ..> VehicleFailedEvent : <<listen>>
 ReservationEventHandler ..> VehicleReturnedEvent : <<listen>>
-ReservationService ..> ReservationConfirmedEvent : <<publish>>\n(chờ merge)
+ReservationEventHandler ..> VehiclePickedUpEvent : <<listen>>
+ReservationService ..> ReservationConfirmedEvent : <<publish>>
+ReservationService ..> ReservationCheckedInEvent : <<publish>>
 ReservationService ..> ReservationCancelledEvent : <<publish>>
 ReservationService ..> ReservationExpiredEvent : <<publish>>
 ReservationRepository .down.> Reservation

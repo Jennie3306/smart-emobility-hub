@@ -142,7 +142,7 @@ public class Reservation {
     private void moveTo(ReservationState target, OffsetDateTime now) {
         if (!state.canMoveTo(target)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Cannot transition reservation from " + state + " sang " + target);
+                    "Cannot transition reservation from " + state + " to " + target);
         }
         this.state = target;
         if (target.isTerminal()) {   // ended: release the keys so the resource can be booked again

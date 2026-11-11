@@ -13,6 +13,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -73,5 +74,26 @@ class ReservationControllerTest {
         mvc.perform(get("/api/m2/reservations/current"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.remainingSeconds").isNumber());
+    }
+
+    @Test
+    @WithMockUser(username = "operator1", roles = "OPERATOR")
+    @DisplayName("TC-M2-20: OPERATOR can search vehicles but cannot reserve -> 403 ACCESS_DENIED (NFR-SEC-01, UC-M2-03)")
+    void operatorCannotReserve() throws Exception {
+        jdbc.update("INSERT INTO rental_vehicle(code, type, battery_level, state, current_hub_id, version)"
+                + " VALUES ('EB-A02', 'E_BIKE', 90, 'AVAILABLE', 1, 0)");
+        long id = jdbc.queryForObject("SELECT id FROM rental_vehicle WHERE code = 'EB-A02'", Long.class);
+
+        mvc.perform(get("/api/m2/vehicles/search")).andExpect(status().isOk());
+
+        mvc.perform(post("/api/m2/reservations").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vehicleId\":" + id + "}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("ACCESS_DENIED"));
+        mvc.perform(post("/api/m2/reservations/1/cancel")).andExpect(status().isForbidden());
+        mvc.perform(post("/api/m2/reservations/1/check-in")).andExpect(status().isForbidden());
+
+        Integer rows = jdbc.queryForObject("SELECT COUNT(*) FROM reservation", Integer.class);
+        assertEquals(0, rows);
     }
 }
