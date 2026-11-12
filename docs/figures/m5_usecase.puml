@@ -1,0 +1,44 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Student" as Student
+actor "Student with\npersonal vehicle" as PersonalStudent
+actor "Operator" as Operator
+actor "Sensor / IoT\nSimulator" as Sensor
+actor "Timer /\nScheduler" as Timer
+
+Student <|-- PersonalStudent
+
+rectangle "Smart E-Mobility Hub — M5 Charging scheduling & priority" {
+  usecase "UC-M5-01\nRequest charging" as UC01
+  usecase "UC-M5-02\nBook charging slot" as UC02
+  usecase "UC-M5-03\nAdjust charging priority" as UC03
+  usecase "UC-M5-04\nCancel request / schedule" as UC04
+  usecase "UC-M5-05\nView queue & schedule" as UC05
+  usecase "UC-M5-06\nAuto-sort queue & allocate port" as UC06
+  usecase "UC-M5-07\nReassign port on charger failure" as UC07
+  usecase "UC-M5-08\nAuto-release charging port" as UC08
+
+  UC01 ..> UC06 : <<include>>
+  UC03 ..> UC06 : <<include>>
+  UC07 ..> UC06 : <<include>>
+  UC03 ..> UC05 : <<extend>>
+  UC04 ..> UC05 : <<extend>>
+}
+
+Student --> UC01
+Student --> UC04
+Student --> UC05
+PersonalStudent --> UC02
+PersonalStudent --> UC01
+Operator --> UC01
+Operator --> UC03
+Operator --> UC05
+Sensor --> UC06
+Sensor --> UC07
+Sensor --> UC08
+Timer --> UC06
+Timer --> UC08
+@enduml
