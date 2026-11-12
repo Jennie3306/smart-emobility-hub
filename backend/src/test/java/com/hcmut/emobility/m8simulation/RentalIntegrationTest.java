@@ -31,6 +31,8 @@ class RentalIntegrationTest {
     private long vehicleId;
     @BeforeEach void setup() {
         jdbc.update("insert into hub(id,name,location) values(9000,'Integration Hub','Test')");
+        // BR-M4-08: tra xe thue can mot cho trong quy cho do chung cua Hub
+        jdbc.update("insert into parking_space(hub_id,space_code,type,status,version) values(9000,'P-01','BIKE','FREE',0)");
         String code="I-"+UUID.randomUUID().toString().substring(0,8);
         jdbc.update("insert into rental_vehicle(code,type,battery_level,state,current_hub_id,version) values(?,'E_BIKE',90,'AVAILABLE',9000,0)",code);
         vehicleId=jdbc.queryForObject("select id from rental_vehicle where code=?",Long.class,code);
