@@ -64,6 +64,11 @@ public class ParkingService {
     static final int START_GRACE_MINUTES = 5;
     /** Check-in som toi da 15 phut truoc gio bat dau. */
     static final int EARLY_CHECK_IN_MINUTES = 15;
+    /**
+     * Bang chuyen trang thai 4.1: Occupied -> Free khi "xe roi cong / ket thuc khung gio". Xe chua check-out
+     * thi Timer tu check-out sau gio roi bai 15 phut (doi xung voi 15 phut no-show cua BR-M4-04).
+     */
+    static final int CHECK_OUT_GRACE_MINUTES = 15;
     /** M5 tu choi sac khi pin tu 90% tro len. */
     static final int FULL_BATTERY = 90;
 
@@ -280,14 +285,37 @@ public class ParkingService {
             throw new BusinessException("NOT_CHECKED_IN", "Check in before checking out");
         }
         ParkingSpace space = lockSpace(booking.getSpaceId());
+        finishStay(booking, space, now());
+        return ParkingBookingResponse.of(booking, space);
+    }
+
+    /**
+     * Check-out tu dong (Timer, bang chuyen trang thai 4.1 "ket thuc khung gio"): luot da check-in ma qua
+     * gio roi bai + 15 phut van chua check-out thi dong lai, tra cho ve FREE, reservation COMPLETED.
+     * Nho vay suc chua theo khung gio (BR-M4-01) khop voi so cho that su dang dung.
+     * Tra ve true khi da check-out; false neu luot dat da dong hoac chua toi han.
+     */
+    @Transactional
+    public boolean autoCheckOut(Long bookingId) {
+        ParkingBookingLog booking = bookings.findById(bookingId).orElse(null);
+        if (booking == null || !booking.isActive() || !booking.isCheckedIn()) return false;
+        OffsetDateTime now = now();
+        if (!now.isAfter(booking.getSlotEnd().plusMinutes(CHECK_OUT_GRACE_MINUTES))) return false;
+        finishStay(booking, lockSpace(booking.getSpaceId()), now);
+        log.info("[M4] Booking {} at space {} checked out automatically: window ended at {}", booking.getId(),
+                booking.getSpaceId(), booking.getSlotEnd());
+        return true;
+    }
+
+    /** UC-M4-03 luong 1a: reservation COMPLETED o M2, cho ve FREE (hoac chi go reservation neu cho dang khoa). */
+    private void finishStay(ParkingBookingLog booking, ParkingSpace space, OffsetDateTime now) {
         if (reservations.completeByResource(ResourceType.PARKING_SPACE, space.getId()).isEmpty()) {
             log.warn("[M4] No CHECKED_IN reservation in M2 for space {} (reservation {}); closing the booking anyway",
                     space.getId(), booking.getReservationId());
         }
         releaseSpace(space, booking.getReservationId());
-        booking.close(ParkingBookingLog.Status.COMPLETED, now());
+        booking.close(ParkingBookingLog.Status.COMPLETED, now);
         bookings.save(booking);
-        return ParkingBookingResponse.of(booking, space);
     }
 
     /** Sinh vien huy truoc khi check-in. M2 tu choi khi da qua han (RESERVATION_EXPIRED). */
@@ -390,6 +418,13 @@ public class ParkingService {
     }
 
     // ------------------------------------------------------------------ Timer (UC-M4-04)
+
+    /** Luot da check-in, qua gio roi bai + 15 phut ma chua check-out. */
+    @Transactional(readOnly = true)
+    public List<Long> overstayBookingIds() {
+        return bookings.findOverstays(ParkingBookingLog.Status.ACTIVE, now().minusMinutes(CHECK_OUT_GRACE_MINUTES))
+                .stream().map(ParkingBookingLog::getId).toList();
+    }
 
     @Transactional(readOnly = true)
     public List<Long> overdueReservationIds() {

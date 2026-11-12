@@ -6,7 +6,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * UC-M4-04, actor Timer. Luong chinh: Timer cua M2 danh dau reservation EXPIRED va M4 nhan
+ * Actor Timer cua M4. (1) Check-out tu dong: luot da check-in ma qua gio roi bai 15 phut (bang chuyen
+ * trang thai 4.1, Occupied -> Free khi ket thuc khung gio). (2) UC-M4-04: luong chinh: Timer cua M2 danh dau reservation EXPIRED va M4 nhan
  * ReservationExpiredEvent. Job nay la luoi an toan (UC-M4-04 4a, thu lai): luot dat qua han ma M2 da dong
  * reservation nhung M4 chua giai phong cho (vi du su kien bi bo lo khi loi) thi giai phong o day.
  * Moi luot dat chay trong giao dich rieng qua proxy cua ParkingService.
@@ -34,5 +35,15 @@ public class ParkingNoShowJob {
             }
         }
         if (released > 0) log.info("[M4] Timer: released {} no-show parking space(s)", released);
+
+        int checkedOut = 0;
+        for (Long bookingId : parking.overstayBookingIds()) {
+            try {
+                if (parking.autoCheckOut(bookingId)) checkedOut++;
+            } catch (Exception ex) {
+                log.warn("[M4] Could not check out booking {} automatically: {}", bookingId, ex.getMessage());
+            }
+        }
+        if (checkedOut > 0) log.info("[M4] Timer: {} booking(s) checked out after their window ended", checkedOut);
     }
 }

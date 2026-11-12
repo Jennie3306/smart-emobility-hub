@@ -344,7 +344,7 @@ function TicketsTab({ bookings, vehicles, hubs, busy, setBusy, setError, setNoti
           </div>
           <div className="mt-4 rounded bg-slate-50 p-3 text-sm">
             {b.checkInTime
-              ? <>Checked in at {formatTime(b.checkInTime)}. {b.spaceStatus === "BLOCKED" && <span className="text-red-700">The charger here failed; the space is blocked, but you can still check out.</span>}</>
+              ? <>Checked in at {formatTime(b.checkInTime)}. Check out when you leave; otherwise you are checked out automatically 15 minutes after {formatTime(b.slotEnd)}. {b.spaceStatus === "BLOCKED" && <span className="text-red-700">The charger here failed; the space is blocked, but you can still check out.</span>}</>
               : now < opensAt
                 ? <>Check-in opens at {formatTime(new Date(opensAt).toISOString())}.</>
                 : <>Check in within <Countdown until={b.checkInDeadline} now={now} /> or the space is released.</>}

@@ -151,4 +151,20 @@ class ParkingFlowIntegrationTest {
                 ResourceStateUpdatedEvent.SOURCE_DEVICE));
         assertEquals("FREE", spaceStatus(CHARGER_SPACE));
     }
+
+    @Test
+    @DisplayName("TC-M4-40: qua gio roi bai 15 phut ma chua check-out -> Timer tu check-out, reservation COMPLETED, cho FREE")
+    void automaticCheckOutAtWindowEnd() {
+        ParkingBookingResponse booking = book(registerVehicle("59X1-90004"), PLAIN_SPACE);
+        setNow(T0.plusHours(1));
+        parking.checkIn(STUDENT, booking.id());
+
+        setNow(T0.plusHours(3).plusMinutes(16)); // gio roi bai T0+3h, them 15 phut cho phep
+        assertTrue(parking.overstayBookingIds().contains(booking.id()));
+        assertTrue(parking.autoCheckOut(booking.id()));
+
+        assertEquals("FREE", spaceStatus(PLAIN_SPACE));
+        assertEquals("COMPLETED", reservationState(booking.reservationId()));
+        assertEquals("COMPLETED", bookingStatus(booking.id()));
+    }
 }

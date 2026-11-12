@@ -353,6 +353,29 @@ class ParkingServiceTest {
         assertFalse(PrivateVehicle.VehicleType.E_SCOOTER.requiredSpaceType() == ParkingSpace.Type.CAR);
     }
 
+    @Test
+    @DisplayName("TC-M4-39 (BVA, bang 4.1 'ket thuc khung gio'): dung gio roi bai + 15 phut chua check-out; qua 1 phut thi Timer tu check-out")
+    void autoCheckOutAfterWindowEnds() {
+        ParkingSpace space = reservedSpace(9L, 600L);
+        space.checkIn(600L);
+        // Khung gio 05:45 -> 07:45, gio roi bai + 15 phut = 08:00 = NOW
+        ParkingBookingLog booking = booking(70L, 600L, space, NOW.minusHours(2).minusMinutes(15));
+        booking.markCheckedIn(NOW.minusHours(2));
+
+        assertFalse(service.autoCheckOut(70L), "dung bien 15 phut thi chua check-out");
+        assertEquals(OCCUPIED, space.getStatus());
+
+        ParkingService later = new ParkingService(spaces, bookings, vehicles, reservations, events, jdbc,
+                Clock.fixed(NOW.plusMinutes(1).toInstant(), NOW.getOffset()));
+        assertTrue(later.autoCheckOut(70L));
+        assertEquals(FREE, space.getStatus());
+        assertEquals(ParkingBookingLog.Status.COMPLETED, booking.getStatus());
+        assertEquals(NOW.plusMinutes(1), booking.getCheckOutTime());
+        verify(reservations).completeByResource(ResourceType.PARKING_SPACE, 9L);
+
+        assertFalse(later.autoCheckOut(70L), "luot da dong thi khong lam gi them");
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static ParkingSpace space(long id, ParkingSpace.Type type, Long chargerPointId) {

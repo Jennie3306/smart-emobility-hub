@@ -15,6 +15,7 @@ Mỗi tài nguyên có **một module chủ sở hữu**; module khác chỉ đ�
 - Số đọc của M6 mang `source = "M6"`. M1 **bỏ qua** số đọc M6 cho chỗ đỗ và trụ sạc; nó cập nhật khi M4/M5 phát trạng thái sau khi xử lý.
 - Khi khởi động, M4 và M5 phát lại trạng thái mọi chỗ đỗ / trụ sạc, nên M1 khớp với M4/M5 kể cả trên database cũ.
 - Dữ liệu demo được tạo bằng **luồng thật**: 31 sinh viên demo (`demo01`..`demo31`, mật khẩu `123456`) có lượt đặt đã check-in ở Hub Ga Metro, chỗ P-09..P-39. Hub bắt đầu ở 31/40 = 77%, ngay dưới ngưỡng cảnh báo 80%. Các chỗ có trụ sạc P-01..P-08 và P-40 để trống. Tắt bằng `app.demo.seed-parking=false`.
+- Lượt đặt nào đã check-in mà quá giờ rời bãi 15 phút vẫn chưa check-out thì Timer của M4 tự check-out (bảng chuyển trạng thái 4.1: Occupied → Free khi kết thúc khung giờ). Lượt demo dài 12 giờ; mỗi lần khởi động app, sinh viên demo nào đã hết lượt sẽ được đặt và check-in lại, nên lúc nào mở app Hub cũng bắt đầu ở 77%.
 
 ## Luồng demo (khoảng 10 phút)
 

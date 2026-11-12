@@ -39,6 +39,16 @@ public interface ParkingBookingLogRepository extends JpaRepository<ParkingBookin
                                  @Param("startAt") OffsetDateTime startAt,
                                  @Param("endAt") OffsetDateTime endAt);
 
+    /** Bang chuyen trang thai 4.1: luot da check-in ma gio roi bai truoc moc before (Timer tu check-out). */
+    @Query("""
+            select b from ParkingBookingLog b
+             where b.status = :status and b.checkInTime is not null and b.slotEnd < :before
+            """)
+    List<ParkingBookingLog> findOverstays(@Param("status") ParkingBookingLog.Status status,
+                                          @Param("before") OffsetDateTime before);
+
+    boolean existsByStudentIdAndStatus(Long studentId, ParkingBookingLog.Status status);
+
     boolean existsByPersonalVehicleIdAndStatus(Long personalVehicleId, ParkingBookingLog.Status status);
 
     /** UC-M4-04 (Timer): luot dat con o trang thai status, chua check-in va da qua han truoc moc before. */
