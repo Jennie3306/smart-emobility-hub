@@ -2,6 +2,7 @@ package com.hcmut.emobility.m4parking.domain;
 
 import com.hcmut.emobility.shared.common.BusinessException;
 import jakarta.persistence.*;
+import org.springframework.http.HttpStatus;
 
 /**
  * Entity ParkingSpace - quan ly thong tin va trang thai cho do xe tai Hub (Module M4).
@@ -139,8 +140,9 @@ public class ParkingSpace {
 
     private static void requireReservationId(Long reservationId) {
         if (reservationId == null) {
+            // Du lieu dau vao sai, khong phai xung dot trang thai: tra 400 thay vi 409 mac dinh.
             throw new BusinessException("INVALID_RESERVATION_ID",
-                    "Ma reservation khong duoc de trong");
+                    "Ma reservation khong duoc de trong", HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -154,12 +156,15 @@ public class ParkingSpace {
 
     /**
      * Cho dang BLOCKED: reservation da ket thuc (check-out, huy, het han) nhung cho van khoa (BR-M4-06, D-M4-02).
+     * Phai khop ma reservation dang gan, de su kien tre cua reservation cu khong go nham reservation hien tai.
      */
-    public void detachReservation() {
+    public void detachReservation(Long reservationId) {
+        requireReservationId(reservationId);
         if (status != Status.BLOCKED) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
                     "Chi bo lien ket khi cho dang BLOCKED");
         }
+        requireMatchingReservation(reservationId);
         this.currentReservationId = null;
     }
 

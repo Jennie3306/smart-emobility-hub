@@ -27,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /**
  * Muc domain cua M4: vong doi trang thai cua ParkingSpace (muc 4.1 cua report).
  * Ky thuat: state transition testing.
- * Lien quan: BR-M4-05, BR-M4-06, BR-M4-07; TC-M4-08..13, TC-M4-16..20; loi D-M4-01..03.
+ * Lien quan: BR-M4-05, BR-M4-06, BR-M4-07; TC-M4-08..13, TC-M4-16..21; loi D-M4-01..03.
  */
 class ParkingSpaceStateTest {
 
@@ -158,26 +158,26 @@ class ParkingSpaceStateTest {
     }
 
     @Test
-    @DisplayName("TC-M4-12c: check-out tren cho BLOCKED dung detachReservation(), cho van BLOCKED va het gan reservation")
+    @DisplayName("TC-M4-12c: check-out tren cho BLOCKED dung detachReservation(id), cho van BLOCKED va het gan reservation")
     void detachReservationKeepsSpaceBlocked() {
         ParkingSpace space = occupiedSpace(7007L);
         space.block();
 
-        space.detachReservation();
+        space.detachReservation(7007L);
 
         assertState(space, BLOCKED, null);
     }
 
     @Test
-    @DisplayName("detachReservation() chi chay tren cho BLOCKED, trang thai khac bi chan va giu nguyen reservation")
+    @DisplayName("detachReservation(id) chi chay tren cho BLOCKED, trang thai khac bi chan va giu nguyen reservation")
     void detachReservationOnNonBlockedSpaceIsRejected() {
         ParkingSpace free = newSpace();
         ParkingSpace reserved = reservedSpace(9009L);
         ParkingSpace occupied = occupiedSpace(9010L);
 
-        assertRejected(INVALID_TRANSITION, free::detachReservation);
-        assertRejected(INVALID_TRANSITION, reserved::detachReservation);
-        assertRejected(INVALID_TRANSITION, occupied::detachReservation);
+        assertRejected(INVALID_TRANSITION, () -> free.detachReservation(9008L));
+        assertRejected(INVALID_TRANSITION, () -> reserved.detachReservation(9009L));
+        assertRejected(INVALID_TRANSITION, () -> occupied.detachReservation(9010L));
 
         assertState(free, FREE, null);
         assertState(reserved, RESERVED, 9009L);
@@ -196,11 +196,11 @@ class ParkingSpaceStateTest {
     }
 
     @Test
-    @DisplayName("TC-M4-13: sau detachReservation(), unblock() tra cho ve FREE va khong con reservation")
+    @DisplayName("TC-M4-13: sau detachReservation(id), unblock() tra cho ve FREE va khong con reservation")
     void unblockAfterDetachFreesSpace() {
         ParkingSpace space = reservedSpace(8008L);
         space.block();
-        space.detachReservation();
+        space.detachReservation(8008L);
 
         space.unblock();
 
@@ -236,7 +236,7 @@ class ParkingSpaceStateTest {
     void bookWithNullReservationIdIsRejected() {
         ParkingSpace space = newSpace();
 
-        assertRejected(INVALID_RESERVATION_ID, () -> space.book(null));
+        assertRejected(INVALID_RESERVATION_ID, HttpStatus.BAD_REQUEST, () -> space.book(null));
 
         assertState(space, FREE, null);
     }
@@ -246,7 +246,7 @@ class ParkingSpaceStateTest {
     void checkInWithMissingOrMismatchedReservationIsRejected() {
         ParkingSpace space = reservedSpace(1001L);
 
-        assertRejected(INVALID_RESERVATION_ID, () -> space.checkIn(null));
+        assertRejected(INVALID_RESERVATION_ID, HttpStatus.BAD_REQUEST, () -> space.checkIn(null));
         assertRejected(RESERVATION_MISMATCH, () -> space.checkIn(9999L));
 
         assertState(space, RESERVED, 1001L);
@@ -256,12 +256,12 @@ class ParkingSpaceStateTest {
     @DisplayName("TC-M4-19: release(id) tu choi null hoac su kien tre cua reservation A tren cho da dat cho B")
     void releaseWithMissingOrMismatchedReservationIsRejected() {
         ParkingSpace reservedByB = reservedSpace(2002L);
-        assertRejected(INVALID_RESERVATION_ID, () -> reservedByB.release(null));
+        assertRejected(INVALID_RESERVATION_ID, HttpStatus.BAD_REQUEST, () -> reservedByB.release(null));
         assertRejected(RESERVATION_MISMATCH, () -> reservedByB.release(1001L));
         assertState(reservedByB, RESERVED, 2002L);
 
         ParkingSpace occupiedByC = occupiedSpace(3003L);
-        assertRejected(INVALID_RESERVATION_ID, () -> occupiedByC.release(null));
+        assertRejected(INVALID_RESERVATION_ID, HttpStatus.BAD_REQUEST, () -> occupiedByC.release(null));
         assertRejected(RESERVATION_MISMATCH, () -> occupiedByC.release(1001L));
         assertState(occupiedByC, OCCUPIED, 3003L);
     }
@@ -275,6 +275,18 @@ class ParkingSpaceStateTest {
 
         assertFalse(publicMethods.contains("setHubId"), "setHubId() public co the lam lech id khop voi M1");
         assertFalse(publicMethods.contains("setType"), "setType() public cho phep doi loai cho tuy tien");
+    }
+
+    @Test
+    @DisplayName("TC-M4-21: detachReservation(id) tren cho BLOCKED tu choi null hoac su kien tre cua reservation khac")
+    void detachReservationWithMissingOrMismatchedReservationIsRejected() {
+        ParkingSpace space = reservedSpace(2002L);
+        space.block();
+
+        assertRejected(INVALID_RESERVATION_ID, HttpStatus.BAD_REQUEST, () -> space.detachReservation(null));
+        assertRejected(RESERVATION_MISMATCH, () -> space.detachReservation(1001L));
+
+        assertState(space, BLOCKED, 2002L);
     }
 
     private static ParkingSpace newSpace() {
@@ -294,9 +306,13 @@ class ParkingSpaceStateTest {
     }
 
     private static void assertRejected(String expectedCode, Executable action) {
+        assertRejected(expectedCode, HttpStatus.CONFLICT, action);
+    }
+
+    private static void assertRejected(String expectedCode, HttpStatus expectedStatus, Executable action) {
         BusinessException error = assertThrows(BusinessException.class, action);
         assertEquals(expectedCode, error.getCode());
-        assertEquals(HttpStatus.CONFLICT, error.getStatus());
+        assertEquals(expectedStatus, error.getStatus());
     }
 
     private static void assertState(ParkingSpace space, Status status, Long reservationId) {
