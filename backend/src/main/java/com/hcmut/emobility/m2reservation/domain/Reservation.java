@@ -2,6 +2,7 @@ package com.hcmut.emobility.m2reservation.domain;
 
 import com.hcmut.emobility.shared.common.BusinessException;
 import jakarta.persistence.*;
+import org.springframework.http.HttpStatus;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -86,6 +87,26 @@ public class Reservation {
     public void confirm(OffsetDateTime now, int holdMinutes) {
         moveTo(ReservationState.CONFIRMED, now);
         this.expiresAt = now.plusMinutes(holdMinutes);
+    }
+
+    /**
+     * PENDING -> CONFIRMED for a booked time window (M4 parking). The hold lasts until holdUntil
+     * (BR-M4-04: slot start + 15 minutes); after that the Timer expires it as a no-show.
+     */
+    public void confirmWindow(OffsetDateTime now, OffsetDateTime windowStart, OffsetDateTime windowEnd,
+                              OffsetDateTime holdUntil) {
+        if (windowStart == null || windowEnd == null || !windowEnd.isAfter(windowStart)) {
+            throw new BusinessException("INVALID_TIME_SLOT", "The booking must end after it starts",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (holdUntil == null || !holdUntil.isAfter(now)) {
+            throw new BusinessException("INVALID_TIME_SLOT", "The check-in deadline has already passed",
+                    HttpStatus.BAD_REQUEST);
+        }
+        moveTo(ReservationState.CONFIRMED, now);
+        this.startAt = windowStart;
+        this.endAt = windowEnd;
+        this.expiresAt = holdUntil;
     }
 
     /** CONFIRMED -> CHECKED_IN. BR-M2-07: only valid while now < expiresAt. */

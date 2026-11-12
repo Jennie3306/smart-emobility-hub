@@ -46,6 +46,15 @@ public class ParkingSpace {
     }
 
     /**
+     * Ly do khoa cho (V41). Chi cho bi khoa vi tru sac hong moi tu mo lai khi M6 bao tru sac hoat dong;
+     * cho do Operator khoa thi phai do Operator mo.
+     */
+    public enum BlockReason {
+        CHARGER_FAILURE,
+        OPERATOR
+    }
+
+    /**
      * Loai phuong tien cho cho do xe (xe oto dien hoac xe may/dap dien).
      */
     public enum Type {
@@ -76,6 +85,10 @@ public class ParkingSpace {
 
     @Column(name = "charger_point_id")
     private Long chargerPointId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "blocked_reason", length = 20)
+    private BlockReason blockedReason;
 
     @Version
     private Long version;
@@ -172,7 +185,21 @@ public class ParkingSpace {
      * Khoa cho do khi co su co (BR-M4-06): chuyen sang BLOCKED.
      */
     public void block() {
+        block(BlockReason.OPERATOR);
+    }
+
+    /**
+     * Khoa cho voi ly do cu the (BR-M4-06). Reservation dang gan (neu co) duoc giu lai de service
+     * huy qua M2 hoac go ra khi check-out.
+     */
+    public void block(BlockReason reason) {
         changeStatus(Status.BLOCKED);
+        this.blockedReason = reason == null ? BlockReason.OPERATOR : reason;
+    }
+
+    /** Cho bi khoa vi tru sac gan voi cho bi hong (ChargerFailed tu M6). */
+    public boolean isBlockedByChargerFailure() {
+        return status == Status.BLOCKED && blockedReason == BlockReason.CHARGER_FAILURE;
     }
 
     /**
@@ -185,6 +212,7 @@ public class ParkingSpace {
                     "Cho do van gan reservation " + currentReservationId);
         }
         changeStatus(Status.FREE);
+        this.blockedReason = null;
     }
 
     // Getters and Setters
@@ -218,6 +246,10 @@ public class ParkingSpace {
 
     public Long getChargerPointId() {
         return chargerPointId;
+    }
+
+    public BlockReason getBlockedReason() {
+        return blockedReason;
     }
 
     public void setChargerPointId(Long chargerPointId) {

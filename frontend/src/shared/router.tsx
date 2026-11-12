@@ -19,6 +19,8 @@ export const router = createBrowserRouter([
       { path: "m3/vehicles", lazy: async () => ({ Component: (await import("../modules/m3vehicle/pages/VehicleListPage")).default }) },
       // M6
       { path: "m6/operations", lazy: async () => ({ Component: (await import("../modules/m6simulator/pages/M6OperationsPage")).default }) },
+      // M4
+      { path: "m4/parking", lazy: async () => ({ Component: (await import("../modules/m4parking/pages/ParkingPage")).default }) },
       // M5
       { path: "m5/charging", lazy: async () => ({ Component: (await import("../modules/m5charging/pages/ChargingPage")).default }) },
       // M2, M4..M8: moi nguoi them route tai day theo mau tren

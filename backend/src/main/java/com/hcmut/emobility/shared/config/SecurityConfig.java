@@ -54,6 +54,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/m5/hubs/*/queue", "/api/m5/sessions/*/audit").hasRole("OPERATOR")
                 .requestMatchers(HttpMethod.PUT, "/api/m5/sessions/*/schedule").hasRole("OPERATOR")
                 .requestMatchers(HttpMethod.PATCH, "/api/m5/sessions/*/priority").hasRole("OPERATOR")
+                // M4: khoa / mo khoa cho do va danh sach luot dat cua Hub chi danh cho OPERATOR.
+                .requestMatchers(HttpMethod.POST, "/api/m4/spaces/*/block", "/api/m4/spaces/*/unblock").hasRole("OPERATOR")
+                .requestMatchers(HttpMethod.GET, "/api/m4/hubs/*/bookings").hasRole("OPERATOR")
                 .anyRequest().authenticated())
             // Loi 401/403 do bo loc Security nem ra KHONG di qua GlobalExceptionHandler,
             // nen phai tu ghi JSON o day - neu khong Spring tra ve trang HTML "Whitelabel Error Page".

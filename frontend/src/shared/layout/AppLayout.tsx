@@ -8,6 +8,7 @@ const nav = [
   { to: "/m2/search", label: "Find a vehicle (M2)" },
   { to: "/m2/my-reservation", label: "My reservation" },
   { to: "/m3/vehicles",  label: "Rental vehicles (M3)" },
+  { to: "/m4/parking", label: "Parking (M4)" },
   { to: "/m5/charging", label: "Smart charging (M5)" },
   { to: "/m6/operations", label: "Incidents & IoT (M6)" },
   // moi module tu them muc cua minh

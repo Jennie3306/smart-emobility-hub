@@ -29,6 +29,8 @@ app:
     allowed-origin: http://localhost:5173
   reservation:
     hold-minutes: 15          # BR-M2-02
+  parking:
+    no-show-scan-ms: 60000    # UC-M4-04: luoi an toan giai phong cho qua han (Timer chinh la cua M2)
   charging:
     low-battery-threshold: 20 # BR-M5-01 (%)
     recalculation-interval-ms: 60000 # FR-M5-04: chu ky xep hang doi, giu cong 10 phut, sac

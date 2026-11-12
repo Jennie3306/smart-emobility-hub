@@ -74,7 +74,50 @@ public class ReservationService implements ReservationCore {
     @Override
     @Transactional
     public Reservation reserve(Long userId, ResourceType type, Long resourceId, Long hubId) {
-        // These pre-checks only pick the right error code. The UNIQUE constraint in saveActive decides who wins.
+        checkCanReserve(userId, type, resourceId);
+        OffsetDateTime now = now();
+        Reservation reservation = Reservation.create(userId, type, resourceId, hubId, now);
+        reservation.confirm(now, holdMinutes);
+        saveActive(reservation);
+        publisher.publish(new ReservationConfirmedEvent(reservation.getId(),userId,type.name(),resourceId,hubId));
+        return reservation;
+    }
+
+    /**
+     * M4 parking booking for a time window (FR-M4-02). Same rules as reserve(); the hold ends at the
+     * check-in deadline chosen by M4 (BR-M4-04), and the window is stored in start_at / end_at so M5
+     * can check that a charging schedule fits inside the parking booking.
+     */
+    @Override
+    @Transactional
+    public Reservation reserveWindow(Long userId, ResourceType type, Long resourceId, Long hubId,
+                                     OffsetDateTime startAt, OffsetDateTime endAt, OffsetDateTime checkInDeadline) {
+        checkCanReserve(userId, type, resourceId);
+        OffsetDateTime now = now();
+        Reservation reservation = Reservation.create(userId, type, resourceId, hubId, now);
+        reservation.confirmWindow(now, startAt, endAt, checkInDeadline);
+        saveActive(reservation);
+        publisher.publish(new ReservationConfirmedEvent(reservation.getId(),userId,type.name(),resourceId,hubId));
+        return reservation;
+    }
+
+    /** BR-M4-06: cancel a CONFIRMED reservation whose resource was blocked by an incident. */
+    @Override
+    @Transactional
+    public Optional<Reservation> cancelForBlockedResource(Long reservationId) {
+        Optional<Reservation> found = repository.findById(reservationId)
+                .filter(r -> r.getState() == ReservationState.CONFIRMED);
+        found.ifPresent(reservation -> {
+            reservation.cancel(CancelReason.RESOURCE_BLOCKED, now());
+            saveActive(reservation);
+            publisher.publish(new ReservationCancelledEvent(reservation.getId(),
+                    reservation.getResourceType().name(), reservation.getResourceId()));
+        });
+        return found;
+    }
+
+    /** These pre-checks only pick the right error code. The UNIQUE constraint in saveActive decides who wins. */
+    private void checkCanReserve(Long userId, ResourceType type, Long resourceId) {
         if (findActive(userId, type).isPresent()) {
             throw new BusinessException("RESERVATION_LIMIT_EXCEEDED", "You already have an active reservation");
         }
@@ -82,13 +125,6 @@ public class ReservationService implements ReservationCore {
                 type, resourceId, ReservationState.ACTIVE).isPresent()) {
             throw new BusinessException("RESOURCE_CONFLICT", "This resource was just reserved by another user");
         }
-
-        OffsetDateTime now = now();
-        Reservation reservation = Reservation.create(userId, type, resourceId, hubId, now);
-        reservation.confirm(now, holdMinutes);
-        saveActive(reservation);
-        publisher.publish(new ReservationConfirmedEvent(reservation.getId(),userId,type.name(),resourceId,hubId));
-        return reservation;
     }
 
     /**
