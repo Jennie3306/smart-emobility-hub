@@ -81,7 +81,8 @@ public class ParkingEventHandler {
     @Order(0)
     @Transactional
     public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
-        if (!CHARGING_POINT.equals(event.getResourceType()) || event.getNewState() == null) return;
+        if (!event.isDeviceReading() || !CHARGING_POINT.equals(event.getResourceType())
+                || event.getNewState() == null) return;
         String state = event.getNewState().trim().toUpperCase();
         if (!state.equals("AVAILABLE") && !state.equals("IDLE")) return;
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;

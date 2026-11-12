@@ -146,7 +146,9 @@ class ParkingFlowIntegrationTest {
                 jdbc.queryForObject("SELECT cancel_reason FROM reservation WHERE id = ?", String.class,
                         booking.reservationId()));
 
-        events.publish(new ResourceStateUpdatedEvent(HUB, "CHARGING_POINT", CHARGER, "AVAILABLE"));
+        // So doc thiet bi cua M6 (source = "M6"): M4 chi mo cho khi tin hieu den tu thiet bi.
+        events.publish(new ResourceStateUpdatedEvent(HUB, "CHARGING_POINT", CHARGER, "AVAILABLE",
+                ResourceStateUpdatedEvent.SOURCE_DEVICE));
         assertEquals("FREE", spaceStatus(CHARGER_SPACE));
     }
 }

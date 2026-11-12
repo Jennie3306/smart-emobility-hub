@@ -80,7 +80,8 @@ public class ChargingEventHandler {
     @Transactional
     public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
-        if ("CHARGING_POINT".equals(event.getResourceType())) {
+        // Only device readings from M6 carry new information for M5; M5's own events (and M4's) are ignored.
+        if (event.isDeviceReading() && "CHARGING_POINT".equals(event.getResourceType())) {
             charging.synchroniseChargingPoint(event.getResourceId(), event.getHubId(), event.getNewState());
         }
     }

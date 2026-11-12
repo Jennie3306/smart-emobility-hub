@@ -378,6 +378,17 @@ public class ParkingService {
         return ParkingSpaceResponse.from(space);
     }
 
+    /**
+     * Dong bo luc khoi dong (chot 12/11): phat trang thai moi cho do mot lan de mo hinh doc cua M1 (va M8)
+     * bat dau dung bang so lieu M4 dang giu, ke ca tren database da seed truoc khi co M4.
+     */
+    @Transactional
+    public int publishAllSpaceStates() {
+        List<ParkingSpace> all = spaces.findAll();
+        all.forEach(this::publishSpace);
+        return all.size();
+    }
+
     // ------------------------------------------------------------------ Timer (UC-M4-04)
 
     @Transactional(readOnly = true)

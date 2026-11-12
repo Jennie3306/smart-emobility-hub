@@ -88,7 +88,8 @@ public class DeviceEventService {
     private List<DomainEvent> buildEvents(DeviceReading reading) {
         if (reading.failureReason() == null || reading.failureReason().isBlank()) {
             return List.of(new ResourceStateUpdatedEvent(reading.hubId(), reading.resourceType().name(),
-                    reading.resourceId(), reading.observedState()));
+                    reading.resourceId(), reading.observedState(),
+                    ResourceStateUpdatedEvent.SOURCE_DEVICE));
         }
 
         if (reading.resourceType() == ResourceType.VEHICLE) {
@@ -98,12 +99,12 @@ public class DeviceEventService {
         if (reading.resourceType() == ResourceType.CHARGING_POINT) {
             return List.of(
                     new ResourceStateUpdatedEvent(reading.hubId(), reading.resourceType().name(),
-                            reading.resourceId(), "FAULTY"),
+                            reading.resourceId(), "FAULTY", ResourceStateUpdatedEvent.SOURCE_DEVICE),
                     new ChargerFailedEvent(reading.resourceId(), reading.hubId(), reading.failureReason()));
         }
 
         return List.of(new ResourceStateUpdatedEvent(reading.hubId(), reading.resourceType().name(),
-                reading.resourceId(), reading.observedState()));
+                reading.resourceId(), reading.observedState(), ResourceStateUpdatedEvent.SOURCE_DEVICE));
     }
 
     private String validate(DeviceReading reading) {

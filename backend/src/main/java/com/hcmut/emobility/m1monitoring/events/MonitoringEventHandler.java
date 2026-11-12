@@ -69,6 +69,14 @@ public class MonitoringEventHandler {
         }
 
         String type = event.getResourceType();
+        if (event.isDeviceReading()
+                && (MonitoringService.PARKING.equals(type) || MonitoringService.CHARGING.equals(type))) {
+            // Chot 12/11: M4 giu trang thai cho do, M5 giu trang thai tru sac. So doc cua M6 chi la tin hieu
+            // cho hai module do; M1 doi trang thai ma chu so huu phat ra sau khi xu ly, de dashboard khong
+            // lech voi M4/M5 (vi du M6 bao cho 1 FREE trong khi sinh vien dang do o do).
+            log.debug("[M1] Bo qua so doc M6 cho {} {}: cho chu so huu cap nhat", type, event.getResourceId());
+            return;
+        }
         if (!MonitoringService.PARKING.equals(type) && !MonitoringService.CHARGING.equals(type)) {
             // VEHICLE do M3 giu; M1 chi dem lai so xe kha dung.
             pushHub(event.getHubId());

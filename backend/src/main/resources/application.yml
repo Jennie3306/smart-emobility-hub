@@ -25,6 +25,8 @@ server:
 app:
   demo-users:
     enabled: true      # tao student1 / operator1 khi bang app_user rong
+  demo:
+    seed-parking: true # M4: 31 luot dat that o Hub Ga Metro (77%) de M1/M2/M4/M8 cung so lieu; tat = false
   cors:
     allowed-origin: http://localhost:5173
   reservation:

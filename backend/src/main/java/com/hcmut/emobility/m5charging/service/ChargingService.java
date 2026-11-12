@@ -297,6 +297,8 @@ public class ChargingService {
         }
         point.markFaulty();
         points.save(point);
+        // M5 owns the charging-point state: M1 mirrors this event, not M6's raw reading (decision 12/11).
+        publishResourceState(point, "FAULTY");
         List<ChargingSession> affected = sessions.findByChargingPointIdAndStatusIn(chargingPointId, POINT_OCCUPYING);
         OffsetDateTime now = now();
         for (ChargingSession session : affected) {
@@ -345,9 +347,24 @@ public class ChargingService {
         boolean recovered = point.applyExternalState(state);
         if (point.getState() == before) return;
         points.save(point);
+        // M1 ignores M6's raw reading for charging points and mirrors the state M5 decided (decision 12/11).
+        publishResourceState(point, recovered ? "FREE" : point.getState().name());
         if (recovered) {
             log.info("[M5] Charging point {} at hub {} is back in service; the next queue tick will use it", pointId, hubId);
         }
+    }
+
+    /**
+     * Startup sync (decision 12/11): publish every charging point's state once, so M1's projection (and M8,
+     * which reads it) starts from what M5 actually holds, even on a database seeded before M5 existed.
+     */
+    @Transactional
+    public int publishAllPointStates() {
+        List<ChargingPoint> all = points.findAll();
+        for (ChargingPoint point : all) {
+            publishResourceState(point, point.getState() == ChargingPointState.AVAILABLE ? "FREE" : point.getState().name());
+        }
+        return all.size();
     }
 
     @Transactional
@@ -460,8 +477,13 @@ public class ChargingService {
             // A booking re-queued after a charger failure waits for its own start time.
             if (session.waitsForWindow(now)) continue;
             List<ChargingPoint> free = points.lockByHubAndState(hubId, ChargingPointState.AVAILABLE);
+            // A session tied to an M4 parking booking prefers the charger installed at that space, so the
+            // vehicle charges where it is parked (decision 12/11, one consistent story across modules).
+            Long linkedCharger = chargerAtParkingSpace(session.getParkingSpaceId());
             ChargingPoint selected = free.stream()
                     .filter(p -> !hasOverlap(p.getId(), now, now.plusMinutes(90), now))
+                    .sorted(Comparator.comparing((ChargingPoint p) -> p.getId().equals(linkedCharger) ? 0 : 1)
+                            .thenComparing(ChargingPoint::getId))
                     .findFirst().orElse(null);
             if (selected == null) break;
             session.assign(selected.getId(), now, null);
@@ -472,6 +494,14 @@ public class ChargingService {
         }
         queuePublisher.publish(hubId, sessions.findByHubIdOrderByCreatedAtDesc(hubId).stream()
                 .map(s -> response(s, queuePosition(s), now)).toList());
+    }
+
+    /** Read-only lookup in M4's parking_space (like validateParkingReservation reads M2's reservation). */
+    private Long chargerAtParkingSpace(Long parkingSpaceId) {
+        if (parkingSpaceId == null) return null;
+        List<Long> chargers = jdbc.queryForList("select charger_point_id from parking_space where id = ?",
+                Long.class, parkingSpaceId);
+        return chargers.isEmpty() ? null : chargers.get(0);
     }
 
     private boolean hasOverlap(Long pointId, OffsetDateTime start, OffsetDateTime end, OffsetDateTime now) {
