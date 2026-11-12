@@ -141,6 +141,21 @@ public class ChargingSession {
         return session;
     }
 
+    /**
+     * Charging requested together with an M4 parking booking for later: the session waits in the queue
+     * until the student arrives, so no port is held (and expired) while the vehicle is not there yet.
+     * The waiting score also starts at arrival, not at booking time.
+     */
+    public void waitForArrival(OffsetDateTime arriveAt, OffsetDateTime leaveAt, OffsetDateTime now) {
+        if (status != ChargingSessionStatus.REQUESTED && status != ChargingSessionStatus.QUEUED) {
+            throw invalid("Only a waiting session can wait for the vehicle to arrive");
+        }
+        if (arriveAt == null || leaveAt == null || !leaveAt.isAfter(arriveAt) || !arriveAt.isAfter(now)) return;
+        scheduledStartAt = arriveAt;
+        scheduledEndAt = leaveAt;
+        waitingSince = arriveAt;
+    }
+
     public void enqueue(OffsetDateTime now) {
         if (status != ChargingSessionStatus.REQUESTED && status != ChargingSessionStatus.INTERRUPTED) {
             throw invalid("Only REQUESTED or INTERRUPTED sessions can enter the queue");
@@ -183,7 +198,8 @@ public class ChargingSession {
     public void updateBatteryForElapsedTime(OffsetDateTime now) {
         if (status != ChargingSessionStatus.CHARGING || chargingStartedAt == null) return;
         long elapsedMinutes = Math.max(0, Duration.between(chargingStartedAt, now).toMinutes());
-        batteryLevel = (int) Math.min(targetBatteryLevel, startBatteryLevel + elapsedMinutes);
+        int simulated = (int) Math.min(targetBatteryLevel, startBatteryLevel + elapsedMinutes);
+        batteryLevel = Math.max(batteryLevel, simulated); // charging never lowers the battery level
     }
 
     public boolean shouldComplete(OffsetDateTime now) {
@@ -218,7 +234,7 @@ public class ChargingSession {
         }
         // A booking that has not started yet keeps its time window (review PR #11): the student
         // still expects that slot, and the dispatcher waits for it instead of holding a port now.
-        failureBonus = 0; // Applied only if the failed session remains queued after reassignment.
+        // failureBonus is kept: an earlier compensation is not thrown away by a second failure (review PR #11).
         if (waitingSince == null) waitingSince = now;
     }
 

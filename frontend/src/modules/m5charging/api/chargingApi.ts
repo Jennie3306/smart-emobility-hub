@@ -1,4 +1,5 @@
 import { api, type ApiError } from "@/shared/api/client";
+import { englishHubLabels } from "@/shared/api/hubLabels";
 import type { AxiosError } from "axios";
 
 export type VehicleKind = "PERSONAL" | "RENTAL";
@@ -38,7 +39,7 @@ export interface ChargingSession {
 }
 
 export const chargingApi = {
-  hubs: () => api.get<ChargingHub[]>("/m5/hubs").then(r => r.data),
+  hubs: () => api.get<ChargingHub[]>("/m5/hubs").then(r => englishHubLabels(r.data)),
   mine: () => api.get<ChargingSession[]>("/m5/sessions/mine").then(r => r.data),
   queue: (hubId: number) => api.get<ChargingSession[]>(`/m5/hubs/${hubId}/queue`).then(r => r.data),
   request: (body: {
@@ -70,6 +71,7 @@ export function chargingErrorMessage(error: unknown): string {
     case "CHARGING_POINT_BUSY": return "The assigned charging point is no longer available.";
     case "INVALID_STATE_TRANSITION": return "This action is not allowed in the current session state.";
     case "ACCESS_DENIED": return "You do not have permission to change this charging session.";
+    case "VEHICLE_NOT_OWNED": return data?.message ?? "You can only charge a vehicle you hold.";
     case "VALIDATION_FAILED": return "Check the entered values and try again.";
     default: return data?.message ?? "Unable to complete the charging request. Please try again.";
   }

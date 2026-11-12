@@ -13,7 +13,9 @@ public final class ChargingPriorityPolicy {
     private ChargingPriorityPolicy() { }
 
     public static int upcomingUseScore(OffsetDateTime expectedUseAt, OffsetDateTime now) {
-        if (expectedUseAt == null || expectedUseAt.isBefore(now)) return 0;
+        if (expectedUseAt == null) return 0;
+        // Review PR #11: a vehicle already needed (expected use has passed) is the most urgent, not the least.
+        if (!expectedUseAt.isAfter(now)) return 100;
         long minutes = Duration.between(now, expectedUseAt).toMinutes();
         if (minutes <= 30) return 100;
         if (minutes <= 60) return 70;

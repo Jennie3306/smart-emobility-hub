@@ -51,7 +51,7 @@ public class ChargingEventHandler {
         }
         try {
             charging.handleM4ChargingRequest(event.getUserId(), event.getHubId(), event.getParkingSpaceId(),
-                    kind, event.getVehicleId(), event.getBatteryLevel(), event.getLeaveAt());
+                    kind, event.getVehicleId(), event.getBatteryLevel(), event.getArriveAt(), event.getLeaveAt());
         } catch (RuntimeException ex) {
             log.error("[M5] ChargingRequested {} for parking space {} failed: {}", event.getEventId(),
                     event.getParkingSpaceId(), ex.getMessage(), ex);
