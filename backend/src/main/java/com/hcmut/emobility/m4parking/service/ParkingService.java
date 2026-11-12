@@ -160,7 +160,8 @@ public class ParkingService {
                     count(hubSpaces, ParkingSpace.Status.OCCUPIED),
                     count(hubSpaces, ParkingSpace.Status.BLOCKED),
                     hubSpaces.stream().filter(s -> s.getStatus() == ParkingSpace.Status.FREE
-                            && s.getChargerPointId() != null).count()));
+                            && s.getChargerPointId() != null).count(),
+                    hubSpaces.stream().filter(s -> s.getDockedVehicleId() != null).count()));
         }
         return result;
     }
@@ -179,8 +180,10 @@ public class ParkingService {
         }
         int capacity = hubCapacity(hubId);
         long active = bookings.countOverlapping(hubId, ParkingBookingLog.Status.ACTIVE, startAt, endAt);
+        long docked = spaces.countByHubIdAndDockedVehicleIdIsNotNull(hubId);
         long free = count(spaces.findByHubIdOrderById(hubId), ParkingSpace.Status.FREE);
-        return new ParkingAvailability(hubId, startAt, endAt, capacity, active, Math.max(0, capacity - active), free);
+        return new ParkingAvailability(hubId, startAt, endAt, capacity, active, docked,
+                Math.max(0, capacity - active - docked), free);
     }
 
     // ------------------------------------------------------------------ FR-M4-02 dat cho
@@ -222,7 +225,9 @@ public class ParkingService {
             throw new BusinessException("DUPLICATE_BOOKING",
                     "You already have a parking booking at this Hub in the same time window");
         }
-        if (bookings.countOverlapping(request.hubId(), ParkingBookingLog.Status.ACTIVE, startAt, endAt) >= capacity) {
+        // BR-M4-01 + BR-M4-08: rental vehicles standing at the Hub hold a space in every window.
+        long docked = spaces.countByHubIdAndDockedVehicleIdIsNotNull(request.hubId());
+        if (bookings.countOverlapping(request.hubId(), ParkingBookingLog.Status.ACTIVE, startAt, endAt) + docked >= capacity) {
             throw new BusinessException("HUB_FULL", "This Hub is fully booked for the selected time window");
         }
 
@@ -499,11 +504,21 @@ public class ParkingService {
         log.info("[M4] Booking {} (reservation {}) closed as {}", booking.getId(), reservationId, finalOutcome);
     }
 
-    /** Tra cho ve FREE neu no van giu reservation nay; cho dang BLOCKED thi chi go reservation ra. */
+    /**
+     * Tra cho ve FREE neu no van giu reservation nay; cho dang BLOCKED thi chi go reservation ra.
+     * Cho bi khoa vi tru sac ma tru da hoat dong lai trong luc xe con do (M5 da bao FREE truoc do) thi mo
+     * luon, khong phai cho M5 phat them mot lan nua.
+     */
     private void releaseSpace(ParkingSpace space, Long reservationId) {
         if (!reservationId.equals(space.getCurrentReservationId())) return;
         if (space.getStatus() == ParkingSpace.Status.BLOCKED) {
             space.detachReservation(reservationId);
+            if (space.isBlockedByChargerFailure() && chargerOperational(space.getChargerPointId())) {
+                space.unblock();
+                publishSpace(space);
+                log.info("[M4] Space {} unblocked on check-out: its charger is already back in service",
+                        space.getSpaceCode());
+            }
             spaces.save(space);
             return;
         }
@@ -617,6 +632,17 @@ public class ParkingService {
             throw badRequest("INVALID_BOOKING_DURATION",
                     "A booking must last between " + MIN_BOOKING_MINUTES + " minutes and " + MAX_BOOKING_HOURS + " hours");
         }
+    }
+
+    /**
+     * Read-only look at the charger's state as M5 holds it (same read-only JDBC pattern M5 and M7 use for
+     * other modules' tables). Unknown charger -> false, so the space stays blocked.
+     */
+    private boolean chargerOperational(Long chargerPointId) {
+        if (chargerPointId == null) return false;
+        List<String> state = jdbc.queryForList("select state from charging_point where id = ?", String.class,
+                chargerPointId);
+        return !state.isEmpty() && !state.get(0).equals("FAULTY") && !state.get(0).equals("UNDER_REPAIR");
     }
 
     /** Throws HUB_NOT_FOUND (404). */

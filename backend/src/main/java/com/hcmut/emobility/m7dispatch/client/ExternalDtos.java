@@ -8,9 +8,13 @@ public final class ExternalDtos {
     /** state theo tu vung cua M3: AVAILABLE, RESERVED, IN_USE, MAINTENANCE, IN_TRANSIT. */
     public record VehicleInfo(Long vehicleId, String state, Long currentHubId) { }
 
-    /** capacity = so cho do cua hub; currentVehicleCount = so xe dang thuoc hub. */
-    public record HubInfo(Long hubId, int capacity, int currentVehicleCount) {
-        public boolean isFull() { return currentVehicleCount >= capacity; }
+    /**
+     * BR-M7-03 (Appendix A v2): freeSpaces = free spaces in the destination Hub's shared parking pool (M4);
+     * incomingVehicles = vehicles already on their way there in active tasks. Full when every free space is
+     * already promised to an incoming vehicle.
+     */
+    public record HubInfo(Long hubId, int freeSpaces, int incomingVehicles) {
+        public boolean isFull() { return incomingVehicles >= freeSpaces; }
     }
 
     /** Khuyen nghi dieu chuyen mot xe cu the (tu M8). */

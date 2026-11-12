@@ -20,15 +20,18 @@ import org.springframework.stereotype.Component;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.stream.LongStream;
 
 /**
  * Du lieu demo do cho (chot 12/11): Hub Ga Metro o 31/40 cho dang dung (77%, ngay duoi nguong canh bao
  * 80% cua M1) - bang luot dat THAT di qua M2 va M4, khong sua thang bang cua M1. Nho vay M1, M2, M4 va M8
  * cung mot so lieu; sinh vien demo dat them mot cho la Hub len 80% va M1 bao canh bao.
  *
- * 31 sinh vien demo (demo01..demo31, mat khau 123456): demoNN luon do o cho P-(08+NN), tuc P-09..P-39 -
- * cac cho KHONG co tru sac (P-37..P-39 la cho CAR nen ba nguoi cuoi di o to). P-01..P-08 (co tru sac) va
- * P-40 de trong cho luong demo dat cho kem sac.
+ * 31 = 29 luot dat demo + 2 xe thue EB-001, EB-002 dang dung o Hub (BR-M4-08: xe thue chiem cho trong quy
+ * cho do chung). 29 sinh vien demo (demo01..demo29, mat khau 123456): demo01..demo26 o P-09..P-34 (BIKE),
+ * demo27..demo29 o P-37..P-39 (CAR). P-35, P-36 de cho hai xe thue (RentalDockService chon cho khong co tru
+ * sac, so lon truoc). P-01..P-08 (co tru sac) va P-40 de trong cho luong demo dat cho kem sac.
  *
  * Moi lan app khoi dong, seeder "bu" lai: sinh vien demo nao khong con luot dat dang hieu luc (vi Timer da
  * tu check-out khi het khung gio, hoac da check-out tay) thi duoc dat va check-in lai mot khung 12 gio moi.
@@ -40,9 +43,9 @@ public class ParkingDemoSeeder {
     private static final Logger log = LoggerFactory.getLogger(ParkingDemoSeeder.class);
 
     static final long DEMO_HUB = 1L;
-    /** V40: cho P-nn cua Hub 1 co id = nn. */
-    static final int FIRST_SPACE = 9;
-    static final int LAST_SPACE = 39;
+    /** V40: cho P-nn cua Hub 1 co id = nn. P-35, P-36 de cho xe thue EB-001, EB-002 (BR-M4-08). */
+    static final List<Long> DEMO_SPACES = LongStream.concat(LongStream.rangeClosed(9, 34), LongStream.rangeClosed(37, 39))
+            .boxed().toList();
     static final int BOOKING_HOURS = 12;
 
     private final ParkingService parking;
@@ -63,13 +66,13 @@ public class ParkingDemoSeeder {
         this.clock = clock;
     }
 
-    /** Tra ve so luot dat demo vua tao (0 khi ca 31 nguoi deu con luot dat dang hieu luc). */
+    /** Tra ve so luot dat demo vua tao (0 khi ca 29 nguoi deu con luot dat dang hieu luc). */
     public int seed() {
         OffsetDateTime start = OffsetDateTime.now(clock).truncatedTo(ChronoUnit.MINUTES);
         String passwordHash = null;
         int created = 0;
-        for (int n = 1; n <= LAST_SPACE - FIRST_SPACE + 1; n++) {
-            long spaceId = FIRST_SPACE + n - 1L;
+        for (int n = 1; n <= DEMO_SPACES.size(); n++) {
+            long spaceId = DEMO_SPACES.get(n - 1);
             String username = String.format("demo%02d", n);
             try {
                 ParkingSpace space = spaces.findById(spaceId).orElse(null);

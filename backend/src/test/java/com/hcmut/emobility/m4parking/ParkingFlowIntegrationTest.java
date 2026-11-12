@@ -134,7 +134,7 @@ class ParkingFlowIntegrationTest {
     }
 
     @Test
-    @DisplayName("TC-M4-38 (BR-M4-06): tru sac hong -> cho BLOCKED, reservation CANCELLED; tru sac tot lai -> FREE")
+    @DisplayName("TC-M4-38 (BR-M4-06): tru sac hong -> cho BLOCKED, reservation CANCELLED; M5 bao tru sac hoat dong lai -> FREE")
     void chargerFailureAndRecovery() {
         ParkingBookingResponse booking = book(registerVehicle("59X1-90003"), CHARGER_SPACE);
 
@@ -146,9 +146,8 @@ class ParkingFlowIntegrationTest {
                 jdbc.queryForObject("SELECT cancel_reason FROM reservation WHERE id = ?", String.class,
                         booking.reservationId()));
 
-        // So doc thiet bi cua M6 (source = "M6"): M4 chi mo cho khi tin hieu den tu thiet bi.
-        events.publish(new ResourceStateUpdatedEvent(HUB, "CHARGING_POINT", CHARGER, "AVAILABLE",
-                ResourceStateUpdatedEvent.SOURCE_DEVICE));
+        // Appendix A v2: M5 owns the charging point and reports it operational again; M4 reacts to that.
+        events.publish(new ResourceStateUpdatedEvent(HUB, "CHARGING_POINT", CHARGER, "FREE"));
         assertEquals("FREE", spaceStatus(CHARGER_SPACE));
     }
 

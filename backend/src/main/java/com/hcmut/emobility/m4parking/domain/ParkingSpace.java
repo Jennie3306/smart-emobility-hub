@@ -8,14 +8,16 @@ import org.springframework.http.HttpStatus;
  * Entity ParkingSpace - quan ly thong tin va trang thai cho do xe tai Hub (Module M4).
  *
  * State Machine:
- *   FREE -> RESERVED -> OCCUPIED -> FREE
+ *   FREE -> RESERVED -> OCCUPIED -> FREE            (booking: personal or rental vehicle, via M2)
+ *   FREE -> OCCUPIED -> FREE                         (rental vehicle docked / undocked, via ParkingDock)
  *   FREE / RESERVED / OCCUPIED -> BLOCKED (khi gap su co, vi du ChargerFailed tu M6)
- *   BLOCKED -> FREE (khi su co duoc khac phuc)
+ *   BLOCKED -> FREE (khi su co duoc khac phuc); BLOCKED -> OCCUPIED (khac phuc, xe thue van dang do o do)
  *
  * Tuan thu cac Business Rules:
  *   - BR-M4-01: Gioi han suc chua Hub theo khung gio
  *   - BR-M4-04: Giai phong cho do neu no-show qua 15 phut
- *   - BR-M4-05: Chi chuyen sang OCCUPIED khi co reservation hop le
+ *   - BR-M4-05: Chi chuyen sang OCCUPIED khi co reservation hop le hoac mot xe thue dang do (docked)
+ *   - BR-M4-08: Mot Hub co mot quy cho do chung; xe thue dang dung o Hub chiem mot cho (Appendix A v2)
  *   - BR-M4-06: Chuyen sang BLOCKED khi gap su co, khong cho phep dat cho hoac check-in
  *   - BR-M4-07: Chan cac chuyen trang thai khong hop le theo state machine
  */
@@ -37,10 +39,10 @@ public class ParkingSpace {
          */
         public boolean canMoveTo(Status target) {
             return switch (this) {
-                case FREE -> target == RESERVED || target == BLOCKED;
+                case FREE -> target == RESERVED || target == OCCUPIED || target == BLOCKED;
                 case RESERVED -> target == OCCUPIED || target == FREE || target == BLOCKED;
                 case OCCUPIED -> target == FREE || target == BLOCKED;
-                case BLOCKED -> target == FREE;
+                case BLOCKED -> target == FREE || target == OCCUPIED;
             };
         }
     }
@@ -90,6 +92,10 @@ public class ParkingSpace {
     @Column(name = "blocked_reason", length = 20)
     private BlockReason blockedReason;
 
+    /** Rental vehicle standing on this space (V42, BR-M4-08); null for a booked or free space. */
+    @Column(name = "docked_vehicle_id", unique = true)
+    private Long dockedVehicleId;
+
     @Version
     private Long version;
 
@@ -130,10 +136,41 @@ public class ParkingSpace {
      */
     public void checkIn(Long reservationId) {
         requireReservationId(reservationId);
-        if (this.status == Status.RESERVED) {
-            requireMatchingReservation(reservationId);
+        if (this.status != Status.RESERVED) {
+            // FREE -> OCCUPIED is only for a docked rental vehicle (dock); a booking must be RESERVED first.
+            throw new BusinessException("INVALID_STATE_TRANSITION",
+                    "Chi check-in duoc cho dang RESERVED, hien tai: " + this.status);
+        }
+        requireMatchingReservation(reservationId);
+        changeStatus(Status.OCCUPIED);
+    }
+
+    /**
+     * BR-M4-08: a rental vehicle arrives at the Hub (returned by a student or delivered by M7) and stands
+     * on this free space. FREE -> OCCUPIED without a reservation.
+     */
+    public void dock(Long vehicleId) {
+        if (vehicleId == null) {
+            throw new BusinessException("INVALID_VEHICLE_ID", "Rental vehicle id is required", HttpStatus.BAD_REQUEST);
+        }
+        if (status != Status.FREE) {
+            throw new BusinessException("SPACE_NOT_AVAILABLE", "Space " + spaceCode + " is " + status);
         }
         changeStatus(Status.OCCUPIED);
+        this.dockedVehicleId = vehicleId;
+    }
+
+    /**
+     * BR-M4-08: the docked rental vehicle leaves (picked up or moved away). OCCUPIED -> FREE; on a BLOCKED
+     * space the vehicle is only detached and the space stays blocked.
+     */
+    public void undock(Long vehicleId) {
+        if (vehicleId == null || !vehicleId.equals(this.dockedVehicleId)) {
+            throw new BusinessException("VEHICLE_NOT_DOCKED",
+                    "Rental vehicle " + vehicleId + " is not parked on space " + spaceCode);
+        }
+        this.dockedVehicleId = null;
+        if (status == Status.OCCUPIED) changeStatus(Status.FREE);
     }
 
     /**
@@ -211,7 +248,8 @@ public class ParkingSpace {
             throw new BusinessException("SPACE_STILL_IN_USE",
                     "Cho do van gan reservation " + currentReservationId);
         }
-        changeStatus(Status.FREE);
+        // A rental vehicle that stood here during the incident is still parked: back to OCCUPIED, not FREE.
+        changeStatus(dockedVehicleId != null ? Status.OCCUPIED : Status.FREE);
         this.blockedReason = null;
     }
 
@@ -250,6 +288,10 @@ public class ParkingSpace {
 
     public BlockReason getBlockedReason() {
         return blockedReason;
+    }
+
+    public Long getDockedVehicleId() {
+        return dockedVehicleId;
     }
 
     public void setChargerPointId(Long chargerPointId) {

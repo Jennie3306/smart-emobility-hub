@@ -4,11 +4,16 @@ import com.hcmut.emobility.m1monitoring.domain.ResourceState;
 import com.hcmut.emobility.m1monitoring.repository.ResourceStateRepository;
 import com.hcmut.emobility.m1monitoring.service.DashboardPublisher;
 import com.hcmut.emobility.m1monitoring.service.MonitoringService;
+import com.hcmut.emobility.shared.events.ChargingCompletedEvent;
+import com.hcmut.emobility.shared.events.ChargingStartedEvent;
 import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
+import com.hcmut.emobility.shared.events.DispatchFailedEvent;
+import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.ReservationConfirmedEvent;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
+import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import com.hcmut.emobility.shared.events.VehiclePickedUpEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
 import org.slf4j.Logger;
@@ -55,9 +60,9 @@ public class MonitoringEventHandler {
     }
 
     /**
-     * M6 bao tai nguyen doi trang thai -> cap nhat mo hinh doc, tinh lai, day xuong.
-     * M6 giu trang thai trong bo nho va khong ghi database, nen neu M1 khong
-     * cap nhat bang cua minh o day thi so lieu tren dashboard se dung yen.
+     * The owner of a parking space (M4) or charging point (M5) changed its state -> update the read model,
+     * recount and push. Appendix A v2: only owners publish this event, so M1 mirrors it as is; raw sensor
+     * readings (DeviceReadingReportedEvent) go to the owners and never reach the dashboard directly.
      */
     @EventListener
     @Order(100)
@@ -69,16 +74,7 @@ public class MonitoringEventHandler {
         }
 
         String type = event.getResourceType();
-        if (event.isDeviceReading()
-                && (MonitoringService.PARKING.equals(type) || MonitoringService.CHARGING.equals(type))) {
-            // Chot 12/11: M4 giu trang thai cho do, M5 giu trang thai tru sac. So doc cua M6 chi la tin hieu
-            // cho hai module do; M1 doi trang thai ma chu so huu phat ra sau khi xu ly, de dashboard khong
-            // lech voi M4/M5 (vi du M6 bao cho 1 FREE trong khi sinh vien dang do o do).
-            log.debug("[M1] Bo qua so doc M6 cho {} {}: cho chu so huu cap nhat", type, event.getResourceId());
-            return;
-        }
         if (!MonitoringService.PARKING.equals(type) && !MonitoringService.CHARGING.equals(type)) {
-            // VEHICLE do M3 giu; M1 chi dem lai so xe kha dung.
             pushHub(event.getHubId());
             return;
         }
@@ -91,7 +87,7 @@ public class MonitoringEventHandler {
             if (existing.isPresent()) {
                 existing.get().applyState(state);
             } else {
-                // Tai nguyen moi do M6 sinh them: ghi nhan de lan sau dem dung.
+                // A resource the owner created after V10 seeded the read model: record it.
                 resources.save(new ResourceState(type, event.getResourceId(),
                         event.getHubId(), state));
                 log.info("[M1] Ghi nhan tai nguyen moi {} {} o hub {}",
@@ -149,6 +145,51 @@ public class MonitoringEventHandler {
     @Order(100)
     @Transactional(readOnly = true)
     public void onVehiclePickedUp(VehiclePickedUpEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getHubId());
+    }
+
+    /** M7 started a redistribution task -> the source hub has one vehicle less. */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onDispatchStarted(DispatchStartedEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getFromHubId());
+    }
+
+    /** M7 marked a started task FAILED -> the vehicle is back at the source hub. */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onDispatchFailed(DispatchFailedEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getFromHubId());
+    }
+
+    /** M3 flagged a rental vehicle LOW_BATTERY -> the hub has one available vehicle less. */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onVehicleLowBattery(VehicleLowBatteryEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getHubId());
+    }
+
+    /** M5 started a charging session -> refresh the hub (port and, for rental vehicles, vehicle counts). */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onChargingStarted(ChargingStartedEvent event) {
+        if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
+        pushHub(event.getHubId());
+    }
+
+    /** M5 finished a charging session -> a charged rental vehicle is available again (Appendix A). */
+    @EventListener
+    @Order(100)
+    @Transactional(readOnly = true)
+    public void onChargingCompleted(ChargingCompletedEvent event) {
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
         pushHub(event.getHubId());
     }

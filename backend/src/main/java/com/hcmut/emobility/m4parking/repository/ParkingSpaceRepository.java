@@ -25,4 +25,10 @@ public interface ParkingSpaceRepository extends JpaRepository<ParkingSpace, Long
     Optional<ParkingSpace> findByChargerPointId(Long chargerPointId);
 
     Optional<ParkingSpace> findByCurrentReservationId(Long reservationId);
+
+    /** BR-M4-08: the space a rental vehicle stands on. */
+    Optional<ParkingSpace> findByDockedVehicleId(Long vehicleId);
+
+    /** BR-M4-01 + BR-M4-08: rental vehicles standing at the Hub take capacity out of every time window. */
+    long countByHubIdAndDockedVehicleIdIsNotNull(Long hubId);
 }

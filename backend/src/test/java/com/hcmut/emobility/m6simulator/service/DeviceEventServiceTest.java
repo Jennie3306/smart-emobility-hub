@@ -9,7 +9,7 @@ import com.hcmut.emobility.m6simulator.domain.SimulatorScenario;
 import com.hcmut.emobility.shared.events.ChargerFailedEvent;
 import com.hcmut.emobility.shared.events.DomainEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
-import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
+import com.hcmut.emobility.shared.events.DeviceReadingReportedEvent;
 import com.hcmut.emobility.shared.events.VehicleFailedEvent;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,19 +49,19 @@ class DeviceEventServiceTest {
     }
 
     @Test
-    void normalReadingPublishesResourceStateUpdatedAndStoresLatestState() {
+    void normalReadingPublishesDeviceReadingReportedAndStoresLatestState() {
         DeviceReading reading = reading(ResourceType.PARKING_SPACE, 1L, "OCCUPIED", null, null, 1);
 
         ProcessingResult result = service.processReading(reading);
 
         ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
         verify(publisher).publish(captor.capture());
-        assertTrue(captor.getValue() instanceof ResourceStateUpdatedEvent);
-        ResourceStateUpdatedEvent event = (ResourceStateUpdatedEvent) captor.getValue();
+        assertTrue(captor.getValue() instanceof DeviceReadingReportedEvent);
+        DeviceReadingReportedEvent event = (DeviceReadingReportedEvent) captor.getValue();
         assertEquals(1L, event.getHubId());
         assertEquals("PARKING_SPACE", event.getResourceType());
         assertEquals(1L, event.getResourceId());
-        assertEquals("OCCUPIED", event.getNewState());
+        assertEquals("OCCUPIED", event.getObservedState());
         assertEquals(ProcessingResult.Status.PROCESSED, result.status());
         assertEquals(1, stateStore.snapshot().size());
     }
@@ -75,13 +75,13 @@ class DeviceEventServiceTest {
 
         ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
         verify(publisher, times(3)).publish(captor.capture());
-        List<ResourceStateUpdatedEvent> stateEvents = captor.getAllValues().stream()
-                .map(ResourceStateUpdatedEvent.class::cast)
+        List<DeviceReadingReportedEvent> stateEvents = captor.getAllValues().stream()
+                .map(DeviceReadingReportedEvent.class::cast)
                 .toList();
         assertEquals(List.of("AVAILABLE", "FREE", "AVAILABLE"),
-                stateEvents.stream().map(ResourceStateUpdatedEvent::getNewState).toList());
+                stateEvents.stream().map(DeviceReadingReportedEvent::getObservedState).toList());
         assertEquals(List.of("VEHICLE", "PARKING_SPACE", "CHARGING_POINT"),
-                stateEvents.stream().map(ResourceStateUpdatedEvent::getResourceType).toList());
+                stateEvents.stream().map(DeviceReadingReportedEvent::getResourceType).toList());
     }
 
     @Test
@@ -109,7 +109,8 @@ class DeviceEventServiceTest {
 
         ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
         verify(publisher).publish(captor.capture());
-        assertTrue(captor.getValue() instanceof ResourceStateUpdatedEvent);
+        assertTrue(captor.getValue() instanceof DeviceReadingReportedEvent);
+        assertEquals(10, ((DeviceReadingReportedEvent) captor.getValue()).getBatteryLevel());
         assertFalse(captor.getValue() instanceof VehicleFailedEvent);
         assertFalse(captor.getValue() instanceof VehicleLowBatteryEvent);
         assertEquals(10, stateStore.snapshot().values().iterator().next().batteryLevel());
@@ -128,19 +129,17 @@ class DeviceEventServiceTest {
     }
 
     @Test
-    void chargerFailurePublishesFaultyStateAndChargerFailed() {
+    void chargerFailurePublishesOnlyChargerFailed() {
         DeviceReading reading = reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, "OFFLINE", 3);
 
         ProcessingResult result = service.processReading(reading);
 
         ArgumentCaptor<DomainEvent> captor = ArgumentCaptor.forClass(DomainEvent.class);
-        verify(publisher, times(2)).publish(captor.capture());
-        List<DomainEvent> events = captor.getAllValues();
-        assertTrue(events.getFirst() instanceof ResourceStateUpdatedEvent);
-        assertEquals("FAULTY", ((ResourceStateUpdatedEvent) events.getFirst()).getNewState());
-        assertTrue(events.get(1) instanceof ChargerFailedEvent);
-        assertEquals("OFFLINE", ((ChargerFailedEvent) events.get(1)).getReason());
-        assertEquals(2, result.outboundEvents().size());
+        // Appendix A v2: M5 owns the port, so M5 (not M6) publishes FAULTY after handling ChargerFailed.
+        verify(publisher).publish(captor.capture());
+        assertTrue(captor.getValue() instanceof ChargerFailedEvent);
+        assertEquals("OFFLINE", ((ChargerFailedEvent) captor.getValue()).getReason());
+        assertEquals(1, result.outboundEvents().size());
     }
 
     @Test

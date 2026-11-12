@@ -73,18 +73,19 @@ public class ParkingEventHandler {
     }
 
     /**
-     * MaintenanceResolved (bang chuyen trang thai muc 4.1): M6 bao tru sac "AVAILABLE"/"IDLE" tro lai.
-     * Chi nhan tu vung cua M6; "FREE" cua M5 la trang thai phan cong, khong phai bao tri xong.
-     * Bao cao PARKING_SPACE tu cam bien M6 bi bo qua: M4 la nguon su that cua trang thai cho do.
+     * MaintenanceResolved (state table 4.1): M5 owns the charging point and reports it operational again
+     * (any state other than FAULTY / UNDER_REPAIR) -> unblock the space that was blocked for CHARGER_FAILURE.
+     * Appendix A v2: M4 reacts to the owner's decision, not to the raw M6 reading. handleChargerRecovered is
+     * idempotent and leaves spaces blocked by the Operator untouched, so repeated FREE / IN_USE updates are harmless.
+     * PARKING_SPACE updates are M4's own and ignored here.
      */
     @EventListener
     @Order(0)
     @Transactional
     public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
-        if (!event.isDeviceReading() || !CHARGING_POINT.equals(event.getResourceType())
-                || event.getNewState() == null) return;
+        if (!CHARGING_POINT.equals(event.getResourceType()) || event.getNewState() == null) return;
         String state = event.getNewState().trim().toUpperCase();
-        if (!state.equals("AVAILABLE") && !state.equals("IDLE")) return;
+        if (state.equals("FAULTY") || state.equals("UNDER_REPAIR")) return;
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
         parking.handleChargerRecovered(event.getResourceId());
     }

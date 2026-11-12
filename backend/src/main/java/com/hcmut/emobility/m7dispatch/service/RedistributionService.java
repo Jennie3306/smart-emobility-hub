@@ -8,9 +8,14 @@ import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionTaskRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
+import com.hcmut.emobility.shared.contracts.ParkingDock;
 import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
+import com.hcmut.emobility.shared.events.DispatchFailedEvent;
+import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,11 +26,15 @@ import java.util.Set;
 
 /**
  * FR-M7-01..03. Tao, duyet va theo doi nhiem vu dieu chuyen xe.
- * M7 khong doi trang thai xe: khi nhiem vu DONE, M7 phat DispatchCompletedEvent
- * va M3 tu chuyen xe sang hub dich, M1 tu cap nhat dashboard hai hub.
+ * M7 khong doi trang thai xe: IN_PROGRESS phat DispatchStartedEvent, DONE phat DispatchCompletedEvent,
+ * FAILED (sau khi da khoi hanh) phat DispatchFailedEvent; M3 tu doi trang thai va vi tri xe, M1 tu cap nhat
+ * dashboard. Cho do cua xe di qua ParkingDock cua M4 (quy cho do chung, Appendix A v2): roi Hub nguon khi
+ * khoi hanh, giu cho o Hub dich khi den (Hub dich da het cho -> DESTINATION_FULL, nhiem vu van IN_PROGRESS).
  */
 @Service
 public class RedistributionService {
+
+    private static final Logger log = LoggerFactory.getLogger(RedistributionService.class);
 
     /** BR-M7-01: xe dang duoc dat hoac dang co nguoi su dung thi khong dieu chuyen. */
     private static final Set<String> NOT_MOVABLE = Set.of("RESERVED", "BOOKED", "IN_USE");
@@ -35,17 +44,20 @@ public class RedistributionService {
     private final VehicleClient vehicleClient;
     private final HubClient hubClient;
     private final RecommendationClient recommendationClient;
+    private final ParkingDock parkingDock;
 
     public RedistributionService(RedistributionTaskRepository repository,
                                  EventPublisher events,
                                  VehicleClient vehicleClient,
                                  HubClient hubClient,
-                                 RecommendationClient recommendationClient) {
+                                 RecommendationClient recommendationClient,
+                                 ParkingDock parkingDock) {
         this.repository = repository;
         this.events = events;
         this.vehicleClient = vehicleClient;
         this.hubClient = hubClient;
         this.recommendationClient = recommendationClient;
+        this.parkingDock = parkingDock;
     }
 
     /** FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED. */
@@ -122,13 +134,45 @@ public class RedistributionService {
                     "Cannot move task from " + current + " to " + newStatus);
         }
 
+        if (newStatus == RedistributionTaskStatus.IN_PROGRESS) {
+            // BR-M7-01 at departure time too: a student may have reserved the vehicle since the task was created.
+            ExternalDtos.VehicleInfo vehicle = vehicleClient.checkVehicle(task.getVehicleId())
+                    .orElseThrow(() -> new BusinessException("VEHICLE_NOT_FOUND",
+                            "Vehicle not found: " + task.getVehicleId(), HttpStatus.NOT_FOUND));
+            if (vehicle.state() != null && NOT_MOVABLE.contains(vehicle.state().toUpperCase())) {
+                throw new BusinessException("VEHICLE_RESERVED",
+                        "Vehicle " + task.getVehicleId() + " was reserved or taken after the task was created (BR-M7-01)");
+            }
+            parkingDock.undockRentalVehicle(task.getVehicleId());
+        } else if (newStatus == RedistributionTaskStatus.DONE) {
+            try {
+                parkingDock.dockRentalVehicle(task.getVehicleId(), task.getDestinationHubId());
+            } catch (BusinessException ex) {
+                if (!"HUB_FULL".equals(ex.getCode())) throw ex;
+                throw new BusinessException("DESTINATION_FULL", "Destination hub " + task.getDestinationHubId()
+                        + " has no free parking space now. Wait for a space or mark the task FAILED (BR-M7-03).");
+            }
+        } else if (newStatus == RedistributionTaskStatus.FAILED && current == RedistributionTaskStatus.IN_PROGRESS) {
+            try {
+                parkingDock.dockRentalVehicle(task.getVehicleId(), task.getSourceHubId());
+            } catch (BusinessException ex) {
+                log.warn("[M7] Task {} failed: vehicle {} is back at hub {} without a parking space ({})",
+                        task.getTaskId(), task.getVehicleId(), task.getSourceHubId(), ex.getCode());
+            }
+        }
+
         task.setStatus(newStatus);
         task.setUpdatedAt(LocalDateTime.now());
         RedistributionTask saved = repository.save(task);
 
-        if (newStatus == RedistributionTaskStatus.DONE) {
+        if (newStatus == RedistributionTaskStatus.IN_PROGRESS) {
+            events.publish(new DispatchStartedEvent(saved.getTaskId(), saved.getVehicleId(),
+                    saved.getSourceHubId(), saved.getDestinationHubId()));
+        } else if (newStatus == RedistributionTaskStatus.DONE) {
             events.publish(new DispatchCompletedEvent(saved.getTaskId(), saved.getVehicleId(),
                     saved.getSourceHubId(), saved.getDestinationHubId()));
+        } else if (newStatus == RedistributionTaskStatus.FAILED && current == RedistributionTaskStatus.IN_PROGRESS) {
+            events.publish(new DispatchFailedEvent(saved.getTaskId(), saved.getVehicleId(), saved.getSourceHubId()));
         }
         return saved;
     }

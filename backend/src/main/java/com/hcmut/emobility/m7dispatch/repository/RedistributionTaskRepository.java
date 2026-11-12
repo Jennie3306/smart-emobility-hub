@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,9 @@ public interface RedistributionTaskRepository extends JpaRepository<Redistributi
     Optional<RedistributionTask> findActiveByVehicleId(@Param("vehicleId") Long vehicleId);
 
     List<RedistributionTask> findByStatusOrderByCreatedAtDesc(RedistributionTaskStatus status);
+
+    /** BR-M7-03: vehicles already promised to a destination Hub (CREATED or IN_PROGRESS tasks). */
+    long countByDestinationHubIdAndStatusIn(Long destinationHubId, Collection<RedistributionTaskStatus> statuses);
 
     List<RedistributionTask> findAllByOrderByCreatedAtDesc();
 }

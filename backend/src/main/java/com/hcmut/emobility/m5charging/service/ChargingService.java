@@ -16,6 +16,7 @@ import com.hcmut.emobility.m5charging.repository.ChargingPriorityAuditRepository
 import com.hcmut.emobility.m5charging.repository.ChargingSessionRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
 import com.hcmut.emobility.shared.events.ChargingCompletedEvent;
+import com.hcmut.emobility.shared.events.ChargingStartedEvent;
 import com.hcmut.emobility.shared.events.DomainEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
@@ -256,6 +257,9 @@ public class ChargingService {
         sessions.save(session);
         points.save(point);
         publishResourceState(point, "IN_USE");
+        // Appendix A v2: lets M3 move a rental vehicle LOW_BATTERY -> CHARGING.
+        events.publish(new ChargingStartedEvent(session.getId(), session.getHubId(), point.getId(),
+                session.getVehicleKind().name(), session.getVehicleId()));
         queuePublisher.publish(session.getHubId(), response(session, null));
         return response(session, null);
     }

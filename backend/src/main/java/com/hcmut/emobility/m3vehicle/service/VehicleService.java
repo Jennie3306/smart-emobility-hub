@@ -8,6 +8,7 @@ import com.hcmut.emobility.m3vehicle.domain.SessionStatus;
 import com.hcmut.emobility.m3vehicle.repository.RentalSessionRepository;
 
 import com.hcmut.emobility.shared.common.BusinessException;
+import com.hcmut.emobility.shared.contracts.ParkingDock;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
@@ -19,6 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.hcmut.emobility.m3vehicle.dto.CurrentTripResponse;
 
+import java.util.stream.Collectors;
+
 @Service
 public class VehicleService {
 
@@ -28,16 +31,17 @@ public class VehicleService {
 
     @Value("${app.charging.low-battery-threshold}")
     private int lowBatteryThreshold;
-    private final HubServiceClient hubServiceClient;
+    /** BR-M3-03: the Hub's shared parking pool, owned by M4 (Appendix A v2). */
+    private final ParkingDock parkingDock;
 
     public VehicleService(RentalVehicleRepository repository,
                           RentalSessionRepository sessionRepository,
                           EventPublisher publisher,
-                          HubServiceClient hubServiceClient) {
+                          ParkingDock parkingDock) {
         this.repository = repository;
         this.sessionRepository = sessionRepository;
         this.publisher = publisher;
-        this.hubServiceClient = hubServiceClient;
+        this.parkingDock = parkingDock;
     }
 
     /**
@@ -65,6 +69,8 @@ public class VehicleService {
         }
 
         Long originHubId=vehicle.getCurrentHubId();
+        // BR-M3-03: the vehicle leaves the Hub, so its parking space returns to the shared pool.
+        parkingDock.undockRentalVehicle(vehicleId);
         vehicle.changeState(VehicleState.IN_USE);
         vehicle.setCurrentHubId(null);
         vehicle.clearReservation();
@@ -77,7 +83,9 @@ public class VehicleService {
 
     /**
      * Tra xe tai mot Hub: IN_USE -> AVAILABLE (hoac LOW_BATTERY neu pin duoi nguong).
-     * Phat VehicleReturnedEvent de M5 xet dua vao hang doi sac va M2 dong dat cho.
+     * BR-M3-03: the vehicle needs a free space in the Hub's shared parking pool (M4, ParkingDock). The space
+     * row is locked, so two students returning to the last space cannot both succeed; the loser gets HUB_FULL
+     * with the Hubs that still have room. Phat VehicleReturnedEvent de M5 xet dua vao hang doi sac va M2 dong dat cho.
      */
     @Transactional
     public void returnVehicle(Long vehicleId, Long hubId, int batteryLevel, Long userId) {
@@ -95,13 +103,13 @@ public class VehicleService {
                     HttpStatus.BAD_REQUEST
             );
         }
-        // BR-M3-03: Hub đích còn chỗ
-        if (!hubServiceClient.hasAvailableSpace(hubId)) {
-            throw new BusinessException(
-                    "HUB_FULL",
-                    "Destination hub is full. Choose another hub.",
-                    HttpStatus.CONFLICT
-            );
+        // BR-M3-03: Hub đích còn chỗ - giữ một chỗ trong quỹ chỗ đỗ chung của M4.
+        try {
+            parkingDock.dockRentalVehicle(vehicleId, hubId);
+        } catch (BusinessException ex) {
+            if (!"HUB_FULL".equals(ex.getCode())) throw ex;
+            throw new BusinessException("HUB_FULL",
+                    "This Hub has no free parking space. " + alternativeHubs(hubId), HttpStatus.CONFLICT);
         }
 
         vehicle.updateBattery(batteryLevel);
@@ -115,8 +123,17 @@ public class VehicleService {
 
         publisher.publish(new VehicleReturnedEvent(vehicleId, hubId, batteryLevel));
         if (batteryLevel < lowBatteryThreshold) {
-            publisher.publish(new VehicleLowBatteryEvent(vehicleId, batteryLevel));
+            publisher.publish(new VehicleLowBatteryEvent(vehicleId, batteryLevel, hubId));
         }
+    }
+
+    /** UC-M3-02 exception "Hub full": name the Hubs that still have a free space. */
+    private String alternativeHubs(Long fullHubId) {
+        String others = parkingDock.vacancies().stream()
+                .filter(v -> !v.hubId().equals(fullHubId) && v.freeSpaces() > 0)
+                .map(v -> v.hubName() + " (" + v.freeSpaces() + " free)")
+                .collect(Collectors.joining(", "));
+        return others.isEmpty() ? "No other Hub has a free space right now." : "Try: " + others + ".";
     }
 
     private RentalVehicle findOrThrow(Long id) {

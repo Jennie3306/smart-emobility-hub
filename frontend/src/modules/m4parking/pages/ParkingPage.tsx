@@ -80,7 +80,7 @@ function SpaceGrid({ spaces, selectedId, onSelect, renderAction }: {
       const selected = selectedId === space.id;
       return <div key={space.id} className={`rounded border-2 p-2 text-center text-xs ${SPACE_TONE[space.status]} ${selected ? "ring-2 ring-brand ring-offset-1" : ""}`}>
         <button type="button" disabled={!selectable} onClick={() => { if (onSelect && space.status === "FREE") onSelect(space); }}
-          className="w-full disabled:cursor-default" title={`${space.spaceCode} · ${space.type} · ${space.status}${space.blockedReason ? ` (${space.blockedReason})` : ""}`}>
+          className="w-full disabled:cursor-default" title={`${space.spaceCode} · ${space.type} · ${space.status}${space.blockedReason ? ` (${space.blockedReason})` : ""}${space.dockedVehicleId != null ? ` · rental vehicle #${space.dockedVehicleId}` : ""}`}>
           <div className="font-mono font-semibold">{space.spaceCode}{space.chargerPointId != null && " ⚡"}</div>
           <div className="mt-0.5 text-[10px] uppercase tracking-wide">{space.type} · {space.status}</div>
         </button>
@@ -292,7 +292,7 @@ function BookTab({ hubs, hubId, setHubId, spaces, busy, setBusy, setError, setNo
         {charge && <label className="mt-2 block">Battery level now (%)<input min="0" max="89" type="number" className="mt-1 w-full rounded border p-2" value={battery} placeholder={vehicle?.batteryLevel != null && kind === "PERSONAL" ? `${vehicle.batteryLevel} (from your vehicle)` : ""} onChange={e => setBattery(e.target.value)} /></label>}
         {charge && <p className="mt-2 text-xs text-slate-500">Only spaces with a charging point. Smart charging (M5) queues your vehicle from your arrival time.</p>}
       </div>
-      {availability && <p className={`text-xs ${availability.remaining > 0 ? "text-slate-600" : "font-semibold text-red-700"}`}>Capacity for this window: {availability.activeBookings} / {availability.capacity} booked · {availability.remaining} left</p>}
+      {availability && <p className={`text-xs ${availability.remaining > 0 ? "text-slate-600" : "font-semibold text-red-700"}`}>Capacity for this window: {availability.activeBookings} booked + {availability.dockedRentalVehicles} rental vehicles parked / {availability.capacity} · {availability.remaining} left</p>}
       <p className="text-xs text-slate-500">{spaceId != null ? <>Selected space <strong>{spaces.find(s => s.id === spaceId)?.spaceCode}</strong>. <button type="button" className="underline" onClick={() => setSpaceId(null)}>Let the system choose</button></> : "No space selected: the system chooses a suitable free space."}</p>
       <button disabled={busy || hubId == null || noVehicle || (availability != null && availability.remaining <= 0)} className="w-full rounded bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Booking…" : charge ? "Book & charge" : "Book space"}</button>
     </form>
@@ -477,11 +477,11 @@ function OperatorView({ hubs, hubId, setHubId, spaces, selectedHub, busy, setBus
       <Metric label="Capacity" value={selectedHub.capacity} detail="Parking spaces at this Hub" />
       <Metric label="Free" value={selectedHub.free} detail={`${selectedHub.freeWithCharger} with a charger`} />
       <Metric label="Reserved" value={selectedHub.reserved} detail="Waiting for check-in" />
-      <Metric label="Occupied" value={selectedHub.occupied} detail="Checked in" />
+      <Metric label="Occupied" value={selectedHub.occupied} detail={`${selectedHub.occupied - selectedHub.dockedRental} checked in · ${selectedHub.dockedRental} rental vehicles`} />
       <Metric label="Blocked" value={selectedHub.blocked} detail="Incident or maintenance" />
     </div>}
     <section className="space-y-3">
-      <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold text-slate-900">Spaces</h2><p className="text-xs text-slate-500">Blocking a reserved space cancels its booking (BR-M4-06). A space blocked because its charger failed reopens when the charger reports AVAILABLE again.</p></div>
+      <div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold text-slate-900">Spaces</h2><p className="text-xs text-slate-500">Blocking a reserved space cancels its booking (BR-M4-06). A space blocked because its charger failed reopens when M5 reports the charger back in service. Rental vehicles standing at the Hub occupy spaces too (shared pool, BR-M4-08).</p></div>
         <select className="rounded border px-3 py-2 text-sm" value={filter} onChange={e => setFilter(e.target.value as "ALL" | SpaceStatus)}><option value="ALL">All statuses</option><option value="FREE">Free</option><option value="RESERVED">Reserved</option><option value="OCCUPIED">Occupied</option><option value="BLOCKED">Blocked</option></select></div>
       <SpaceGrid spaces={visible} renderAction={space => space.status === "BLOCKED"
         ? <button disabled={busy} onClick={() => act(space, "unblock")} className="mt-1 w-full rounded border border-slate-300 bg-white px-1 py-0.5 text-[10px] text-slate-700 no-underline disabled:opacity-50">Unblock</button>

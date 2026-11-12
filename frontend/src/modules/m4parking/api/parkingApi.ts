@@ -17,6 +17,8 @@ export interface ParkingHub {
   occupied: number;
   blocked: number;
   freeWithCharger: number;
+  /** BR-M4-08: rental vehicles standing at the Hub (part of "occupied"). */
+  dockedRental: number;
 }
 
 export interface ParkingSpace {
@@ -27,6 +29,8 @@ export interface ParkingSpace {
   status: SpaceStatus;
   chargerPointId: number | null;
   blockedReason: "CHARGER_FAILURE" | "OPERATOR" | null;
+  /** BR-M4-08: rental vehicle parked on this space, if any. */
+  dockedVehicleId: number | null;
 }
 
 export interface Availability {
@@ -35,6 +39,7 @@ export interface Availability {
   endAt: string;
   capacity: number;
   activeBookings: number;
+  dockedRentalVehicles: number;
   remaining: number;
   freeSpaces: number;
 }
