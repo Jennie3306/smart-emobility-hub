@@ -17,7 +17,4 @@ public final class ExternalDtos {
         public boolean isFull() { return incomingVehicles >= freeSpaces; }
     }
 
-    /** Khuyen nghi dieu chuyen mot xe cu the (tu M8). */
-    public record Recommendation(String recommendationId, Long vehicleId,
-                                 Long sourceHubId, Long destinationHubId) { }
 }

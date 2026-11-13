@@ -11,6 +11,7 @@ const nav = [
   { to: "/m4/parking", label: "Parking (M4)" },
   { to: "/m5/charging", label: "Smart charging (M5)" },
   { to: "/m6/operations", label: "Incidents & IoT (M6)" },
+  { to: "/m7/redistribution", label: "Redistribution (M7)" },
   // moi module tu them muc cua minh
   { to: "/m8/simulation", label: "What-if Studio (M8)" },
 ];

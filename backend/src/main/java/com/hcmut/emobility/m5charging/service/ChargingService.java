@@ -442,10 +442,15 @@ public class ChargingService {
 
     @Transactional
     public void applyRecommendation(String recommendationId, String actionType) {
-        // Current M7 publisher sends only actionType="REDISTRIBUTE" and no M5 session/slot payload.
-        // Do not guess which charging session should be changed; wait for a typed event contract.
-        log.info("[M5] Recommendation {} received with actionType={}; no charging-session target is present, so no M5 change was applied",
-                recommendationId, actionType);
+        // Appendix A v2: M5 acts only when the approved action concerns charging. Approved recommendations are
+        // vehicle moves today (M7 sends actionType="REDISTRIBUTE"; M8 proposes "dispatch" and "reroute"), so there
+        // is nothing to reschedule. A charging action would need a typed payload (session / port) first.
+        if (!"CHARGING".equalsIgnoreCase(actionType)) {
+            log.info("[M5] Recommendation {} ({}) is not a charging action; charging schedule unchanged",
+                    recommendationId, actionType);
+            return;
+        }
+        log.warn("[M5] Charging recommendation {} has no session or port in its payload; not applied", recommendationId);
     }
 
     @Transactional(readOnly = true)

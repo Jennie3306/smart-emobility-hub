@@ -3,7 +3,9 @@ package com.hcmut.emobility.m7dispatch.client;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -30,5 +32,21 @@ public class JdbcFleetClient implements VehicleClient {
                         rs.getObject("current_hub_id", Long.class)),
                 vehicleId);
         return rows.stream().findFirst();
+    }
+
+    @Override
+    public List<Long> availableVehiclesAt(Long hubId) {
+        return jdbc.queryForList(
+                "SELECT id FROM rental_vehicle WHERE current_hub_id = ? AND state = 'AVAILABLE' "
+                        + "ORDER BY battery_level DESC, id", Long.class, hubId);
+    }
+
+    @Override
+    public Map<Long, Integer> availableCountPerHub() {
+        Map<Long, Integer> counts = new HashMap<>();
+        jdbc.query("SELECT current_hub_id, COUNT(*) FROM rental_vehicle "
+                        + "WHERE state = 'AVAILABLE' AND current_hub_id IS NOT NULL GROUP BY current_hub_id",
+                rs -> { counts.put(rs.getLong(1), rs.getInt(2)); });
+        return counts;
     }
 }

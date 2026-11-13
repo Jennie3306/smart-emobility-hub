@@ -2,7 +2,6 @@ package com.hcmut.emobility.m7dispatch.service;
 
 import com.hcmut.emobility.m7dispatch.client.ExternalDtos;
 import com.hcmut.emobility.m7dispatch.client.HubClient;
-import com.hcmut.emobility.m7dispatch.client.RecommendationClient;
 import com.hcmut.emobility.m7dispatch.client.VehicleClient;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
@@ -13,7 +12,6 @@ import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.DispatchFailedEvent;
 import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
-import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,7 +28,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test case TC-M7-01..12 theo muc 8 Template_M7.
+ * Test case TC-M7-01..04, 07..12 theo muc 8 Template_M7 (TC-M7-05, 06 va 15..20: RecommendationServiceTest).
  * Id dung Long de khop hop dong su kien (Phu luc A). Suc chua Hub dich = cho trong trong quy cho do chung
  * cua M4 tru so xe dang duoc dieu toi (BR-M7-03, Appendix A v2).
  */
@@ -42,7 +40,6 @@ class RedistributionServiceTest {
     @Mock private RedistributionTaskRepository repository;
     @Mock private VehicleClient vehicleClient;
     @Mock private HubClient hubClient;
-    @Mock private RecommendationClient recommendationClient;
     @Mock private EventPublisher eventPublisher;
     @Mock private ParkingDock parkingDock;
 
@@ -122,36 +119,6 @@ class RedistributionServiceTest {
 
         assertEquals("DESTINATION_FULL", ex.getCode());
         assertTrue(ex.getMessage().contains("BR-M7-03"));
-    }
-
-    @Test
-    @DisplayName("TC-M7-05 duyet khuyen nghi hop le thi tao nhiem vu va phat su kien")
-    void tc05_approveRecommendation() {
-        when(recommendationClient.getRecommendation("REC-01")).thenReturn(Optional.of(
-                new ExternalDtos.Recommendation("REC-01", VEHICLE, HUB_A, HUB_B)));
-        vehicleIs("AVAILABLE");
-        when(repository.findActiveByVehicleId(anyLong())).thenReturn(Optional.empty());
-        destinationHas(10, 5);
-        when(repository.save(any(RedistributionTask.class))).thenAnswer(i -> i.getArgument(0));
-
-        RedistributionTask task = service.approveRecommendation("REC-01");
-
-        assertEquals(RedistributionTaskStatus.CREATED, task.getStatus());
-        assertEquals("REC-01", task.getRecommendationId());
-        verify(eventPublisher, times(1)).publish(any(RecommendationApprovedEvent.class));
-    }
-
-    @Test
-    @DisplayName("TC-M7-06 khuyen nghi khong ton tai thi khong tao nhiem vu")
-    void tc06_unknownRecommendation() {
-        when(recommendationClient.getRecommendation("REC-X")).thenReturn(Optional.empty());
-
-        BusinessException ex = assertThrows(BusinessException.class,
-                () -> service.approveRecommendation("REC-X"));
-
-        assertEquals("RECOMMENDATION_NOT_FOUND", ex.getCode());
-        verify(repository, never()).save(any());
-        verify(eventPublisher, never()).publish(any());
     }
 
     @Test
