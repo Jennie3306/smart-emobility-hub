@@ -1,5 +1,5 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
-import { AppLayout } from "./layout/AppLayout";
+import { createBrowserRouter } from "react-router-dom";
+import { AppLayout, RoleHome } from "./layout/AppLayout";
 import { LoginPage } from "./layout/LoginPage";
 
 // Moi module tu them route cua minh vao day; KHONG sua route cua module khac.
@@ -9,7 +9,7 @@ export const router = createBrowserRouter([
     path: "/",
     element: <AppLayout />,
     children: [
-      { index: true, element: <Navigate to="/m1/dashboard" replace /> },
+      { index: true, element: <RoleHome /> },
       // M1
       { path: "m1/dashboard", lazy: async () => ({ Component: (await import("../modules/m1monitoring/pages/DashboardPage")).default }) },
       { path: "m1/hubs", lazy: async () => ({ Component: (await import("../modules/m1monitoring/pages/HubListPage")).default }) },

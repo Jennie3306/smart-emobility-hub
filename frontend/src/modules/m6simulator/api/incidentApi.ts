@@ -67,19 +67,19 @@ export function incidentError(error: unknown): string {
   const data = response?.data;
   switch (data?.code) {
     case "ACTIVE_INCIDENT_EXISTS":
-      return `Tài nguyên này đang có sự cố #${data.details?.existingIncidentId} (${data.details?.existingStatus}). Xử lý sự cố đó trước.`;
+      return `This resource already has incident #${data.details?.existingIncidentId} (${data.details?.existingStatus}). Handle that incident first.`;
     case "STALE_VERSION":
-      return "Sự cố vừa được người khác cập nhật. Danh sách đã tải lại, hãy thao tác lại.";
+      return "Someone else has just updated this incident. The list was reloaded; please try again.";
     case "INVALID_STATE_TRANSITION":
-      return "Thao tác không hợp lệ với trạng thái hiện tại.";
+      return "This action is not allowed in the current state.";
     case "RESOURCE_NOT_FOUND":
-      return "Không tìm thấy xe hoặc cổng sạc với mã này.";
+      return "No vehicle or charging point has this ID.";
     case "RESOURCE_HUB_MISMATCH":
-      return "Tài nguyên không thuộc Hub đã chọn.";
+      return "The resource does not belong to the selected hub.";
     case "ASSIGNEE_NOT_FOUND":
-      return "Không có tài khoản Operator với tên đăng nhập này.";
+      return "There is no Operator account with this username.";
   }
   if (data?.message) return data.message;
-  if (response?.status === 403) return "Chỉ tài khoản Operator được quản lý sự cố.";
-  return "Không thể hoàn tất yêu cầu. Kiểm tra kết nối rồi thử lại.";
+  if (response?.status === 403) return "Only Operator accounts can manage incidents.";
+  return "The request could not be completed. Check the connection and try again.";
 }
