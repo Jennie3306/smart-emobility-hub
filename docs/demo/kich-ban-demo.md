@@ -23,7 +23,7 @@ Mỗi tài nguyên có **một module chủ sở hữu**; module khác chỉ đ�
 ## Luồng demo (khoảng 10 phút)
 
 1. **Operator — Dashboard (M1):** Hub Ga Metro 77% chỗ đỗ (29 xe cá nhân + 2 xe thuê), 7/8 trụ sạc hoạt động (trụ 8 hỏng sẵn), cảnh báo `LOW_VEHICLE` vì chỉ còn 1 xe sẵn sàng; các Hub ký túc xá dư xe.
-2. **student1 — Find a vehicle (M2) → My reservation:** đặt EB-001 ở Hub Ga Metro (*Book vehicle*), rồi *Pick up vehicle* → chỗ P-36 được nhả, Hub còn 30/40 = 75%.
+2. **student1 — Find a vehicle (M2) → My reservation:** đặt EB-001 ở Hub Ga Metro (*Book vehicle*), rồi *Pick up vehicle* → chỗ P-36 được nhả, Hub còn 30/40 = 75%. Khung **Current trip** (FR-M3-03) hiện ngay dưới đặt chỗ: xe EB-001, giờ bắt đầu và số phút, vị trí *On the road (picked up at Metro Hub)*, pin 92%.
 3. **student1 — Parking (M4):** *My vehicles* → thêm xe; *Book a space* → Hub Ga Metro, giờ đến = bây giờ, tick *Charge while parked*, pin 30% → hệ thống chọn P-01 (có trụ 1). Hub 31/40.
    - M5: phiên sạc vào hàng đợi, được gán **trụ 1** (trụ của chỗ P-01), trụ chuyển RESERVED trên dashboard.
 4. **student1 — My reservation (M3 trả xe):** *Return vehicle* về Hub Ga Metro, pin 70% → xe chiếm một chỗ trong quỹ chung, Hub lên 32/40 = 80%.
