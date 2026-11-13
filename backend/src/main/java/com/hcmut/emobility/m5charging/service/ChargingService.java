@@ -332,7 +332,7 @@ public class ChargingService {
             }
         }
         if (bonusApplied) recalculateHub(hubId, now);
-        // M6 already emits the FAULTY resource update. M5 emits only updates for its own assignment changes.
+        // FAULTY was published above (M5 owns the point, contract v2); recalculateHub published the reassignments.
         queuePublisher.publish(hubId, hubSessions(hubId));
     }
 
