@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { errorMessage, hubName, reservationApi, type Reservation, type ReservationState } from "../api/reservationApi";
+import { CurrentTripCard } from "../../m3vehicle/components/CurrentTripCard";
 
 /** State labels and colours from table 5.2. */
 const STATE_LABEL: Record<ReservationState, { text: string; className: string }> = {
@@ -14,7 +15,7 @@ const STATE_LABEL: Record<ReservationState, { text: string; className: string }>
 
 type Banner = { kind: "info" | "error"; text: string } | null;
 
-/** S-M2-03 Current reservation. FR-M2-04, FR-M2-07; reflects FR-M2-05 (Timer) and FR-M2-08 (vehicle failure). */
+/** S-M2-03 Current reservation. FR-M2-04, FR-M2-07, and the M3 current-trip card (FR-M3-03); reflects FR-M2-05 (Timer) and FR-M2-08 (vehicle failure). */
 export default function MyReservationPage() {
   const [current, setCurrent] = useState<Reservation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,6 +127,9 @@ export default function MyReservationPage() {
             )}
           </div>
           <p>Vehicle <b>{current.vehicleCode ?? `#${current.resourceId}`}</b> at {hubName(current.hubId)}</p>
+          {current.state === "CHECKED_IN" && (
+            <CurrentTripCard hubLabel={hubName} pickupHubId={current.hubId ?? undefined} refreshKey={`${current.id}-${current.resourceId}`} />
+          )}
           {current.state==="CHECKED_IN"&&<section className="space-y-3 rounded border p-4"><h2 className="font-semibold">Return your vehicle</h2><div className="flex flex-wrap gap-4"><label>Destination hub<select className="ml-2 rounded border p-2" value={returnHub} onChange={e=>setReturnHub(Number(e.target.value))}>{hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label><label>Battery on return (%)<input className="ml-2 w-24 rounded border p-2" type="number" min={0} max={100} value={returnBattery} onChange={e=>setReturnBattery(Number(e.target.value))}/></label></div><p className="text-xs text-slate-500">Returning needs a free space in the destination Hub's parking pool (M4). If the Hub is full, the system suggests Hubs that still have room.</p><button className="rounded bg-brand px-4 py-2 text-white disabled:opacity-50" disabled={busy||hubs.length===0||returnBattery<0||returnBattery>100} onClick={returnTrip}>{busy?"Returning…":"Return vehicle"}</button></section>}
 
           {current.state === "CONFIRMED" && (
