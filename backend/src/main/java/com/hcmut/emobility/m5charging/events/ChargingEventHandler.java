@@ -3,12 +3,12 @@ package com.hcmut.emobility.m5charging.events;
 import com.hcmut.emobility.m5charging.domain.VehicleKind;
 import com.hcmut.emobility.m5charging.service.ChargingService;
 import com.hcmut.emobility.shared.events.ChargerFailedEvent;
+import com.hcmut.emobility.shared.events.DeviceReadingReportedEvent;
 import com.hcmut.emobility.shared.events.ChargingRequestedEvent;
 import com.hcmut.emobility.shared.events.ProcessedEventStore;
 import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
 import com.hcmut.emobility.shared.events.ReservationCancelledEvent;
 import com.hcmut.emobility.shared.events.ReservationExpiredEvent;
-import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
 import com.hcmut.emobility.shared.events.VehicleLowBatteryEvent;
 import com.hcmut.emobility.shared.events.VehicleReturnedEvent;
 import org.slf4j.Logger;
@@ -51,7 +51,7 @@ public class ChargingEventHandler {
         }
         try {
             charging.handleM4ChargingRequest(event.getUserId(), event.getHubId(), event.getParkingSpaceId(),
-                    kind, event.getVehicleId(), event.getBatteryLevel(), event.getLeaveAt());
+                    kind, event.getVehicleId(), event.getBatteryLevel(), event.getArriveAt(), event.getLeaveAt());
         } catch (RuntimeException ex) {
             log.error("[M5] ChargingRequested {} for parking space {} failed: {}", event.getEventId(),
                     event.getParkingSpaceId(), ex.getMessage(), ex);
@@ -75,14 +75,17 @@ public class ChargingEventHandler {
         charging.handleChargerFailed(event.getChargingPointId(), event.getHubId());
     }
 
+    /**
+     * Appendix A v2: M6 reports what the charging point's device observed; M5 owns the port and decides its
+     * state (e.g. a FAULTY port reported online again becomes FREE), then publishes ResourceStateUpdatedEvent.
+     */
     @EventListener
     @Order(0)
     @Transactional
-    public void onResourceStateUpdated(ResourceStateUpdatedEvent event) {
+    public void onDeviceReadingReported(DeviceReadingReportedEvent event) {
+        if (!"CHARGING_POINT".equals(event.getResourceType())) return;
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
-        if ("CHARGING_POINT".equals(event.getResourceType())) {
-            charging.synchroniseChargingPoint(event.getResourceId(), event.getHubId(), event.getNewState());
-        }
+        charging.synchroniseChargingPoint(event.getResourceId(), event.getHubId(), event.getObservedState());
     }
 
     @EventListener

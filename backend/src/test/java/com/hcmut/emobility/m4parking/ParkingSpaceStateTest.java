@@ -53,13 +53,13 @@ class ParkingSpaceStateTest {
     }
 
     @Test
-    @DisplayName("Muc 4.1: Status.canMoveTo khop bang chuyen trang thai (16 cap)")
+    @DisplayName("Muc 4.1: Status.canMoveTo khop bang chuyen trang thai (16 cap, gom dock xe thue BR-M4-08)")
     void transitionTableMatchesDesign() {
         Map<Status, Set<Status>> allowed = Map.of(
-                FREE, EnumSet.of(RESERVED, BLOCKED),
+                FREE, EnumSet.of(RESERVED, OCCUPIED, BLOCKED),
                 RESERVED, EnumSet.of(OCCUPIED, FREE, BLOCKED),
                 OCCUPIED, EnumSet.of(FREE, BLOCKED),
-                BLOCKED, EnumSet.of(FREE));
+                BLOCKED, EnumSet.of(FREE, OCCUPIED));
 
         for (Status from : Status.values()) {
             for (Status to : Status.values()) {
@@ -75,6 +75,54 @@ class ParkingSpaceStateTest {
 
         assertRejected(INVALID_TRANSITION, () -> space.checkIn(1001L));
 
+        assertState(space, FREE, null);
+    }
+
+    @Test
+    @DisplayName("TC-M4-41 (BR-M4-08): xe thue dock vao cho FREE -> OCCUPIED khong reservation; roi Hub -> FREE")
+    void rentalVehicleDocksAndLeaves() {
+        ParkingSpace space = newSpace();
+
+        space.dock(77L);
+        assertState(space, OCCUPIED, null);
+        assertEquals(77L, space.getDockedVehicleId());
+
+        space.undock(77L);
+        assertState(space, FREE, null);
+        assertEquals(null, space.getDockedVehicleId());
+    }
+
+    @Test
+    @DisplayName("TC-M4-42 (BR-M4-08): dock vao cho khong FREE bi chan; undock sai xe bi chan")
+    void dockOnlyOnFreeSpaceAndUndockOnlyTheDockedVehicle() {
+        ParkingSpace reserved = reservedSpace(6006L);
+        assertRejected("SPACE_NOT_AVAILABLE", () -> reserved.dock(77L));
+        assertState(reserved, RESERVED, 6006L);
+
+        ParkingSpace docked = newSpace();
+        docked.dock(77L);
+        assertRejected("SPACE_NOT_AVAILABLE", () -> docked.dock(78L));
+        assertRejected("VEHICLE_NOT_DOCKED", () -> docked.undock(78L));
+        assertRejected(INVALID_TRANSITION, () -> docked.book(6007L));
+        assertEquals(77L, docked.getDockedVehicleId());
+    }
+
+    @Test
+    @DisplayName("TC-M4-43 (BR-M4-06, BR-M4-08): cho co xe thue bi khoa roi mo lai -> OCCUPIED, xe van o do")
+    void blockedDockedSpaceReturnsToOccupied() {
+        ParkingSpace space = newSpace();
+        space.dock(77L);
+        space.block(ParkingSpace.BlockReason.CHARGER_FAILURE);
+        assertState(space, BLOCKED, null);
+
+        space.unblock();
+        assertState(space, OCCUPIED, null);
+        assertEquals(77L, space.getDockedVehicleId());
+
+        space.block(ParkingSpace.BlockReason.OPERATOR);
+        space.undock(77L);
+        assertState(space, BLOCKED, null);
+        space.unblock();
         assertState(space, FREE, null);
     }
 

@@ -8,7 +8,10 @@ import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionTaskRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
+import com.hcmut.emobility.shared.contracts.ParkingDock;
 import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
+import com.hcmut.emobility.shared.events.DispatchFailedEvent;
+import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
 import org.junit.jupiter.api.DisplayName;
@@ -27,8 +30,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 
 /**
- * Test case TC-M7-01..10 theo muc 8 Template_M7.
- * Id dung Long de khop hop dong su kien (Phu luc A).
+ * Test case TC-M7-01..12 theo muc 8 Template_M7.
+ * Id dung Long de khop hop dong su kien (Phu luc A). Suc chua Hub dich = cho trong trong quy cho do chung
+ * cua M4 tru so xe dang duoc dieu toi (BR-M7-03, Appendix A v2).
  */
 @ExtendWith(MockitoExtension.class)
 class RedistributionServiceTest {
@@ -40,6 +44,7 @@ class RedistributionServiceTest {
     @Mock private HubClient hubClient;
     @Mock private RecommendationClient recommendationClient;
     @Mock private EventPublisher eventPublisher;
+    @Mock private ParkingDock parkingDock;
 
     @InjectMocks private RedistributionService service;
 
@@ -48,9 +53,9 @@ class RedistributionServiceTest {
                 .thenReturn(Optional.of(new ExternalDtos.VehicleInfo(VEHICLE, state, HUB_A)));
     }
 
-    private void destinationHas(int capacity, int vehicles) {
+    private void destinationHas(int freeSpaces, int incomingVehicles) {
         when(hubClient.checkDestinationCapacity(anyLong()))
-                .thenReturn(Optional.of(new ExternalDtos.HubInfo(HUB_B, capacity, vehicles)));
+                .thenReturn(Optional.of(new ExternalDtos.HubInfo(HUB_B, freeSpaces, incomingVehicles)));
     }
 
     private RedistributionTask taskIn(RedistributionTaskStatus status) {
@@ -106,7 +111,7 @@ class RedistributionServiceTest {
     }
 
     @Test
-    @DisplayName("TC-M7-04 chan dieu chuyen den hub da day (gia tri bien: 10/10)")
+    @DisplayName("TC-M7-04 chan dieu chuyen den hub da day (bien: 10 cho trong, 10 xe dang toi)")
     void tc04_blockFullDestination() {
         vehicleIs("AVAILABLE");
         when(repository.findActiveByVehicleId(anyLong())).thenReturn(Optional.empty());
@@ -150,15 +155,19 @@ class RedistributionServiceTest {
     }
 
     @Test
-    @DisplayName("TC-M7-07 CREATED -> IN_PROGRESS khi bat dau dieu chuyen")
+    @DisplayName("TC-M7-07 CREATED -> IN_PROGRESS: xe roi cho o Hub nguon, phat DispatchStartedEvent cho M3")
     void tc07_startTask() {
         RedistributionTask task = taskIn(RedistributionTaskStatus.CREATED);
+        vehicleIs("AVAILABLE");
         when(repository.save(task)).thenReturn(task);
 
         service.updateTaskStatus(TASK, RedistributionTaskStatus.IN_PROGRESS);
 
         assertEquals(RedistributionTaskStatus.IN_PROGRESS, task.getStatus());
-        verify(eventPublisher, never()).publish(any());
+        verify(parkingDock).undockRentalVehicle(VEHICLE);
+        ArgumentCaptor<DispatchStartedEvent> captor = ArgumentCaptor.forClass(DispatchStartedEvent.class);
+        verify(eventPublisher).publish(captor.capture());
+        assertEquals(HUB_A, captor.getValue().getFromHubId());
     }
 
     @Test
@@ -170,6 +179,7 @@ class RedistributionServiceTest {
         service.updateTaskStatus(TASK, RedistributionTaskStatus.DONE);
 
         assertEquals(RedistributionTaskStatus.DONE, task.getStatus());
+        verify(parkingDock).dockRentalVehicle(VEHICLE, HUB_B);
         ArgumentCaptor<DispatchCompletedEvent> captor = ArgumentCaptor.forClass(DispatchCompletedEvent.class);
         verify(eventPublisher).publish(captor.capture());
         assertEquals(VEHICLE, captor.getValue().getVehicleId());
@@ -178,7 +188,7 @@ class RedistributionServiceTest {
     }
 
     @Test
-    @DisplayName("TC-M7-09 IN_PROGRESS -> FAILED khi dieu chuyen that bai")
+    @DisplayName("TC-M7-09 IN_PROGRESS -> FAILED: xe quay ve Hub nguon, phat DispatchFailedEvent cho M3")
     void tc09_failTask() {
         RedistributionTask task = taskIn(RedistributionTaskStatus.IN_PROGRESS);
         when(repository.save(task)).thenReturn(task);
@@ -186,6 +196,38 @@ class RedistributionServiceTest {
         service.updateTaskStatus(TASK, RedistributionTaskStatus.FAILED);
 
         assertEquals(RedistributionTaskStatus.FAILED, task.getStatus());
+        verify(parkingDock).dockRentalVehicle(VEHICLE, HUB_A);
+        verify(eventPublisher).publish(any(DispatchFailedEvent.class));
+    }
+
+    @Test
+    @DisplayName("TC-M7-11 IN_PROGRESS -> DONE khi Hub dich vua het cho: DESTINATION_FULL, nhiem vu van IN_PROGRESS")
+    void tc11_destinationFilledUpBeforeArrival() {
+        RedistributionTask task = taskIn(RedistributionTaskStatus.IN_PROGRESS);
+        when(parkingDock.dockRentalVehicle(VEHICLE, HUB_B))
+                .thenThrow(new BusinessException("HUB_FULL", "No free parking space is left at this Hub"));
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.updateTaskStatus(TASK, RedistributionTaskStatus.DONE));
+
+        assertEquals("DESTINATION_FULL", ex.getCode());
+        assertEquals(RedistributionTaskStatus.IN_PROGRESS, task.getStatus());
+        verify(repository, never()).save(any());
+        verify(eventPublisher, never()).publish(any());
+    }
+
+    @Test
+    @DisplayName("TC-M7-12 xe vua bi sinh vien dat sau khi tao nhiem vu: khong cho khoi hanh (BR-M7-01, tranh chap voi M2)")
+    void tc12_vehicleReservedBeforeDeparture() {
+        RedistributionTask task = taskIn(RedistributionTaskStatus.CREATED);
+        vehicleIs("RESERVED");
+
+        BusinessException ex = assertThrows(BusinessException.class,
+                () -> service.updateTaskStatus(TASK, RedistributionTaskStatus.IN_PROGRESS));
+
+        assertEquals("VEHICLE_RESERVED", ex.getCode());
+        assertEquals(RedistributionTaskStatus.CREATED, task.getStatus());
+        verify(parkingDock, never()).undockRentalVehicle(anyLong());
         verify(eventPublisher, never()).publish(any());
     }
 

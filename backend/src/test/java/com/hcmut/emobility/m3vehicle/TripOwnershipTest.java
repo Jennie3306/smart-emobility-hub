@@ -2,6 +2,7 @@ package com.hcmut.emobility.m3vehicle;
 import com.hcmut.emobility.m3vehicle.domain.*;
 import com.hcmut.emobility.m3vehicle.repository.*;
 import com.hcmut.emobility.m3vehicle.service.*;
+import com.hcmut.emobility.shared.contracts.ParkingDock;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.common.BusinessException;
 import org.junit.jupiter.api.Test;
@@ -11,7 +12,7 @@ import java.util.Optional;
 class TripOwnershipTest {
     @Test void anotherUserCannotReturnAnActiveTrip() {
         var vehicles=mock(RentalVehicleRepository.class); var sessions=mock(RentalSessionRepository.class);
-        var vehicle=mock(RentalVehicle.class); var publisher=mock(EventPublisher.class); var hubs=mock(HubServiceClient.class);
+        var vehicle=mock(RentalVehicle.class); var publisher=mock(EventPublisher.class); var hubs=mock(ParkingDock.class);
         when(vehicles.findById(1L)).thenReturn(Optional.of(vehicle));
         when(sessions.findByVehicleIdAndStatus(1L,SessionStatus.ACTIVE)).thenReturn(Optional.of(RentalSession.start(1L,2L)));
         var service=new VehicleService(vehicles,sessions,publisher,hubs);

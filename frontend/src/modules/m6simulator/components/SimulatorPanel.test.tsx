@@ -13,7 +13,7 @@ const idle: SimulatorStatus = { schedulerEnabled: false, intervalMs: null, state
 const result: SimulationRun = { runId: "e4c0178f-0674-4db1-a542-77a74892c346", scenario: "NORMAL_TICK", seed: "42",
   startedAt: "2026-10-28T09:00:00+07:00", completedAt: "2026-10-28T09:00:01+07:00", readingCount: 3,
   processedCount: 3, duplicateCount: 0, rejectedCount: 0, error: null,
-  outboundEvents: [{ eventId: "d6daa174-94ce-4098-a85f-83326b9d8cdd", eventType: "ResourceStateUpdated", resourceType: "VEHICLE", resourceId: 1 }] };
+  outboundEvents: [{ eventId: "d6daa174-94ce-4098-a85f-83326b9d8cdd", eventType: "DeviceReadingReported", resourceType: "VEHICLE", resourceId: 1 }] };
 const failure = (status: number) => ({ isAxiosError: true, response: { status, data: { code: `TEST_${status}`, details: { seed: "Check input" } } } });
 beforeEach(() => { vi.resetAllMocks(); vi.mocked(simulatorApi.status).mockResolvedValue(idle); });
 afterEach(cleanup);
@@ -39,7 +39,7 @@ it.each(["NORMAL_TICK", "VEHICLE_FAILURE", "CHARGER_FAILURE"] as const)("sends %
   await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
   expect(simulatorApi.run).toHaveBeenCalledWith(scenario, "42");
   expect(await screen.findByText(result.runId)).toBeTruthy();
-  expect(screen.getByText("ResourceStateUpdated")).toBeTruthy();
+  expect(screen.getByText("DeviceReadingReported")).toBeTruthy();
   expect(screen.getByText(result.outboundEvents[0].eventId)).toBeTruthy();
   expect(screen.getByText("Trùng inbound ID")).toBeTruthy();
 });

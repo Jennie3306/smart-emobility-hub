@@ -168,4 +168,35 @@ class ChargingSessionTest {
         assertEquals(NOW, automatic.getWaitingSince());
         assertNotNull(automatic.getActiveVehicleKey());
     }
+
+    @Test
+    void parkingBookingForLaterWaitsForArrival() {
+        // Charging requested with an M4 parking booking: no port is held before the vehicle arrives.
+        OffsetDateTime arrive = NOW.plusHours(3);
+        ChargingSession session = ChargingSession.request(7L, 1L, 9L, VehicleKind.PERSONAL,
+                40L, 30, arrive.plusHours(2), NOW);
+        session.waitForArrival(arrive, arrive.plusHours(2), NOW);
+        session.enqueue(NOW);
+
+        assertEquals(ChargingSessionStatus.QUEUED, session.getStatus());
+        assertTrue(session.waitsForWindow(NOW));
+        assertFalse(session.waitsForWindow(arrive));
+        assertEquals(arrive, session.getWaitingSince());
+
+        session.assign(2L, arrive.plusMinutes(1), null);
+        assertEquals(arrive.plusMinutes(11), session.getHoldExpiresAt());
+    }
+
+    @Test
+    void chargingNeverLowersTheBatteryLevel() {
+        ChargingSession session = ChargingSession.request(7L, 1L, null, VehicleKind.RENTAL,
+                41L, 95, null, NOW);
+        session.enqueue(NOW);
+        session.assign(2L, NOW, null);
+        session.start(NOW.plusMinutes(1));
+
+        session.updateBatteryForElapsedTime(NOW.plusMinutes(10));
+
+        assertEquals(95, session.getBatteryLevel());
+    }
 }

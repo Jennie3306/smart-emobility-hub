@@ -289,7 +289,7 @@ export default function ChargingPage() {
     <section className="rounded-lg border bg-white p-4 text-sm text-slate-600">
       <h2 className="font-semibold text-slate-800">Priority policy</h2>
       <p className="mt-2 font-mono text-brand">P = 0.5 × B + 0.3 × U + 0.2 × W</p>
-      <p className="mt-1 text-xs">B = 100 − battery (%); U = 100 / 70 / 40 / 0 for next use within 30 / 60 / 120 minutes / none; W = min(100, 2 × waiting minutes). HIGH adds 30 points; URGENT always ranks first. An interrupted session receives +20 only if no replacement port is available and it remains queued.</p>
+      <p className="mt-1 text-xs">B = 100 − battery (%); U = 100 / 70 / 40 / 0 for next use within 30 / 60 / 120 minutes / later or not given (100 if the expected use time has already passed); W = min(100, 2 × waiting minutes). HIGH adds 30 points; URGENT always ranks first. An interrupted session receives +20 only if no replacement port is available and it remains queued.</p>
     </section>
   </div>;
 }
@@ -302,13 +302,18 @@ function OperatorQueue({ sessions, busyId, onStart, onAdjust }: {
   sessions: ChargingSession[]; busyId: number | null;
   onStart: (id: number) => void; onAdjust: (session: ChargingSession) => void;
 }) {
+  // Same order as the backend dispatcher (review PR #11): the server's queuePosition first, then
+  // URGENT, higher score, earlier request - the tie-breaks of ChargingPriorityPolicy.comparator().
   const queue = [...sessions].filter(s => ["REQUESTED", "QUEUED", "INTERRUPTED"].includes(s.status))
-    .sort((a, b) => (a.priorityLevel === "URGENT" ? -1 : b.priorityLevel === "URGENT" ? 1 : b.priorityScore - a.priorityScore));
+    .sort((a, b) => (a.queuePosition ?? Number.MAX_SAFE_INTEGER) - (b.queuePosition ?? Number.MAX_SAFE_INTEGER)
+      || (a.priorityLevel === "URGENT" ? 0 : 1) - (b.priorityLevel === "URGENT" ? 0 : 1)
+      || b.priorityScore - a.priorityScore
+      || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const active = sessions.filter(s => s.status === "CHARGING" || s.status === "SCHEDULED");
   return <div className="space-y-4">
     <div className="overflow-x-auto rounded-lg border bg-white"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="p-3">Position</th><th className="p-3">Vehicle</th><th className="p-3">Battery</th><th className="p-3">Score</th><th className="p-3">Priority</th><th className="p-3">Waiting</th><th className="p-3">Action</th></tr></thead><tbody>
       {!queue.length && <tr><td className="p-6 text-center text-slate-500" colSpan={7}>No sessions are waiting at this Hub.</td></tr>}
-      {queue.map((s, i) => <tr className="border-t" key={s.id}><td className="p-3 font-mono">#{i + 1}</td><td className="p-3">{s.vehicleKind} #{s.vehicleId}<div className="text-xs text-slate-500">CS-{s.id}</div></td><td className="p-3"><Battery value={s.batteryLevel} /></td><td className="p-3 font-semibold tabular-nums">{s.priorityScore.toFixed(1)}</td><td className="p-3">{s.priorityLevel}</td><td className="p-3">{s.waitingMinutes} min</td><td className="p-3"><button disabled={busyId === s.id} className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50" onClick={() => onAdjust(s)}>Adjust</button></td></tr>)}
+      {queue.map((s, i) => <tr className="border-t" key={s.id}><td className="p-3 font-mono">#{s.queuePosition ?? i + 1}{s.scheduledStartAt && new Date(s.scheduledStartAt).getTime() > Date.now() && <div className="text-xs font-sans text-slate-500">arrives {new Date(s.scheduledStartAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}</td><td className="p-3">{s.vehicleKind} #{s.vehicleId}<div className="text-xs text-slate-500">CS-{s.id}</div></td><td className="p-3"><Battery value={s.batteryLevel} /></td><td className="p-3 font-semibold tabular-nums">{s.priorityScore.toFixed(1)}</td><td className="p-3">{s.priorityLevel}</td><td className="p-3">{s.waitingMinutes} min</td><td className="p-3"><button disabled={busyId === s.id} className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50" onClick={() => onAdjust(s)}>Adjust</button></td></tr>)}
     </tbody></table></div>
     <div className="grid gap-3 md:grid-cols-2">{active.map(s => <div key={s.id} className="flex items-center justify-between rounded-lg border bg-white p-4"><div><div className="font-semibold">{s.vehicleKind} #{s.vehicleId} · CS-{s.id}</div><div className="mt-1 text-xs text-slate-500">{s.chargingPointId ? `Charging point CP-${s.chargingPointId}` : "Port pending"} · {s.batteryLevel}% battery{s.userId == null && " · automatic request"}</div></div><div className="flex items-center gap-2"><SessionStatus status={s.status} />{s.status === "SCHEDULED" && s.userId == null && <button disabled={busyId === s.id} className="rounded bg-brand px-2 py-1 text-xs text-white disabled:opacity-50" onClick={() => onStart(s.id)}>Start</button>}</div></div>)}</div>
   </div>;

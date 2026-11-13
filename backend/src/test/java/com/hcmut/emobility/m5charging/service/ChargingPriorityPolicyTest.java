@@ -77,4 +77,12 @@ class ChargingPriorityPolicyTest {
         session.setPriorityScore(score);
         return session;
     }
+
+    @org.junit.jupiter.api.Test
+    void expectedUseAlreadyPassedIsMostUrgent() {
+        // Review PR #11: a vehicle whose expected use time has passed is needed now, so U = 100, not 0.
+        assertEquals(100, ChargingPriorityPolicy.upcomingUseScore(NOW, NOW));
+        assertEquals(100, ChargingPriorityPolicy.upcomingUseScore(NOW.minusMinutes(5), NOW));
+        assertEquals(0, ChargingPriorityPolicy.upcomingUseScore(null, NOW));
+    }
 }

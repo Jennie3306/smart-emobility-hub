@@ -16,6 +16,7 @@ import com.hcmut.emobility.m5charging.repository.ChargingPriorityAuditRepository
 import com.hcmut.emobility.m5charging.repository.ChargingSessionRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
 import com.hcmut.emobility.shared.events.ChargingCompletedEvent;
+import com.hcmut.emobility.shared.events.ChargingStartedEvent;
 import com.hcmut.emobility.shared.events.DomainEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
 import com.hcmut.emobility.shared.events.ResourceStateUpdatedEvent;
@@ -90,6 +91,7 @@ public class ChargingService {
             throw new BusinessException("BATTERY_ALREADY_FULL", "Charging is not accepted when battery level is 90% or higher");
         }
         ensureHubExists(request.hubId());
+        ensureVehicleBelongsTo(userId, request.vehicleKind(), request.vehicleId());
         ensureOperationalPort(request.hubId());
         ensureNoActiveSession(request.vehicleKind(), request.vehicleId());
         ChargingSession session = ChargingSession.request(userId, request.hubId(), request.parkingSpaceId(),
@@ -115,6 +117,7 @@ public class ChargingService {
         }
         validateScheduleWindow(request.startAt(), request.durationMinutes(), now);
         ensureHubExists(request.hubId());
+        ensureVehicleBelongsTo(userId, VehicleKind.PERSONAL, request.vehicleId());
         validateParkingReservation(userId, request.hubId(), request.parkingSpaceId(),
                 request.startAt(), request.startAt().plusMinutes(request.durationMinutes()));
         ensureNoActiveSession(VehicleKind.PERSONAL, request.vehicleId());
@@ -224,8 +227,13 @@ public class ChargingService {
         OffsetDateTime oldStart = session.getScheduledStartAt();
         session.moveSchedule(startAt, durationMinutes, selected.getId());
         sessions.save(session);
-        audits.save(new ChargingPriorityAudit(sessionId, operatorId, session.getPriorityLevel().name(),
-                session.getPriorityLevel().name(), "Schedule moved from " + oldStart + " to " + startAt, now));
+        // Recorded as a SCHEDULE_MOVE (V53), with the Operator's own reason, so it is not mistaken for a
+        // priority change where the old and new priority happen to be equal (review PR #11).
+        String priority = session.getPriorityLevel().name();
+        String detail = reason.trim() + " (schedule " + oldStart + " -> " + startAt + ", " + durationMinutes + " min)";
+        audits.save(new ChargingPriorityAudit(sessionId, operatorId, priority, priority,
+                detail.length() > 500 ? detail.substring(0, 500) : detail, now,
+                ChargingPriorityAudit.ChangeType.SCHEDULE_MOVE));
         if (oldPointId != null && !oldPointId.equals(selected.getId())) releaseReservedPoint(oldPointId);
         recalculateHub(session.getHubId(), now);
         return response(session, null);
@@ -249,6 +257,9 @@ public class ChargingService {
         sessions.save(session);
         points.save(point);
         publishResourceState(point, "IN_USE");
+        // Appendix A v2: lets M3 move a rental vehicle LOW_BATTERY -> CHARGING.
+        events.publish(new ChargingStartedEvent(session.getId(), session.getHubId(), point.getId(),
+                session.getVehicleKind().name(), session.getVehicleId()));
         queuePublisher.publish(session.getHubId(), response(session, null));
         return response(session, null);
     }
@@ -290,6 +301,8 @@ public class ChargingService {
         }
         point.markFaulty();
         points.save(point);
+        // M5 owns the charging-point state: M1 mirrors this event, not M6's raw reading (decision 12/11).
+        publishResourceState(point, "FAULTY");
         List<ChargingSession> affected = sessions.findByChargingPointIdAndStatusIn(chargingPointId, POINT_OCCUPYING);
         OffsetDateTime now = now();
         for (ChargingSession session : affected) {
@@ -338,9 +351,24 @@ public class ChargingService {
         boolean recovered = point.applyExternalState(state);
         if (point.getState() == before) return;
         points.save(point);
+        // M1 ignores M6's raw reading for charging points and mirrors the state M5 decided (decision 12/11).
+        publishResourceState(point, recovered ? "FREE" : point.getState().name());
         if (recovered) {
             log.info("[M5] Charging point {} at hub {} is back in service; the next queue tick will use it", pointId, hubId);
         }
+    }
+
+    /**
+     * Startup sync (decision 12/11): publish every charging point's state once, so M1's projection (and M8,
+     * which reads it) starts from what M5 actually holds, even on a database seeded before M5 existed.
+     */
+    @Transactional
+    public int publishAllPointStates() {
+        List<ChargingPoint> all = points.findAll();
+        for (ChargingPoint point : all) {
+            publishResourceState(point, point.getState() == ChargingPointState.AVAILABLE ? "FREE" : point.getState().name());
+        }
+        return all.size();
     }
 
     @Transactional
@@ -368,7 +396,7 @@ public class ChargingService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public boolean handleM4ChargingRequest(Long userId, Long hubId, Long parkingSpaceId,
                                            VehicleKind vehicleKind, Long vehicleId, Integer batteryLevel,
-                                           OffsetDateTime expectedUseAt) {
+                                           OffsetDateTime arriveAt, OffsetDateTime leaveAt) {
         int level = batteryLevel == null ? 50 : batteryLevel;
         String rejection = null;
         if (hubId == null || vehicleKind == null || vehicleId == null) {
@@ -388,8 +416,11 @@ public class ChargingService {
             return false;
         }
         OffsetDateTime now = now();
+        // The vehicle is needed again when the parking booking ends (U in the priority formula).
         ChargingSession session = ChargingSession.request(userId, hubId, parkingSpaceId,
-                vehicleKind, vehicleId, level, expectedUseAt, now);
+                vehicleKind, vehicleId, level, leaveAt, now);
+        // A booking for later waits in the queue until arrival; the dispatcher skips it until then.
+        session.waitForArrival(arriveAt, leaveAt, now);
         session.enqueue(now);
         sessions.saveAndFlush(session);
         recalculateHub(hubId, now);
@@ -450,8 +481,13 @@ public class ChargingService {
             // A booking re-queued after a charger failure waits for its own start time.
             if (session.waitsForWindow(now)) continue;
             List<ChargingPoint> free = points.lockByHubAndState(hubId, ChargingPointState.AVAILABLE);
+            // A session tied to an M4 parking booking prefers the charger installed at that space, so the
+            // vehicle charges where it is parked (decision 12/11, one consistent story across modules).
+            Long linkedCharger = chargerAtParkingSpace(session.getParkingSpaceId());
             ChargingPoint selected = free.stream()
                     .filter(p -> !hasOverlap(p.getId(), now, now.plusMinutes(90), now))
+                    .sorted(Comparator.comparing((ChargingPoint p) -> p.getId().equals(linkedCharger) ? 0 : 1)
+                            .thenComparing(ChargingPoint::getId))
                     .findFirst().orElse(null);
             if (selected == null) break;
             session.assign(selected.getId(), now, null);
@@ -462,6 +498,14 @@ public class ChargingService {
         }
         queuePublisher.publish(hubId, sessions.findByHubIdOrderByCreatedAtDesc(hubId).stream()
                 .map(s -> response(s, queuePosition(s), now)).toList());
+    }
+
+    /** Read-only lookup in M4's parking_space (like validateParkingReservation reads M2's reservation). */
+    private Long chargerAtParkingSpace(Long parkingSpaceId) {
+        if (parkingSpaceId == null) return null;
+        List<Long> chargers = jdbc.queryForList("select charger_point_id from parking_space where id = ?",
+                Long.class, parkingSpaceId);
+        return chargers.isEmpty() ? null : chargers.get(0);
     }
 
     private boolean hasOverlap(Long pointId, OffsetDateTime start, OffsetDateTime end, OffsetDateTime now) {
@@ -569,6 +613,30 @@ public class ChargingService {
 
     private void publishResourceState(ChargingPoint point, String state) {
         events.publish(new ResourceStateUpdatedEvent(point.getHubId(), "CHARGING_POINT", point.getId(), state));
+    }
+
+    /**
+     * Review PR #11: a student may only charge a vehicle they actually hold, otherwise anyone could lock
+     * out the real owner with ACTIVE_SESSION_EXISTS. Read-only checks, like validateParkingReservation:
+     * a personal EV must be registered to the student and ACTIVE in M4 (personal_vehicle); a rental vehicle
+     * must be reserved or picked up by the student through M2 (reservation).
+     */
+    private void ensureVehicleBelongsTo(Long userId, VehicleKind kind, Long vehicleId) {
+        Integer count = kind == VehicleKind.PERSONAL
+                ? jdbc.queryForObject("""
+                        select count(*) from personal_vehicle
+                         where id = ? and student_id = ? and status = 'ACTIVE'
+                        """, Integer.class, vehicleId, userId)
+                : jdbc.queryForObject("""
+                        select count(*) from reservation
+                         where user_id = ? and resource_type = 'VEHICLE' and resource_id = ?
+                           and state in ('CONFIRMED','CHECKED_IN')
+                        """, Integer.class, userId, vehicleId);
+        if (count == null || count == 0) {
+            throw new BusinessException("VEHICLE_NOT_OWNED", kind == VehicleKind.PERSONAL
+                    ? "Register this personal vehicle in Parking (M4) before charging it"
+                    : "You can only charge a rental vehicle you have reserved or picked up", HttpStatus.FORBIDDEN);
+        }
     }
 
     private void validateParkingReservation(Long userId, Long hubId, Long parkingSpaceId,

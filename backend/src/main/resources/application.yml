@@ -25,10 +25,14 @@ server:
 app:
   demo-users:
     enabled: true      # tao student1 / operator1 khi bang app_user rong
+  demo:
+    seed-parking: true # M4: 31 luot dat that o Hub Ga Metro (77%) de M1/M2/M4/M8 cung so lieu; tat = false
   cors:
     allowed-origin: http://localhost:5173
   reservation:
     hold-minutes: 15          # BR-M2-02
+  parking:
+    no-show-scan-ms: 60000    # UC-M4-04: luoi an toan giai phong cho qua han (Timer chinh la cua M2)
   charging:
     low-battery-threshold: 20 # BR-M5-01 (%)
     recalculation-interval-ms: 60000 # FR-M5-04: chu ky xep hang doi, giu cong 10 phut, sac
