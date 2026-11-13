@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -18,17 +17,12 @@ public class DispatchApplyService {
     private final SnapshotProvider snapshots;
     private final RunStore store;
     private final M7DispatchClient m7;
-    private final Optional<DispatchParking> parking;
 
-    public DispatchApplyService(SnapshotProvider snapshots, RunStore store, M7DispatchClient m7,
-                                Optional<DispatchParking> parking) {
+    public DispatchApplyService(SnapshotProvider snapshots, RunStore store, M7DispatchClient m7) {
         this.snapshots = snapshots;
         this.store = store;
         this.m7 = m7;
-        this.parking = parking;
     }
-
-    public boolean enabled() { return parking.isPresent(); }
 
     public Run apply(String runId, String recommendationId, String sessionId) throws IOException {
         // RunStore is local and single-process. Serialize approvals and other updates to the saved run.
@@ -49,8 +43,6 @@ public class DispatchApplyService {
                 || rec.fromHubId() == rec.toHubId() || rec.amount() < 1) {
             throw new BusinessException("NOT_APPLICABLE", "Only a pending dispatch recommendation can be applied.");
         }
-        DispatchParking holds = parking.orElseThrow(() -> new BusinessException("PARKING_NOT_CONNECTED",
-                "Apply requires authoritative destination parking holds from M4."));
         if (sessionId == null) throw new BusinessException("SESSION_REQUIRED", "Sign in again to apply this recommendation.", HttpStatus.UNAUTHORIZED);
 
         var tasks = new ArrayList<>(rec.dispatch() == null ? List.<DispatchTask>of() : rec.dispatch().tasks());
@@ -66,31 +58,16 @@ public class DispatchApplyService {
         for (Vehicle vehicle : vehicles.subList(0, limit)) {
             String attemptId = UUID.randomUUID().toString();
             run = save(run, rec, "NEEDS_REVIEW", tasks, vehicle.id(), attemptId,
-                    "Task outcome is unconfirmed. Check the M7 task list and the parking hold before creating another task.");
-            try {
-                holds.hold(attemptId, rec.toHubId(), vehicle.id());
-            } catch (BusinessException declined) {
-                // The parking port may report a business rejection only if no hold was created.
-                return finish(run, rec, tasks, "M4 declined the parking hold for vehicle #" + vehicle.id() + ".");
-            } catch (RuntimeException uncertain) {
-                return run;
-            }
-
+                    "Task outcome is unconfirmed. Check the M7 task list before creating another task.");
             long taskId;
             try {
                 taskId = m7.create(sessionId, vehicle.id(), rec.fromHubId(), rec.toHubId());
             } catch (M7DispatchClient.Rejected rejected) {
-                try { holds.release(attemptId); }
-                catch (RuntimeException uncertain) { return run; }
                 return finish(run, rec, tasks, "M7 declined vehicle #" + vehicle.id() + " (" + rejected.getMessage() + ").");
             } catch (RuntimeException uncertain) {
                 return run;
             }
             tasks.add(new DispatchTask(vehicle.id(), taskId));
-            run = save(run, rec, "NEEDS_REVIEW", tasks, vehicle.id(), attemptId,
-                    "The M7 task exists. Check that its parking hold is linked before creating another task.");
-            try { holds.attach(attemptId, taskId); }
-            catch (RuntimeException uncertain) { return run; }
             run = finish(run, rec, tasks, null);
         }
         if (tasks.size() < rec.amount()) {

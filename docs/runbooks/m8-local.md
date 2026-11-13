@@ -44,8 +44,8 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
   These RAM observations are not transactionally synchronized with the database snapshot
   and do not overwrite authoritative M3 vehicle state in the engine.
 - Independently verified proposals and persistent Discard.
-- Apply requires an M4 parking adapter. Without one, the UI disables Apply and the API
-  returns `409 PARKING_NOT_CONNECTED` for a pending dispatch recommendation.
+- Apply creates M7 tasks for a saved dispatch recommendation. M7 checks parking through
+  M4 when creating a task and assigns the destination space when the vehicle arrives.
 - Accepted M2 bookings from the captured 30-minute window can supply the scenario volume.
   The saved snapshot retains that window, so editing an old run repeats its original volume.
 - A 30-minute network check repeats recent accepted bookings against current resources,
@@ -83,9 +83,8 @@ English display labels for seeded hubs do not change live Hub rows.
 - TV2: booking persistence and the accepted-booking read contract are integrated;
   total attempted demand remains unavailable.
 - TV3: review the local rental lifecycle/event and snapshot contract changes.
-- TV4 / M4: the parking integration is the remaining dependency for Apply. When M4
-  publishes the code, map its existing API to `DispatchParking` in M8. A capacity read
-  alone does not reserve a space. M8 scenario history is still stored locally.
+- TV4 / M4: M7 uses the shared parking pool through `ParkingDock`. M8 scenario history
+  is still stored locally.
 - TV7 / M7: M8 already calls the existing per-vehicle task API. Keep that API unless
   verification uncovers a contract issue. M8 owns the recommendation and its task IDs.
 - TV1 / M1 and TV3 / M3: verify dashboard counts and vehicle location after M7 emits
@@ -95,15 +94,14 @@ English display labels for seeded hubs do not change live Hub rows.
 
 - M8 reads fresh inventory and active M7 tasks. It selects available source vehicles
   with at least 20% battery in ID order, leaving one eligible vehicle at the source.
-- `DispatchParking` is the M8 port for the M4 integration. Its adapter must hold a
-  destination space per attempt, link it to the created M7 task and release it after a
-  definitive rejection. M4 must handle completion, cancellation and failed tasks.
-  An adapter may return a business rejection from `hold` only if it created no hold.
-- After a hold, M8 calls `POST /api/m7/redistributions` once per vehicle with the
+- M7 checks destination capacity against the M4 pool and subtracts active incoming tasks.
+  At completion it assigns a space through M4. A destination can fill up before arrival,
+  in which case M7 rejects completion until space is available.
+- M8 calls `POST /api/m7/redistributions` once per vehicle with the
   operator session. Each returned task ID is recorded under the saved recommendation.
   A definitive rejection can leave a partial result. Retry skips confirmed task IDs.
-- An intent is saved before calling M4 or M7. If a response is lost, that recommendation
-  requires manual review in M7 and M4. There is no automatic retry for an uncertain
+- An intent is saved before calling M7. If a response is lost, that recommendation
+  requires manual review against the M7 task list. There is no automatic retry for an uncertain
   outcome because the per-vehicle M7 endpoint accepts no idempotency key. The local
   run file serializes requests in one process. Shared deployment needs durable storage.
 - Apply creates tasks in `CREATED`. M7 publishes the shared `DispatchCompletedEvent`
@@ -113,12 +111,10 @@ English display labels for seeded hubs do not change live Hub rows.
 
 ### Final integration checklist
 
-1. Review the latest M4 and M7 commits. Identify the actual M4 operations for holding
-   a destination space, associating the hold with an M7 task, and releasing or completing
-   it. Check operator authorization, concurrent holds, expiry and retry behavior.
-2. Add the adapter in M8 against those operations. Reuse M7 `GET /api/m7/redistributions`
+1. Verify M7 uses the M4 parking pool for the destination capacity and arrival checks.
+2. Reuse M7 `GET /api/m7/redistributions`
    for active tasks and `POST /api/m7/redistributions` with `vehicleId`, `sourceHubId` and
-   `destinationHubId` to create each task. Enable Apply only with the real parking adapter.
+   `destinationHubId` to create each task.
 3. In an isolated environment, verify successful Apply, a full destination, partial
    creation, duplicate Apply, a lost response, and parking cleanup after failure. Follow
    a created task through `IN_PROGRESS` and `DONE`, then check M3 location and M1 counts.
@@ -154,7 +150,7 @@ restart persistence, bounds, M8 roles, recommendation feasibility and M3 user-ID
 For a demo, open History & comparison and View & edit on
 Integration demo - repeat recent bookings. Compare it with another saved run, or use
 Try this plan to preview rerouting. Saving a new run can call the configured LLM.
-M7 Apply is unavailable, M4 parking validation is pending, and M8 history is file-backed.
+At the time of this smoke test, M7 Apply was unavailable and M4 parking validation was pending. M8 history is file-backed.
 
 ## Exploratory QA fixes — 27 October 2026
 

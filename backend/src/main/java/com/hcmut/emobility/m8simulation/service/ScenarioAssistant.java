@@ -146,7 +146,7 @@ public class ScenarioAssistant {
             }
         }
         if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Try reopening the hub or enabling rerouting.");
-        if(kpi.failed()>0) warnings.add("Dispatch requires captured parking observations. M1 observations are provisional, not authoritative M4 reservations; live execution is unavailable.");
+        if(kpi.failed()>0) warnings.add("Dispatch projections use captured M1 parking observations. M7 checks the current M4 parking pool when tasks are created and completed.");
         return new Proposals(List.copyOf(accepted),source,List.copyOf(warnings));
     }
     /** Fail closed for historical snapshots without observations; never equate rental count with occupancy. */

@@ -53,7 +53,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <p className="m8-footnote">{r.feedback}</p>
       </details></li>)}</ol>
     </details> : null}
-    <details className="m8-agent-limits"><summary>Simulation Limits</summary><p>Every candidate uses the same snapshot, demand, seed and time settings. Parking uses provisional M1 observations. M4 parking reservations and M7 vehicle movements must be revalidated before execution.</p>{best && <p>{best.feedback}</p>}</details>
+    <details className="m8-agent-limits"><summary>Simulation Limits</summary><p>Every candidate uses the same snapshot, demand, seed and time settings. Parking uses captured M1 observations. M7 checks current parking through M4 when creating and completing dispatch tasks.</p>{best && <p>{best.feedback}</p>}</details>
     <p className="m8-preview-note">Preview only. Exploring or retrying a plan never changes live vehicles.</p>
   </section>;
 }

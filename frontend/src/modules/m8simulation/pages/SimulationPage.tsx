@@ -98,7 +98,7 @@ export default function SimulationPage() {
                 </>:<div className="m8-empty"><h3>Start with a Scenario</h3><p>Set the request volume and hub conditions, then run the simulation. You will see the original outcome here and AI-tested alternatives below.</p><div className="m8-mini-network">{snapshot.hubs.map(h=><span key={h.id}>{h.name}<b>{snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length} available {snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length===1?"vehicle":"vehicles"}</b></span>)}</div></div>}
               </div>
               {active&&<AgentPanel run={active} busy={busy} configured={!!monitor?.aiConfigured} onRetry={()=>task(async()=>{const updated=await api.retry(active.id,active.agent?.totalRounds??0);setActive(current=>acceptPlanningResult(current,updated));setRuns(await api.list());setNotice(`AI planning saved for ${updated.scenario.name}. The original snapshot and scenario are unchanged.`);})}/>}
-              {!active?.agent&&<div className="m8-panel"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">3</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. Parking observations are provisional; M4/M7 must revalidate before execution.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
+              {(!active?.agent || active.recommendations.length > 0) && <div className="m8-panel"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">3</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. M7 checks current destination parking through M4.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "TOOL_AGENT" ? "AI tool exploration" : active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
                 {active?.recommendations.length ? active.recommendations.map(r => (
                   <div className="m8-recommendation" key={r.id}>
                     <div className="m8-rec-icon"><StudioIcon kind="network"/></div>
@@ -137,8 +137,8 @@ export default function SimulationPage() {
                   </div>
                 )) : <p className="m8-muted">{active ? "No actionable recommendation for this run." : "Run a scenario to find a plan that fits available resources."}</p>}
                 <div className="m8-integration-note">{monitor?.applyEnabled
-                  ? "Apply creates M7 tasks. Vehicles change hubs after the tasks are completed."
-                  : "Apply requires destination parking holds from M4."}</div>
+                  ? "Apply creates M7 tasks. M7 checks destination parking when it creates and completes each task."
+                  : "Dispatch availability is loading."}</div>
               </div>}
               {active && <details className="m8-panel">
                 <summary>Model assumptions & limitations</summary>

@@ -25,8 +25,8 @@ class SimulationSecurityTest {
     @Test @WithMockUser(roles="STUDENT") void studentCannotApplyDispatch() throws Exception {
         mvc.perform(post("/api/m8/runs/run/recommendations/rec/apply")).andExpect(status().isForbidden());
     }
-    @Test @WithMockUser(roles="OPERATOR") void applyRemainsDisabledWithoutParkingAdapter() throws Exception {
-        mvc.perform(get("/api/m8/status")).andExpect(status().isOk()).andExpect(jsonPath("$.applyEnabled").value(false));
+    @Test @WithMockUser(roles="OPERATOR") void operatorCanSeeApplyEnabled() throws Exception {
+        mvc.perform(get("/api/m8/status")).andExpect(status().isOk()).andExpect(jsonPath("$.applyEnabled").value(true));
     }
     @Test void anonymousCannotExtendPlanning() throws Exception {mvc.perform(post("/api/m8/runs/run/agent/retry?expectedRounds=0")).andExpect(status().isUnauthorized());}
     @Test @WithMockUser(roles="OPERATOR") void operatorCanReadSnapshot() throws Exception {

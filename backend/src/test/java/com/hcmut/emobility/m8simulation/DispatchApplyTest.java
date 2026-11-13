@@ -11,7 +11,6 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -20,20 +19,22 @@ import static org.mockito.Mockito.*;
 class DispatchApplyTest {
     @TempDir Path dir;
     private final M7DispatchClient m7 = mock(M7DispatchClient.class);
-    private final DispatchParking parking = mock(DispatchParking.class);
     private final SnapshotProvider snapshots = mock(SnapshotProvider.class);
 
     @Test void retryCreatesOnlyMissingTasksAndReplayReturnsOriginalIds() throws Exception {
         var store = store();
-        var apply = new DispatchApplyService(snapshots, store, m7, Optional.of(parking));
+        var apply = new DispatchApplyService(snapshots, store, m7);
         when(m7.activeVehicles("session")).thenReturn(Set.of());
         when(m7.create("session", 1, 10, 20)).thenReturn(101L);
         when(m7.create("session", 2, 10, 20))
-                .thenThrow(new M7DispatchClient.Rejected("Destination full")).thenReturn(102L);
+                .thenThrow(new M7DispatchClient.Rejected("DESTINATION_FULL")).thenReturn(102L);
         when(snapshots.capture()).thenReturn(snapshot());
 
-        assertEquals("PARTIAL", apply.apply("run", "rec", "session").recommendations().getFirst().status());
-        var reloaded = new DispatchApplyService(snapshots, openStore(), m7, Optional.of(parking));
+        var partial = apply.apply("run", "rec", "session").recommendations().getFirst();
+        assertEquals("PARTIAL", partial.status());
+        assertTrue(partial.dispatch().message().contains("DESTINATION_FULL"));
+        assertEquals(List.of(new DispatchTask(1, 101)), partial.dispatch().tasks());
+        var reloaded = new DispatchApplyService(snapshots, openStore(), m7);
         var finished = reloaded.apply("run", "rec", "session");
         assertEquals("APPLIED", finished.recommendations().getFirst().status());
         assertEquals(List.of(new DispatchTask(1, 101), new DispatchTask(2, 102)),
@@ -49,19 +50,12 @@ class DispatchApplyTest {
         when(m7.create("session", 1, 10, 20)).thenThrow(new IllegalStateException("lost response"));
         when(snapshots.capture()).thenReturn(snapshot());
 
-        var result = new DispatchApplyService(snapshots, store, m7, Optional.of(parking)).apply("run", "rec", "session");
+        var result = new DispatchApplyService(snapshots, store, m7).apply("run", "rec", "session");
         assertEquals("NEEDS_REVIEW", result.recommendations().getFirst().status());
-        assertEquals(result, new DispatchApplyService(snapshots, openStore(), m7, Optional.of(parking))
+        assertEquals(result, new DispatchApplyService(snapshots, openStore(), m7)
                 .apply("run", "rec", "session"));
         verify(m7, times(1)).create("session", 1, 10, 20);
         verify(m7, never()).create("session", 2, 10, 20);
-    }
-
-    @Test void missingParkingAdapterNeverCallsM7() throws Exception {
-        var apply = new DispatchApplyService(snapshots, store(), m7, Optional.empty());
-        assertEquals("PARKING_NOT_CONNECTED", assertThrows(BusinessException.class,
-                () -> apply.apply("run", "rec", "session")).getCode());
-        verifyNoInteractions(m7);
     }
 
     @Test void savedAiPlanExposesStableDispatchCardAndKeepsRerouteInSimulation() throws Exception {

@@ -19,7 +19,7 @@ public class SimulationController {
     @GetMapping("/snapshot") public Snapshot snapshot() { return service.snapshot(); }
     @GetMapping("/status") public Map<String,Object> status() {
         var status = monitor.status(service.aiConfigured());
-        status.put("applyEnabled", dispatch.enabled());
+        status.put("applyEnabled", true);
         return status;
     }
     @PostMapping("/parse") public ParseResult parse(@Valid @RequestBody ParseRequest request) { return service.parse(request.text()); }
