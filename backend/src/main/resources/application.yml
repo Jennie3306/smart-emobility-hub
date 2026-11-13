@@ -49,9 +49,13 @@ app:
 
   # --- M6: simulator thiet bi ---
   simulator:
-    scheduler-enabled: false   # bat len khi quay demo
+    # Tat khi quay demo: scheduler chay NORMAL_TICK 5 giay/lan nen tru sac hong (CHARGER_FAILURE)
+    # tu hoat dong lai truoc khi nguoi xem kip thay.
+    scheduler-enabled: false
     interval-ms: 5000
-    seed: 42                   # BAT BUOC: SimulatorScheduler doc bang getRequiredProperty
+    # BAT BUOC: SimulatorScheduler doc bang getRequiredProperty. Seed 100 bao pin xe 1 (EB-001) la 92%,
+    # dung bang du lieu V2, nen NORMAL_TICK khong lam doi pin xe; seed 42 bao 15% -> M3 chuyen xe sang LOW_BATTERY.
+    seed: 100
 
 logging:
   level:

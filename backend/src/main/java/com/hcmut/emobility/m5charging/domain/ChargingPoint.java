@@ -80,10 +80,9 @@ public class ChargingPoint {
     }
 
     /**
-     * Applies equipment-health telemetry from outside M5. Only health is taken from outside:
-     * RESERVED and IN_USE are M5's own assignment decisions, so an external AVAILABLE or IN_USE
-     * report (M6 telemetry, or M5's own ResourceStateUpdatedEvent coming back to it) never
-     * overwrites a port that M5 has reserved or started.
+     * Applies equipment-health telemetry from M6 (DeviceReadingReportedEvent, Appendix A v2). Only health is
+     * taken from outside: RESERVED and IN_USE are M5's own assignment decisions, so an AVAILABLE or IN_USE
+     * reading never overwrites a port that M5 has reserved or started.
      *
      * @return true when a FAULTY or UNDER_REPAIR port has just become AVAILABLE again.
      */
