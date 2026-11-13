@@ -26,11 +26,6 @@ public class RedistributionController {
                 request.vehicleId(), request.sourceHubId(), request.destinationHubId());
     }
 
-    @PostMapping("/recommendations/{recommendationId}/approve")
-    public RedistributionTask approveRecommendation(@PathVariable String recommendationId) {
-        return service.approveRecommendation(recommendationId);
-    }
-
     @PutMapping("/{taskId}/status")
     public RedistributionTask updateStatus(@PathVariable Long taskId,
                                            @RequestParam RedistributionTaskStatus status) {

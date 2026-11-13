@@ -1,4 +1,4 @@
-# Appendix A — Module contracts (v2, 12 Nov 2026)
+# Appendix A — Module contracts (v2, 12 Nov 2026; recommendations and incidents 13 Nov)
 
 This file is the event and interface contract between the eight modules. It replaces Appendix A of
 "Project overview & common rules" (v1). The report's §3.1 (architecture) and §4.2 (implementation structure)
@@ -46,8 +46,8 @@ on the dashboard (M1) and in the What-if snapshot (M8).
 |---|---|---|---|
 | DeviceReadingReported | M6 | hubId, resourceType, resourceId, observedState, batteryLevel | M3: record battery; AVAILABLE below threshold → LOW_BATTERY, publish VehicleLowBattery. M5: a FAULTY port reported online → FREE |
 | ResourceStateUpdated | M4 (PARKING_SPACE), M5 (CHARGING_POINT) | hubId, resourceType, resourceId, newState | M1: update dashboard. M8: keep for snapshot. M4: charger operational again → unblock its space |
-| VehicleFailed | M6 | vehicleId, hubId, reason | M3: → MAINTENANCE. M2: cancel the vehicle's reservation. M1: recount |
-| ChargerFailed | M6 | chargingPointId, hubId, reason | M5: port FAULTY, interrupt / move sessions. M4: block the space wired to that port, cancel its unchecked-in booking |
+| VehicleFailed | M6 (failure reading or Operator report; once per active Incident, BR-M6-06) | vehicleId, hubId, reason | M3: → MAINTENANCE. M2: cancel the vehicle's reservation. M1: recount |
+| ChargerFailed | M6 (failure reading or Operator report; once per active Incident, BR-M6-06) | chargingPointId, hubId, reason | M5: port FAULTY, interrupt / move sessions. M4: block the space wired to that port, cancel its unchecked-in booking |
 | ReservationConfirmed | M2 | reservationId, userId, resourceType, resourceId, hubId | M3: vehicle → RESERVED (fails fast so M2 rolls back). M1: recount |
 | ReservationCheckedIn | M2 | reservationId, userId, resourceType, resourceId, hubId | M4: space RESERVED → OCCUPIED. M3: vehicle check-in |
 | ReservationExpired | M2 | reservationId, resourceType, resourceId | M3: vehicle → AVAILABLE. M4: release space (no-show). M5: cancel linked charging session |
@@ -58,12 +58,12 @@ on the dashboard (M1) and in the What-if snapshot (M8).
 | ChargingRequested | M4 | userId, hubId, parkingSpaceId, vehicleKind, vehicleId, batteryLevel, arriveAt, leaveAt | M5: queue a session that waits for the vehicle's arrival, preferring the port wired to the booked space |
 | ChargingStarted | M5 | sessionId, hubId, chargingPointId, vehicleKind, vehicleId | M3: rental vehicle LOW_BATTERY → CHARGING. M1: recount |
 | ChargingCompleted | M5 | sessionId, hubId, chargingPointId, vehicleKind, vehicleId, finalBatteryLevel | M3: rental vehicle CHARGING → AVAILABLE with final level. M1: recount |
-| HubNearCapacity | M1 | hubId, resourceType, usagePercent | M7: propose redistribution |
+| HubNearCapacity | M1 | hubId, resourceType (PARKING or VEHICLE), usagePercent (% or available vehicles) | M7: after M1's commit, propose a redistribution (PENDING) for the Operator |
 | DispatchStarted | M7 | taskId, vehicleId, fromHubId, toHubId | M3: vehicle AVAILABLE → IN_TRANSIT. M1: recount source Hub |
 | DispatchCompleted | M7 | taskId, vehicleId, fromHubId, toHubId | M3: vehicle at destination, IN_TRANSIT → AVAILABLE. M1: recount both Hubs |
 | DispatchFailed | M7 | taskId, vehicleId, fromHubId | M3: vehicle back at source, IN_TRANSIT → AVAILABLE. M1: recount |
-| RecommendationApproved | M7 (after Operator approval) | recommendationId, actionType | M5: change charging schedule when the action concerns charging |
-| SimulationCompleted | M8 | runId, recommendationIds | M7: list the run's recommendations for approval |
+| RecommendationApproved | M7 (after Operator approval) | recommendationId, actionType | M5: change charging schedule when the action concerns charging (today every approved action is REDISTRIBUTE, so M5 changes nothing) |
+| SimulationCompleted | M8 | runId, recommendationIds | Not used: M8 registers each proposal through `RedistributionRecommendations` instead |
 
 ## A.4 Synchronous interfaces
 
@@ -71,6 +71,7 @@ on the dashboard (M1) and in the What-if snapshot (M8).
 |---|---|---|---|---|
 | `ReservationCore` | `m2reservation.service` (only allowed cross-module service import) | M2 | M4 | Booking a parking space must hold the reservation in the same transaction |
 | `ParkingDock` | `shared.contracts` | M4 (`RentalDockService`) | M3 (return, pick-up), M7 (task start / done / failed) | Return or delivery needs an immediate "is there a space"; the space row is locked so two vehicles cannot take the last space |
+| `RedistributionRecommendations` | `shared.contracts` | M7 (`RecommendationService`) | M8 (What-if proposals) | `propose` returns M7's recommendation id at once; `approve` (button in M8) answers with the tasks created. M7 picks the vehicles and checks BR-M7-01..03 |
 | Snapshot reads | read-only JDBC | each owner's tables | M8 (`JdbcSnapshotProvider`), M1, M5, M7 lookups | Consistent read of current state; never written back |
 
 `ParkingDock` errors: `HUB_FULL` (409) when no free space is left — M3 returns it with the Hubs that still have
@@ -89,11 +90,10 @@ room, M7 turns it into `DESTINATION_FULL`; `HUB_NOT_FOUND` (404).
 
 ## A.6 Not implemented yet (tracked in the review)
 
-- SimulationCompleted (M8) and M7 reading M8's recommendations: `NotConnectedRecommendationClient`.
-- M5's handling of RecommendationApproved only logs the event.
-- M7's reaction to HubNearCapacity only logs the event.
+- M8 does not call `RedistributionRecommendations` yet (its branch still creates M7 tasks over REST).
 - M8 reads parking occupancy per Hub from the snapshot's `capacities`; its engine still estimates occupancy from
   rental vehicles only.
 - M8's runs have no state field yet (SimulationRun states above are the design) and are stored in a JSON file,
   not in the database.
-- M6 incidents: `IncidentStatus` / `IncidentLifecycle` exist, but no repository, API or screen.
+- M6 incidents (since 13/11): stored, API `/api/m6/incidents`, created automatically from failure readings
+  (BR-M6-06/10), screen in M6. Publication after commit uses a separate transaction, not an outbox.

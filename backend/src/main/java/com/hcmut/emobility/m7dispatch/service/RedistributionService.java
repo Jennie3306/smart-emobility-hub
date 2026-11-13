@@ -2,7 +2,6 @@ package com.hcmut.emobility.m7dispatch.service;
 
 import com.hcmut.emobility.m7dispatch.client.ExternalDtos;
 import com.hcmut.emobility.m7dispatch.client.HubClient;
-import com.hcmut.emobility.m7dispatch.client.RecommendationClient;
 import com.hcmut.emobility.m7dispatch.client.VehicleClient;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
@@ -13,7 +12,6 @@ import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
 import com.hcmut.emobility.shared.events.DispatchFailedEvent;
 import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
-import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -25,7 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * FR-M7-01..03. Tao, duyet va theo doi nhiem vu dieu chuyen xe.
+ * FR-M7-01, FR-M7-03. Tao va theo doi nhiem vu dieu chuyen xe (duyet khuyen nghi: RecommendationService).
  * M7 khong doi trang thai xe: IN_PROGRESS phat DispatchStartedEvent, DONE phat DispatchCompletedEvent,
  * FAILED (sau khi da khoi hanh) phat DispatchFailedEvent; M3 tu doi trang thai va vi tri xe, M1 tu cap nhat
  * dashboard. Cho do cua xe di qua ParkingDock cua M4 (quy cho do chung, Appendix A v2): roi Hub nguon khi
@@ -43,25 +41,26 @@ public class RedistributionService {
     private final EventPublisher events;
     private final VehicleClient vehicleClient;
     private final HubClient hubClient;
-    private final RecommendationClient recommendationClient;
     private final ParkingDock parkingDock;
 
     public RedistributionService(RedistributionTaskRepository repository,
                                  EventPublisher events,
                                  VehicleClient vehicleClient,
                                  HubClient hubClient,
-                                 RecommendationClient recommendationClient,
                                  ParkingDock parkingDock) {
         this.repository = repository;
         this.events = events;
         this.vehicleClient = vehicleClient;
         this.hubClient = hubClient;
-        this.recommendationClient = recommendationClient;
         this.parkingDock = parkingDock;
     }
 
-    /** FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED. */
-    @Transactional
+    /**
+     * FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED.
+     * Every rejection happens before anything is written, so a rejection does not roll back a caller's
+     * transaction (RecommendationService tries vehicle after vehicle in one transaction).
+     */
+    @Transactional(noRollbackFor = BusinessException.class)
     public RedistributionTask createRedistributionTask(Long vehicleId, Long sourceHubId, Long destinationHubId) {
         if (vehicleId == null || sourceHubId == null || destinationHubId == null) {
             throw new BusinessException("VALIDATION_FAILED",
@@ -105,23 +104,6 @@ public class RedistributionService {
         task.setStatus(RedistributionTaskStatus.CREATED);
         task.setCreatedAt(LocalDateTime.now());
         return repository.save(task);
-    }
-
-    /** FR-M7-02, UC-M7-02. Operator duyet khuyen nghi -> tao nhiem vu tu khuyen nghi do (BR-M7-04). */
-    @Transactional
-    public RedistributionTask approveRecommendation(String recommendationId) {
-        ExternalDtos.Recommendation rec = recommendationClient.getRecommendation(recommendationId)
-                .orElseThrow(() -> new BusinessException("RECOMMENDATION_NOT_FOUND",
-                        "Recommendation not found or no longer valid: " + recommendationId,
-                        HttpStatus.NOT_FOUND));
-
-        RedistributionTask task = createRedistributionTask(
-                rec.vehicleId(), rec.sourceHubId(), rec.destinationHubId());
-        task.setRecommendationId(recommendationId);
-        task = repository.save(task);
-
-        events.publish(new RecommendationApprovedEvent(recommendationId, "REDISTRIBUTE"));
-        return task;
     }
 
     /** FR-M7-03, UC-M7-03. Chuyen trang thai theo bang o muc 4.1; DONE thi phat DispatchCompletedEvent. */

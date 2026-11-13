@@ -28,15 +28,18 @@ public class DeviceEventService {
     private final InMemoryDeviceStateStore stateStore;
     private final InboundDeviceReadingStore inboundStore;
     private final EventPublisher eventPublisher;
+    private final IncidentService incidents;
 
     public DeviceEventService(DemoDeviceCatalog catalog,
                               InMemoryDeviceStateStore stateStore,
                               InboundDeviceReadingStore inboundStore,
-                              EventPublisher eventPublisher) {
+                              EventPublisher eventPublisher,
+                              IncidentService incidents) {
         this.catalog = catalog;
         this.stateStore = stateStore;
         this.inboundStore = inboundStore;
         this.eventPublisher = eventPublisher;
+        this.incidents = incidents;
     }
 
     public ProcessingResult processReading(DeviceReading reading) {
@@ -66,6 +69,16 @@ public class DeviceEventService {
                 reading.resourceId(), reading.observedState(), reading.batteryLevel(),
                 reading.failureReason(), reading.observedAt());
         stateStore.save(snapshot);
+
+        // FR-M6-05, BR-M6-06: a failure opens an Incident; while one is active for this resource, a new failure
+        // reading is recorded as processed but neither creates a second Incident nor announces the failure again.
+        if (isFailure(reading) && !incidents.openForDeviceFailure(reading)) {
+            ProcessingResult kept = ProcessingResult.processedWithoutEvents(reading.eventId(), "ACTIVE_INCIDENT_EXISTS");
+            inboundStore.markCompleted(kept);
+            log.info("M6_DEVICE_READING_PROCESSED runId={} inboundEventId={} result={} reasonCode=ACTIVE_INCIDENT_EXISTS resourceType={} resourceId={} outboundCount=0",
+                    runId, reading.eventId(), kept.status(), reading.resourceType(), reading.resourceId());
+            return kept;
+        }
 
         List<DomainEvent> events = buildEvents(reading);
         List<ProcessingResult.OutboundEvent> outbound = new ArrayList<>(events.size());
@@ -106,6 +119,11 @@ public class DeviceEventService {
 
         return List.of(new DeviceReadingReportedEvent(reading.hubId(), reading.resourceType().name(),
                 reading.resourceId(), reading.observedState(), reading.batteryLevel()));
+    }
+
+    private static boolean isFailure(DeviceReading reading) {
+        return reading.failureReason() != null && !reading.failureReason().isBlank()
+                && reading.resourceType() != ResourceType.PARKING_SPACE;
     }
 
     private String validate(DeviceReading reading) {

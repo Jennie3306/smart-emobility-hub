@@ -27,4 +27,15 @@ public interface RedistributionTaskRepository extends JpaRepository<Redistributi
     long countByDestinationHubIdAndStatusIn(Long destinationHubId, Collection<RedistributionTaskStatus> statuses);
 
     List<RedistributionTask> findAllByOrderByCreatedAtDesc();
+
+    /** Vehicles promised to leave a source Hub (CREATED tasks; IN_PROGRESS ones have already left). */
+    long countBySourceHubIdAndStatusIn(Long sourceHubId, Collection<RedistributionTaskStatus> statuses);
+
+    /** BR-M7-02: vehicles that already have an active task. */
+    @Query("""
+           SELECT t.vehicleId FROM RedistributionTask t
+           WHERE t.status IN (com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus.CREATED,
+                              com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus.IN_PROGRESS)
+           """)
+    List<Long> findActiveVehicleIds();
 }

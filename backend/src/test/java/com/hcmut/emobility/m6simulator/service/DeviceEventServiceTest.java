@@ -31,12 +31,15 @@ import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
 
 class DeviceEventServiceTest {
 
     private EventPublisher publisher;
     private InMemoryDeviceStateStore stateStore;
     private InboundDeviceReadingStore inboundStore;
+    private IncidentService incidents;
     private DeviceEventService service;
 
     @BeforeEach
@@ -44,8 +47,32 @@ class DeviceEventServiceTest {
         publisher = mock(EventPublisher.class);
         stateStore = new InMemoryDeviceStateStore();
         inboundStore = new InboundDeviceReadingStore();
+        incidents = mock(IncidentService.class);
+        // Default: no active Incident yet, so each failure opens one and is announced.
+        when(incidents.openForDeviceFailure(any(DeviceReading.class))).thenReturn(true);
         service = new DeviceEventService(new DemoDeviceCatalog(), stateStore,
-                inboundStore, publisher);
+                inboundStore, publisher, incidents);
+    }
+
+    @Test
+    void failureWhileAnIncidentIsActiveIsRecordedButNotAnnouncedAgain() {
+        when(incidents.openForDeviceFailure(any(DeviceReading.class))).thenReturn(true, false);
+
+        ProcessingResult first = service.processReading(reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, "OFFLINE", 40));
+        ProcessingResult second = service.processReading(reading(ResourceType.CHARGING_POINT, 1L, "FAULTY", null, "OVERHEAT", 41));
+
+        assertEquals(1, first.outboundEvents().size());
+        assertEquals(ProcessingResult.Status.PROCESSED, second.status());
+        assertEquals("ACTIVE_INCIDENT_EXISTS", second.reasonCode());
+        assertTrue(second.outboundEvents().isEmpty());
+        verify(publisher, times(1)).publish(org.mockito.ArgumentMatchers.any(DomainEvent.class));
+        assertTrue(inboundStore.find(new UUID(0, 41)).isPresent());
+    }
+
+    @Test
+    void normalReadingNeverTouchesIncidents() {
+        service.processReading(reading(ResourceType.VEHICLE, 1L, "AVAILABLE", 80, null, 42));
+        verifyNoInteractions(incidents);
     }
 
     @Test
