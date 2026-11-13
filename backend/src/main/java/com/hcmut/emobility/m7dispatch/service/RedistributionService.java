@@ -2,15 +2,18 @@ package com.hcmut.emobility.m7dispatch.service;
 
 import com.hcmut.emobility.m7dispatch.client.ExternalDtos;
 import com.hcmut.emobility.m7dispatch.client.HubClient;
-import com.hcmut.emobility.m7dispatch.client.RecommendationClient;
 import com.hcmut.emobility.m7dispatch.client.VehicleClient;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionTaskRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
+import com.hcmut.emobility.shared.contracts.ParkingDock;
 import com.hcmut.emobility.shared.events.DispatchCompletedEvent;
+import com.hcmut.emobility.shared.events.DispatchFailedEvent;
+import com.hcmut.emobility.shared.events.DispatchStartedEvent;
 import com.hcmut.emobility.shared.events.EventPublisher;
-import com.hcmut.emobility.shared.events.RecommendationApprovedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,12 +23,16 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * FR-M7-01..03. Tao, duyet va theo doi nhiem vu dieu chuyen xe.
- * M7 khong doi trang thai xe: khi nhiem vu DONE, M7 phat DispatchCompletedEvent
- * va M3 tu chuyen xe sang hub dich, M1 tu cap nhat dashboard hai hub.
+ * FR-M7-01, FR-M7-03. Tao va theo doi nhiem vu dieu chuyen xe (duyet khuyen nghi: RecommendationService).
+ * M7 khong doi trang thai xe: IN_PROGRESS phat DispatchStartedEvent, DONE phat DispatchCompletedEvent,
+ * FAILED (sau khi da khoi hanh) phat DispatchFailedEvent; M3 tu doi trang thai va vi tri xe, M1 tu cap nhat
+ * dashboard. Cho do cua xe di qua ParkingDock cua M4 (quy cho do chung, Appendix A v2): roi Hub nguon khi
+ * khoi hanh, giu cho o Hub dich khi den (Hub dich da het cho -> DESTINATION_FULL, nhiem vu van IN_PROGRESS).
  */
 @Service
 public class RedistributionService {
+
+    private static final Logger log = LoggerFactory.getLogger(RedistributionService.class);
 
     /** BR-M7-01: xe dang duoc dat hoac dang co nguoi su dung thi khong dieu chuyen. */
     private static final Set<String> NOT_MOVABLE = Set.of("RESERVED", "BOOKED", "IN_USE");
@@ -34,22 +41,26 @@ public class RedistributionService {
     private final EventPublisher events;
     private final VehicleClient vehicleClient;
     private final HubClient hubClient;
-    private final RecommendationClient recommendationClient;
+    private final ParkingDock parkingDock;
 
     public RedistributionService(RedistributionTaskRepository repository,
                                  EventPublisher events,
                                  VehicleClient vehicleClient,
                                  HubClient hubClient,
-                                 RecommendationClient recommendationClient) {
+                                 ParkingDock parkingDock) {
         this.repository = repository;
         this.events = events;
         this.vehicleClient = vehicleClient;
         this.hubClient = hubClient;
-        this.recommendationClient = recommendationClient;
+        this.parkingDock = parkingDock;
     }
 
-    /** FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED. */
-    @Transactional
+    /**
+     * FR-M7-01, UC-M7-01. Kiem tra rang buoc roi tao nhiem vu o trang thai CREATED.
+     * Every rejection happens before anything is written, so a rejection does not roll back a caller's
+     * transaction (RecommendationService tries vehicle after vehicle in one transaction).
+     */
+    @Transactional(noRollbackFor = BusinessException.class)
     public RedistributionTask createRedistributionTask(Long vehicleId, Long sourceHubId, Long destinationHubId) {
         if (vehicleId == null || sourceHubId == null || destinationHubId == null) {
             throw new BusinessException("VALIDATION_FAILED",
@@ -95,23 +106,6 @@ public class RedistributionService {
         return repository.save(task);
     }
 
-    /** FR-M7-02, UC-M7-02. Operator duyet khuyen nghi -> tao nhiem vu tu khuyen nghi do (BR-M7-04). */
-    @Transactional
-    public RedistributionTask approveRecommendation(String recommendationId) {
-        ExternalDtos.Recommendation rec = recommendationClient.getRecommendation(recommendationId)
-                .orElseThrow(() -> new BusinessException("RECOMMENDATION_NOT_FOUND",
-                        "Recommendation not found or no longer valid: " + recommendationId,
-                        HttpStatus.NOT_FOUND));
-
-        RedistributionTask task = createRedistributionTask(
-                rec.vehicleId(), rec.sourceHubId(), rec.destinationHubId());
-        task.setRecommendationId(recommendationId);
-        task = repository.save(task);
-
-        events.publish(new RecommendationApprovedEvent(recommendationId, "REDISTRIBUTE"));
-        return task;
-    }
-
     /** FR-M7-03, UC-M7-03. Chuyen trang thai theo bang o muc 4.1; DONE thi phat DispatchCompletedEvent. */
     @Transactional
     public RedistributionTask updateTaskStatus(Long taskId, RedistributionTaskStatus newStatus) {
@@ -122,13 +116,45 @@ public class RedistributionService {
                     "Cannot move task from " + current + " to " + newStatus);
         }
 
+        if (newStatus == RedistributionTaskStatus.IN_PROGRESS) {
+            // BR-M7-01 at departure time too: a student may have reserved the vehicle since the task was created.
+            ExternalDtos.VehicleInfo vehicle = vehicleClient.checkVehicle(task.getVehicleId())
+                    .orElseThrow(() -> new BusinessException("VEHICLE_NOT_FOUND",
+                            "Vehicle not found: " + task.getVehicleId(), HttpStatus.NOT_FOUND));
+            if (vehicle.state() != null && NOT_MOVABLE.contains(vehicle.state().toUpperCase())) {
+                throw new BusinessException("VEHICLE_RESERVED",
+                        "Vehicle " + task.getVehicleId() + " was reserved or taken after the task was created (BR-M7-01)");
+            }
+            parkingDock.undockRentalVehicle(task.getVehicleId());
+        } else if (newStatus == RedistributionTaskStatus.DONE) {
+            try {
+                parkingDock.dockRentalVehicle(task.getVehicleId(), task.getDestinationHubId());
+            } catch (BusinessException ex) {
+                if (!"HUB_FULL".equals(ex.getCode())) throw ex;
+                throw new BusinessException("DESTINATION_FULL", "Destination hub " + task.getDestinationHubId()
+                        + " has no free parking space now. Wait for a space or mark the task FAILED (BR-M7-03).");
+            }
+        } else if (newStatus == RedistributionTaskStatus.FAILED && current == RedistributionTaskStatus.IN_PROGRESS) {
+            try {
+                parkingDock.dockRentalVehicle(task.getVehicleId(), task.getSourceHubId());
+            } catch (BusinessException ex) {
+                log.warn("[M7] Task {} failed: vehicle {} is back at hub {} without a parking space ({})",
+                        task.getTaskId(), task.getVehicleId(), task.getSourceHubId(), ex.getCode());
+            }
+        }
+
         task.setStatus(newStatus);
         task.setUpdatedAt(LocalDateTime.now());
         RedistributionTask saved = repository.save(task);
 
-        if (newStatus == RedistributionTaskStatus.DONE) {
+        if (newStatus == RedistributionTaskStatus.IN_PROGRESS) {
+            events.publish(new DispatchStartedEvent(saved.getTaskId(), saved.getVehicleId(),
+                    saved.getSourceHubId(), saved.getDestinationHubId()));
+        } else if (newStatus == RedistributionTaskStatus.DONE) {
             events.publish(new DispatchCompletedEvent(saved.getTaskId(), saved.getVehicleId(),
                     saved.getSourceHubId(), saved.getDestinationHubId()));
+        } else if (newStatus == RedistributionTaskStatus.FAILED && current == RedistributionTaskStatus.IN_PROGRESS) {
+            events.publish(new DispatchFailedEvent(saved.getTaskId(), saved.getVehicleId(), saved.getSourceHubId()));
         }
         return saved;
     }

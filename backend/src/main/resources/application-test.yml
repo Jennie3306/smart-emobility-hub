@@ -9,6 +9,10 @@ spring:
   flyway:
     enabled: false
 app:
+  demo:
+    seed-parking: false        # khong tao 31 luot dat demo khi chay test
+  parking:
+    no-show-scan-ms: 3600000   # Timer M4 khong chay giua cac test
   monitoring:
     initial-delay-ms: 3600000
   m8:

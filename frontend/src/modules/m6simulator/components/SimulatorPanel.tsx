@@ -50,7 +50,7 @@ export function SimulatorPanel() {
   const [statusError, setStatusError] = useState<Failure | null>(null);
   const [runError, setRunError] = useState<Failure | null>(null);
   const [seedError, setSeedError] = useState("");
-  const [seed, setSeed] = useState("42");
+  const [seed, setSeed] = useState("100");
   const [scenario, setScenario] = useState<Scenario>("NORMAL_TICK");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);

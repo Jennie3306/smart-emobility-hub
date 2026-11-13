@@ -17,6 +17,11 @@ public record ProcessingResult(
         return new ProcessingResult(Status.PROCESSED, inboundEventId, events, null);
     }
 
+    /** Accepted and recorded, but nothing to announce (e.g. ACTIVE_INCIDENT_EXISTS, BR-M6-06). */
+    public static ProcessingResult processedWithoutEvents(UUID inboundEventId, String reasonCode) {
+        return new ProcessingResult(Status.PROCESSED, inboundEventId, List.of(), reasonCode);
+    }
+
     public static ProcessingResult duplicate(UUID inboundEventId) {
         return new ProcessingResult(Status.DUPLICATE, inboundEventId, List.of(), null);
     }

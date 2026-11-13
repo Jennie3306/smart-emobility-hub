@@ -1,8 +1,16 @@
 package com.hcmut.emobility.shared.events;
 
 /**
- * Phat boi: M6
- * Ben nhan: M1 cap nhat dashboard; M8 dung lam du lieu snapshot
+ * The owner of a resource changed its state. Published after the change is saved.
+ *
+ * Publishers (one owner per resource type):
+ *   - M4 for PARKING_SPACE (FREE, RESERVED, OCCUPIED, BLOCKED)
+ *   - M5 for CHARGING_POINT (FREE, RESERVED, IN_USE, FAULTY, UNDER_REPAIR)
+ * Consumers: M1 updates the dashboard, M8 keeps it for the What-if snapshot, M4 unblocks a parking space
+ * when M5 reports its charging point operational again.
+ *
+ * Raw sensor readings travel as {@link DeviceReadingReportedEvent}; they never use this event
+ * (Appendix A, event contract v2).
  */
 public class ResourceStateUpdatedEvent extends DomainEvent {
 

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -47,6 +48,15 @@ public class SecurityConfig {
                 // M6-D08 (TV2 duyet 21/10): toan bo /api/m6/** chi danh cho OPERATOR
                 .requestMatchers("/api/m6/**", "/api/m7/**", "/api/m8/**").hasRole("OPERATOR")
                 .requestMatchers("/api/m1/dashboard/**", "/api/m1/alerts/**").hasRole("OPERATOR")
+                // M5: hang doi cua hub, doi lich, doi uu tien va nhat ky chi danh cho OPERATOR.
+                // Sinh vien van goi /api/m5/hubs, /sessions, /sessions/mine, /sessions/schedule (POST),
+                // /sessions/{id}/start va /sessions/{id}/cancel (kiem tra chu so huu trong ChargingService).
+                .requestMatchers(HttpMethod.GET, "/api/m5/hubs/*/queue", "/api/m5/sessions/*/audit").hasRole("OPERATOR")
+                .requestMatchers(HttpMethod.PUT, "/api/m5/sessions/*/schedule").hasRole("OPERATOR")
+                .requestMatchers(HttpMethod.PATCH, "/api/m5/sessions/*/priority").hasRole("OPERATOR")
+                // M4: khoa / mo khoa cho do va danh sach luot dat cua Hub chi danh cho OPERATOR.
+                .requestMatchers(HttpMethod.POST, "/api/m4/spaces/*/block", "/api/m4/spaces/*/unblock").hasRole("OPERATOR")
+                .requestMatchers(HttpMethod.GET, "/api/m4/hubs/*/bookings").hasRole("OPERATOR")
                 .anyRequest().authenticated())
             // Loi 401/403 do bo loc Security nem ra KHONG di qua GlobalExceptionHandler,
             // nen phai tu ghi JSON o day - neu khong Spring tra ve trang HTML "Whitelabel Error Page".

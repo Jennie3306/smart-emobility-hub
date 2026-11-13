@@ -1,0 +1,63 @@
+digraph M5 {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.42", ranksep="0.62", splines=ortho, fontname="DejaVu Sans", labelloc=t, label="M5 — Smart charging | Class diagram (design view)", fontsize=22];
+  node [shape=plain, fontname="DejaVu Sans", fontsize=10];
+  edge [color="#536A7D", penwidth=1.3, arrowsize=0.8, fontname="DejaVu Sans", fontsize=9];
+  Controller [label=<
+    <TABLE BORDER="1" COLOR="#315B7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#EAF2FB">
+      <TR><TD BGCOLOR="#D9E8F7"><B>ChargingController</B><BR/><FONT POINT-SIZE="9">REST · /api/m5</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT">+ request(ChargingRequest, Principal)<BR ALIGN="LEFT"/>+ schedule(ChargingScheduleRequest, Principal)<BR ALIGN="LEFT"/>+ changePriority(id, PriorityChangeRequest)<BR ALIGN="LEFT"/>+ moveSchedule(id, ScheduleMoveRequest)<BR ALIGN="LEFT"/>+ mine() / hubSessions(hubId) / cancel(id)</TD></TR>
+    </TABLE>>];
+  Handler [label=<
+    <TABLE BORDER="1" COLOR="#B7791F" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#FFF3D9">
+      <TR><TD BGCOLOR="#FBE7B7"><B>ChargingEventHandler</B><BR/><FONT POINT-SIZE="9">@Order(0) · idempotent consumer M5</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT">+ onChargingRequested(event)<BR ALIGN="LEFT"/>+ onChargerFailed(event)<BR ALIGN="LEFT"/>+ onResourceStateUpdated(event)<BR ALIGN="LEFT"/>+ onVehicleReturned / onVehicleLowBattery(event)<BR ALIGN="LEFT"/>+ onReservationCancelled / onExpired(event)<BR ALIGN="LEFT"/>+ onRecommendationApproved(event)</TD></TR>
+    </TABLE>>];
+  Service [label=<
+    <TABLE BORDER="1" COLOR="#23845B" CELLBORDER="0" CELLSPACING="0" CELLPADDING="8" BGCOLOR="#E5F4EC">
+      <TR><TD BGCOLOR="#CFEADB"><B>ChargingService</B><BR/><FONT POINT-SIZE="9">Transactional business logic</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT">+ request(userId, request): ChargingSessionResponse<BR ALIGN="LEFT"/>+ schedule(userId, request): ChargingSessionResponse<BR ALIGN="LEFT"/>+ changePriority(id, operatorId, level, reason)<BR ALIGN="LEFT"/>+ moveSchedule(id, startAt, duration, operatorId, reason)<BR ALIGN="LEFT"/>+ start(id, userId, operator): ChargingSessionResponse<BR ALIGN="LEFT"/>+ handleChargerFailed(pointId, hubId): void<BR ALIGN="LEFT"/>+ runScheduledTasks(): void</TD></TR>
+    </TABLE>>];
+  Policy [label=<
+    <TABLE BORDER="1" COLOR="#315B7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#EAF2FB">
+      <TR><TD BGCOLOR="#D9E8F7"><B>ChargingPriorityPolicy</B></TD></TR>
+      <TR><TD ALIGN="LEFT">+ calculateScore(SoC, expectedUseAt,<BR ALIGN="LEFT"/>  waitingSince, bonus, priority, now): double<BR ALIGN="LEFT"/>+ comparator(): Comparator&lt;ChargingSession&gt;</TD></TR>
+    </TABLE>>];
+  Repositories [label=<
+    <TABLE BORDER="1" COLOR="#536A7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#F7F9FB">
+      <TR><TD BGCOLOR="#E8EDF2"><B>Repositories</B></TD></TR>
+      <TR><TD ALIGN="LEFT">ChargingSessionRepository · lockById()<BR ALIGN="LEFT"/>ChargingPointRepository · lockByHubAndStates()<BR ALIGN="LEFT"/>ChargingPriorityAuditRepository · findBySessionId()</TD></TR>
+    </TABLE>>];
+  Scheduler [label=<
+    <TABLE BORDER="1" COLOR="#8063AA" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#F1EDFA">
+      <TR><TD BGCOLOR="#E2D9F1"><B>ChargingScheduler / ChargingQueuePublisher</B></TD></TR>
+      <TR><TD ALIGN="LEFT">ChargingScheduler.run(): every 60 seconds<BR ALIGN="LEFT"/>EventPublisher.publish(DomainEvent)<BR ALIGN="LEFT"/>Queue topic: /topic/m5/hubs/{hubId}/queue</TD></TR>
+    </TABLE>>];
+  Session [label=<
+    <TABLE BORDER="1" COLOR="#315B7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#EAF2FB">
+      <TR><TD BGCOLOR="#D9E8F7"><B>ChargingSession</B><BR/><FONT POINT-SIZE="9">Aggregate root</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT">id, userId, hubId, parkingSpaceId<BR ALIGN="LEFT"/>vehicleKind, vehicleId, batteryLevel, status<BR ALIGN="LEFT"/>priorityLevel, priorityScore, failureBonus<BR ALIGN="LEFT"/>scheduledStartAt, scheduledEndAt, waitingSince<BR ALIGN="LEFT"/>+ enqueue() / assign() / start() / complete()<BR ALIGN="LEFT"/>+ interrupt() / cancel() / changePriority()</TD></TR>
+    </TABLE>>];
+  Point [label=<
+    <TABLE BORDER="1" COLOR="#315B7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#EAF2FB">
+      <TR><TD BGCOLOR="#D9E8F7"><B>ChargingPoint</B><BR/><FONT POINT-SIZE="9">M5 allocation · M6 device health</FONT></TD></TR>
+      <TR><TD ALIGN="LEFT">id, hubId, state<BR ALIGN="LEFT"/>(AVAILABLE / RESERVED / IN_USE / FAULTY / UNDER_REPAIR)<BR ALIGN="LEFT"/>+ reserve() / startCharging() / release()<BR ALIGN="LEFT"/>+ markFaulty() / applyExternalState()</TD></TR>
+    </TABLE>>];
+  Audit [label=<
+    <TABLE BORDER="1" COLOR="#315B7D" CELLBORDER="0" CELLSPACING="0" CELLPADDING="7" BGCOLOR="#EAF2FB">
+      <TR><TD BGCOLOR="#D9E8F7"><B>ChargingPriorityAudit</B></TD></TR>
+      <TR><TD ALIGN="LEFT">id, sessionId, operatorUserId<BR ALIGN="LEFT"/>oldPriority, newPriority, reason, changedAt<BR ALIGN="LEFT"/>Records actor, timestamp and reason</TD></TR>
+    </TABLE>>];
+  {rank=same; Controller; Handler}
+  {rank=same; Policy; Repositories; Scheduler}
+  {rank=same; Session; Point; Audit}
+  Controller -> Service [label="REST calls"];
+  Handler -> Service [label="shared events"];
+  Service -> Policy [label="priority"];
+  Service -> Repositories [label="persist / lock"];
+  Service -> Scheduler [label="timer + publish"];
+  Repositories -> Session [label="session records"];
+  Repositories -> Point [label="port records"];
+  Repositories -> Audit [label="audit records"];
+  Policy -> Repositories [style=invis];
+  Repositories -> Scheduler [style=invis];
+}

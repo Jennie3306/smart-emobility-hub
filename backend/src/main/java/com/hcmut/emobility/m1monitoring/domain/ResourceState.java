@@ -8,9 +8,9 @@ import java.util.Objects;
 
 /**
  * Mo hinh doc cua M1: trang thai moi nhat cua tung cho do va tung tru sac,
- * cap nhat tu su kien ResourceStateUpdatedEvent do M6 phat.
+ * cap nhat tu su kien ResourceStateUpdatedEvent do chu so huu phat (M4 cho do, M5 tru sac; Phu luc A v2).
  *
- * Day khong phai ban goc cua du lieu (ban goc thuoc M4/M5/M6) ma la ban chieu
+ * Day khong phai ban goc cua du lieu (ban goc thuoc M4/M5) ma la ban chieu
  * phuc vu man hinh giam sat, nen M1 so huu va duoc phep ghi.
  */
 @Entity

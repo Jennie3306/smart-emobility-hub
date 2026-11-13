@@ -2,6 +2,7 @@ package com.hcmut.emobility.m2reservation.domain;
 
 import com.hcmut.emobility.shared.common.BusinessException;
 import jakarta.persistence.*;
+import org.springframework.http.HttpStatus;
 
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -88,6 +89,26 @@ public class Reservation {
         this.expiresAt = now.plusMinutes(holdMinutes);
     }
 
+    /**
+     * PENDING -> CONFIRMED for a booked time window (M4 parking). The hold lasts until holdUntil
+     * (BR-M4-04: slot start + 15 minutes); after that the Timer expires it as a no-show.
+     */
+    public void confirmWindow(OffsetDateTime now, OffsetDateTime windowStart, OffsetDateTime windowEnd,
+                              OffsetDateTime holdUntil) {
+        if (windowStart == null || windowEnd == null || !windowEnd.isAfter(windowStart)) {
+            throw new BusinessException("INVALID_TIME_SLOT", "The booking must end after it starts",
+                    HttpStatus.BAD_REQUEST);
+        }
+        if (holdUntil == null || !holdUntil.isAfter(now)) {
+            throw new BusinessException("INVALID_TIME_SLOT", "The check-in deadline has already passed",
+                    HttpStatus.BAD_REQUEST);
+        }
+        moveTo(ReservationState.CONFIRMED, now);
+        this.startAt = windowStart;
+        this.endAt = windowEnd;
+        this.expiresAt = holdUntil;
+    }
+
     /** CONFIRMED -> CHECKED_IN. BR-M2-07: only valid while now < expiresAt. */
     public void checkIn(OffsetDateTime now) {
         if (state == ReservationState.CONFIRMED && isOverdue(now)) {
@@ -142,7 +163,7 @@ public class Reservation {
     private void moveTo(ReservationState target, OffsetDateTime now) {
         if (!state.canMoveTo(target)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Cannot transition reservation from " + state + " sang " + target);
+                    "Cannot transition reservation from " + state + " to " + target);
         }
         this.state = target;
         if (target.isTerminal()) {   // ended: release the keys so the resource can be booked again
