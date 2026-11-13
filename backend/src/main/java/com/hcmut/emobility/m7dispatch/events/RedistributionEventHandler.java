@@ -27,7 +27,9 @@ public class RedistributionEventHandler {
     @EventListener
     public void onHubNearCapacity(HubNearCapacityEvent event) {
         if (!processed.markIfNew(CONSUMER, event.getEventId())) return;
-        log.info("[M7] Nhan canh bao tu M1: hub {} {} = {}%",
-                event.getHubId(), event.getResourceType(), event.getUsagePercent());
+        // M1 gui ty le % cho PARKING, nhung so xe kha dung (khong phai %) cho VEHICLE.
+        boolean vehicles = "VEHICLE".equals(event.getResourceType());
+        log.info("[M7] Nhan canh bao tu M1: hub {} {} = {}{}", event.getHubId(), event.getResourceType(),
+                event.getUsagePercent(), vehicles ? " xe kha dung" : "%");
     }
 }

@@ -37,7 +37,7 @@ it.each(["NORMAL_TICK", "VEHICLE_FAILURE", "CHARGER_FAILURE"] as const)("sends %
   vi.mocked(simulatorApi.run).mockResolvedValue({ ...result, scenario });
   vi.mocked(simulatorApi.status).mockResolvedValue({ ...idle, state: "SUCCEEDED", latestRun: { ...result, scenario } });
   await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
-  expect(simulatorApi.run).toHaveBeenCalledWith(scenario, "42");
+  expect(simulatorApi.run).toHaveBeenCalledWith(scenario, "100");
   expect(await screen.findByText(result.runId)).toBeTruthy();
   expect(screen.getByText("DeviceReadingReported")).toBeTruthy();
   expect(screen.getByText(result.outboundEvents[0].eventId)).toBeTruthy();
@@ -58,7 +58,7 @@ it.each([400, 401, 403])("shows HTTP %s and keeps the entered seed on run failur
   vi.mocked(simulatorApi.run).mockRejectedValue(failure(status));
   await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
   expect((await screen.findByRole("alert")).textContent).toContain(`HTTP ${status}`);
-  expect((screen.getByLabelText("Seed") as HTMLInputElement).value).toBe("42");
+  expect((screen.getByLabelText("Seed") as HTMLInputElement).value).toBe("100");
   expect(screen.queryByText(result.runId)).toBeNull();
 });
 
