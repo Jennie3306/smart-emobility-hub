@@ -19,7 +19,7 @@ public class AppUserDetailsService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String username) {
         AppUser user = repository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("Khong tim thay tai khoan " + username));
+                .orElseThrow(() -> new UsernameNotFoundException("Account not found: " + username));
         return User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())
                 .roles(user.getRole().name())   // -> ROLE_STUDENT / ROLE_OPERATOR

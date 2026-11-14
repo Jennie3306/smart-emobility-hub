@@ -134,15 +134,15 @@ ngay khi sửa, còn container thì phải build lại mỗi lần.
 3. **Không đổi `ddl-auto`.** Để `validate`; schema chỉ thay đổi qua file Flyway của TV4,
    nhờ vậy ERD trong report luôn khớp cơ sở dữ liệu thật.
 
-## F. Việc còn thiếu, chia cho ai
+## F. Tình trạng (14/11/2026)
 
-Khung này đã chạy được: đăng nhập, phân quyền, sự kiện, WebSocket, Swagger, module mẫu M3.
-Những phần dưới đây là nghiệp vụ, chưa làm:
+Cả tám module đã có nghiệp vụ, API, màn hình và test; các việc ở bảng cũ (migration, giả lập IoT,
+`ReservationCore`, design system, STOMP) đã xong. Còn lại trước khi nộp (22/11):
 
-| Việc | Ai | Khi nào |
-|---|---|---|
-| Migration V3+ cho bảng của từng module (theo ERD) | TV4 nhận yêu cầu từ chủ module | Tuần 5 |
-| Bộ giả lập IoT + phát `ResourceStateUpdatedEvent` | TV6 | Tuần 4–5 |
-| Interface public `ReservationCore` cho M4 dùng | TV2 | Tuần 5 |
-| Design system đầy đủ (token, component chung) | TV5 | Tuần 4 |
-| Gửi STOMP từ backend cho dashboard | TV1 | Tuần 5–6 |
+| Việc | Ai |
+|---|---|
+| M8 gọi hợp đồng `RedistributionRecommendations` của M7 (propose / approve), bật *Approve & execute* | TV8 |
+| Điền username thật vào `.github/CODEOWNERS` | TV1 |
+| Quay video demo khoảng 3 phút theo `docs/demo/kich-ban-demo.md` | Cả nhóm |
+
+Sơ đồ của report và ảnh chụp giao diện: `docs/tools_for_figures` (xem README trong đó).

@@ -116,7 +116,7 @@ public class ParkingSpace {
     private void changeStatus(Status newStatus) {
         if (!this.status.canMoveTo(newStatus)) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Khong the chuyen cho do tu trang thai " + this.status + " sang " + newStatus);
+                    "A parking space cannot move from " + this.status + " to " + newStatus);
         }
         this.status = newStatus;
     }
@@ -139,7 +139,7 @@ public class ParkingSpace {
         if (this.status != Status.RESERVED) {
             // FREE -> OCCUPIED is only for a docked rental vehicle (dock); a booking must be RESERVED first.
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Chi check-in duoc cho dang RESERVED, hien tai: " + this.status);
+                    "Only a RESERVED space can be checked in; current state: " + this.status);
         }
         requireMatchingReservation(reservationId);
         changeStatus(Status.OCCUPIED);
@@ -192,14 +192,14 @@ public class ParkingSpace {
         if (reservationId == null) {
             // Du lieu dau vao sai, khong phai xung dot trang thai: tra 400 thay vi 409 mac dinh.
             throw new BusinessException("INVALID_RESERVATION_ID",
-                    "Ma reservation khong duoc de trong", HttpStatus.BAD_REQUEST);
+                    "The reservation id is required", HttpStatus.BAD_REQUEST);
         }
     }
 
     private void requireMatchingReservation(Long reservationId) {
         if (!reservationId.equals(this.currentReservationId)) {
             throw new BusinessException("RESERVATION_MISMATCH",
-                    "Reservation " + reservationId + " khong khop voi cho do (hien tai: "
+                    "Reservation " + reservationId + " does not match this space (current: "
                             + this.currentReservationId + ")");
         }
     }

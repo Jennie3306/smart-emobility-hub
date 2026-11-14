@@ -13,3 +13,6 @@ dist/
 # Harness core maintenance binary
 scripts/bin/harness
 scripts/bin/harness.exe
+
+# Python (docs/tools_for_figures scripts)
+__pycache__/
