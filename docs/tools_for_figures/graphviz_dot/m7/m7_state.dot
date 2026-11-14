@@ -1,0 +1,22 @@
+digraph G {
+rankdir=TB; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+nodesep=0.9; ranksep=0.9; subgraph cluster_t {label="RedistributionTask"; fontname="DejaVu Sans Bold"; CREATED; IN_PROGRESS; DONE; FAILED;} subgraph cluster_r {label="RedistributionRecommendation"; fontname="DejaVu Sans Bold"; PENDING; APPROVED; PARTIAL; REJECTED;}
+"CREATED" [];
+"IN_PROGRESS" [];
+"DONE" [];
+"FAILED" [];
+"PENDING" [fillcolor="#fff1c9", color="#c9a227"];
+"APPROVED" [fillcolor="#fff1c9", color="#c9a227"];
+"PARTIAL" [fillcolor="#fff1c9", color="#c9a227"];
+"REJECTED" [fillcolor="#fff1c9", color="#c9a227"];
+"CREATED" -> "IN_PROGRESS" [label="start [vehicle still AVAILABLE]\n/ undock at source, DispatchStarted" ];
+"IN_PROGRESS" -> "DONE" [label="done [space at destination]\n/ dock, DispatchCompleted" ];
+"IN_PROGRESS" -> "FAILED" [label="fail / dock back at source,\nDispatchFailed" color="#c0504d", fontcolor="#c0504d"];
+"CREATED" -> "FAILED" [label="fail (not started)" color="#c0504d", fontcolor="#c0504d"];
+"PENDING" -> "APPROVED" [label="approve [all tasks created]" ];
+"PENDING" -> "PARTIAL" [label="approve [some tasks created]" ];
+"PARTIAL" -> "APPROVED" [label="approve again [rest created]" ];
+"PENDING" -> "REJECTED" [label="reject" ];
+}

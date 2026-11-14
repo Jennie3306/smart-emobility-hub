@@ -1,0 +1,36 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>From a hub alert to redistribution tasks (M7)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+a [label="M1 commits a LOW_VEHICLE or\nnear-capacity alert for a hub", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d0 [label="Open proposal (PENDING /\nPARTIAL) for this hub?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+n0 [label="No new proposal", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d1 [label="Alert type?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+sh [label="Shortage: donor = hub with the most\nspare vehicles (keeps a minimum);\namount ≤ free room at the hub", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+cr [label="Crowding: target = hub with the most\nfree room; move only vehicles the\nhub can spare", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d2 [label="Donor / target found\nand amount > 0?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+n1 [label="Log the reason, no proposal", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+p [label="Save recommendation PENDING\n(from, to, amount, reason)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+op [label="Operator decides", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+rj [label="REJECTED with reason", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+c [label="Candidates: available vehicles at the source\nnot already in a task; limit = min(remaining,\ncandidates − 1) so the source keeps one", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+l [label="Limit reached or\nno candidate left?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+t [label="Create a task (M4 checks the\ndestination has room; vehicle → IN_TRANSIT\nwhen it leaves)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d3 [label="Result?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+sk [label="Skip this vehicle", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+st [label="Stop: DESTINATION_FULL\nor HUB_NOT_FOUND", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d4 [label="All tasks\ncreated?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+ap [label="APPROVED", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+pa [label="PARTIAL (some tasks) or still\nPENDING (none), with a note;\nthe operator can approve again", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ev [label="First approval with tasks:\npublish RecommendationApprovedEvent", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18]; e2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> a -> d0; d0 -> n0 [label="yes"]; d0 -> d1 [label="no"];
+d1 -> sh [label="vehicle shortage"]; d1 -> cr [label="parking nearly full"]; sh -> d2; cr -> d2;
+d2 -> n1 [label="no"]; d2 -> p [label="yes"]; n0 -> e2; n1 -> e2;
+p -> op; op -> rj [label="reject"]; op -> c [label="approve"]; rj -> e;
+c -> l; l -> t [label="no"]; t -> d3;
+d3 -> l [label="created", constraint=false]; d3 -> sk [label="other error"]; sk -> l [constraint=false];
+d3 -> st [label="destination full"]; l -> d4 [label="yes"]; st -> d4;
+d4 -> ap [label="yes"]; d4 -> pa [label="no"]; ap -> ev; pa -> ev [label="[tasks > 0]"]; pa -> e [label="[no task]"]; ev -> e;
+pa -> op [style=dashed, constraint=false, label="approve again"];
+{rank=same; sh; cr} {rank=same; n0; n1}
+}

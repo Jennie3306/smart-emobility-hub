@@ -1,0 +1,50 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;font-family:"DejaVu Sans",sans-serif;background:#fff;color:#1f2d3d}
+.w{width:1500px;padding:24px;box-sizing:border-box}
+.row{display:flex;gap:16px;align-items:stretch}
+.tier{border:2px solid #9fb3cf;border-radius:12px;padding:12px 14px;margin:0 0 10px;background:#f7f9fd}
+.t{font-weight:bold;font-size:15px;margin-bottom:8px;color:#1f4e79}
+.box{flex:1;border:1.6px solid #4a6fa5;border-radius:9px;background:#eef2fb;padding:8px 10px;font-size:12.5px}
+.box b{display:block;font-size:14px;margin-bottom:2px}
+.arrow{text-align:center;font-size:12px;color:#555;margin:-4px 0 6px}
+.arrow span{font-size:20px;display:block;line-height:18px}
+.app{border:2.5px solid #1f4e79;border-radius:14px;padding:12px;margin-bottom:10px}
+.mods{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.sh{border-color:#4f9a4f;background:#eaf5ea}.sh .box{border-color:#4f9a4f;background:#fff}
+.m8{background:#fff4dc;border-color:#c9a227}
+.ext{border-style:dashed;background:#fff;border-color:#777}
+.db{background:#eef2fb}
+small{color:#555}
+</style></head><body><div class="w">
+<div class="tier" style="background:#fff;border-style:dashed;border-color:#888"><div class="t">Client tier</div>
+<div class="row"><div class="box" style="background:#fff;border-color:#333"><b>Web browser — React 18 + TypeScript SPA (Vite, Tailwind)</b>One folder per module (<code>modules/m1monitoring</code> … <code>m8simulation</code>): pages, typed API client; shared router, layout, STOMP client. Used by <b style="display:inline">Student</b> and <b style="display:inline">Operator</b>.</div>
+<div class="box" style="flex:.55;background:#f2f2f2;border-color:#777"><b>nginx</b>Serves the built SPA; proxies <code>/api/</code> (keeps the JSESSIONID cookie) and <code>/ws/</code> (WebSocket upgrade) to the backend</div></div></div>
+<div class="arrow"><span>⇅</span>HTTP/JSON (REST) · STOMP over SockJS for live updates</div>
+<div class="app"><div class="t">Spring Boot 3.3 application — one deployable, modular monolith (Java 21)</div>
+<div class="tier"><div class="t">Presentation layer</div><div class="row">
+<div class="box"><b>REST controllers</b><code>/api/m1</code> … <code>/api/m8</code>; each controller calls only its own module's service; DTOs validated with Bean Validation</div>
+<div class="box"><b>Spring Security</b>Server-side session cookie; roles STUDENT and OPERATOR; operator-only paths return 403</div>
+<div class="box"><b>Errors and push</b><code>GlobalExceptionHandler</code> maps <code>BusinessException</code> to <code>ApiError</code> (code, message); STOMP broker <code>/topic</code> (M1 dashboard, M5 queue)</div></div></div>
+<div class="arrow"><span>↓</span>service calls</div>
+<div class="tier"><div class="t">Business layer — eight modules, each <code>controller → service → domain → repository</code>, each the only writer of its tables</div>
+<div class="mods">
+<div class="box"><b>M1 Monitoring</b>Alerts, dashboard read model <code>m1_resource_state</code></div>
+<div class="box"><b>M2 Reservation</b>Reservation lifecycle; <code>ReservationCore</code> for M4</div>
+<div class="box"><b>M3 Rental vehicles</b>RentalVehicle states, trips, battery</div>
+<div class="box"><b>M4 Parking</b>Shared parking pool; <code>ParkingDock</code> for M3, M7</div>
+<div class="box"><b>M5 Smart charging</b>Charging points, sessions, priority queue</div>
+<div class="box"><b>M6 IoT and incidents</b>Device simulator, readings, incidents</div>
+<div class="box"><b>M7 Redistribution</b>Tasks, recommendations; <code>RedistributionRecommendations</code></div>
+<div class="box m8"><b>M8 What-if</b>Read-only snapshot, deterministic engine, proposals (own JSON store)</div>
+</div></div>
+<div class="arrow"><span>⇅</span>publish / consume events · call contracts</div>
+<div class="tier sh"><div class="t" style="color:#2f6f2f">Shared kernel — <code>com.hcmut.emobility.shared</code></div><div class="row">
+<div class="box"><b>EventPublisher</b>Synchronous in-process domain events, past-tense facts with <code>eventId</code>; consumers guard with <code>ProcessedEventStore.markIfNew(consumer, id)</code></div>
+<div class="box"><b>Contracts</b><code>ParkingDock</code>, <code>RedistributionRecommendations</code> (+ <code>ReservationCore</code>, published by M2): the only synchronous calls between modules</div>
+<div class="box" style="border-color:#c9a227"><b>Timers (<code>@Scheduled</code>)</b>M1 thresholds 30 s · M2 expiry 30 s · M4 no-show 60 s · M5 queue 60 s · M6 simulator ticks · M8 booking check 30 min</div>
+<div class="box"><b>Auth and common</b><code>AppUser</code>, <code>BusinessException</code>, <code>ApiError</code>, OpenAPI, WebSocket config</div></div></div>
+</div>
+<div class="arrow"><span>↓</span>JPA / JDBC — write own tables; read-only <code>SELECT</code> of others' tables for lookups and snapshots</div>
+<div class="row"><div class="box db" style="flex:2"><b>PostgreSQL 16</b>One schema migrated by Flyway (V1–V71); tables grouped by owner: <code>hub</code>, <code>alert</code>, <code>reservation</code>, <code>rental_vehicle</code>, <code>parking_space</code>, <code>charging_session</code>, <code>incident</code>, <code>redistribution_tasks</code> …</div>
+<div class="box ext"><b>AI provider (optional)</b>Chat-completions API used only by M8 to parse a description and suggest actions; credentials stay on the server</div></div>
+</div></body></html>

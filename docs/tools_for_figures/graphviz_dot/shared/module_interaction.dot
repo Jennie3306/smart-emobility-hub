@@ -1,0 +1,26 @@
+digraph I { graph [fontname="DejaVu Sans", splines=line, outputorder=edgesfirst]; node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", fontsize=12, penwidth=1.6, color="#4a6fa5", fontcolor="#ffffff"];
+m6 [label=<<b>M6 IoT and incidents</b>>, pos="324.0,576!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m2 [label=<<b>M2 Reservation</b>>, pos="72,432!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m4 [label=<<b>M4 Parking</b>>, pos="576,432!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m3 [label=<<b>M3 Rental vehicles</b>>, pos="72,216!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m5 [label=<<b>M5 Smart charging</b>>, pos="576,216!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m7 [label=<<b>M7 Redistribution</b>>, pos="324.0,72!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m1 [label=<<b>M1 Monitoring</b>>, pos="43.199999999999996,0!", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m8 [label=<<b>M8 What-if</b>>, pos="604.8000000000001,0!", shape=box, style="rounded,filled", fillcolor="#fff4dc", color="#c9a227", penwidth=1.8, fontsize=13, width=2.1, height=0.62];
+m6 -> m2 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>1</b></font></td></tr></table>>];
+m6 -> m3 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>2</b></font></td></tr></table>>];
+m6 -> m4 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>3</b></font></td></tr></table>>];
+m6 -> m5 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>4</b></font></td></tr></table>>];
+m2 -> m3 [dir=both, label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>5</b></font></td></tr></table>>];
+m2 -> m4 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>6</b></font></td></tr></table>>];
+m2 -> m5 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>7</b></font></td></tr></table>>];
+m3 -> m5 [dir=both, label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>8</b></font></td></tr></table>>];
+m4 -> m5 [dir=both, label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>9</b></font></td></tr></table>>];
+m1 -> m7 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>10</b></font></td></tr></table>>];
+m7 -> m3 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>11</b></font></td></tr></table>>];
+m7 -> m5 [label=<<table border="0" cellpadding="1" bgcolor="#4a6fa5" style="rounded"><tr><td><font color="#ffffff"><b>12</b></font></td></tr></table>>];
+m4 -> m2 [label=<<table border="0" cellpadding="1" bgcolor="#2f7d32" style="rounded"><tr><td><font color="#ffffff"><b>A</b></font></td></tr></table>>, color="#2f7d32", penwidth=2.6, arrowhead=empty];
+m3 -> m4 [label=<<table border="0" cellpadding="1" bgcolor="#2f7d32" style="rounded"><tr><td><font color="#ffffff"><b>B</b></font></td></tr></table>>, color="#2f7d32", penwidth=2.6, arrowhead=empty];
+m7 -> m4 [label=<<table border="0" cellpadding="1" bgcolor="#2f7d32" style="rounded"><tr><td><font color="#ffffff"><b>C</b></font></td></tr></table>>, color="#2f7d32", penwidth=2.6, arrowhead=empty];
+m8 -> m7 [label=<<table border="0" cellpadding="1" bgcolor="#2f7d32" style="rounded"><tr><td><font color="#ffffff"><b>D</b></font></td></tr></table>>, color="#2f7d32", penwidth=2.6, style=dashed, arrowhead=empty];
+}

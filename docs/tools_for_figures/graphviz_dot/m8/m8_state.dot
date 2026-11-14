@@ -1,0 +1,18 @@
+digraph G {
+rankdir=LR; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+label=<<b>Proposal of a what-if run (M8)</b>>; labelloc=t; fontsize=16;
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> "PENDING";
+"PENDING" [];
+"DISCARDED" [];
+"APPLIED" [style="rounded,dashed,filled", fillcolor="#f2f2f2", color="#888888", fontcolor="#777777"];
+__fin0 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"DISCARDED" -> __fin0;
+"PENDING" -> "DISCARDED" [label="discard(runId, id)\n/ save run with the new status" ];
+"PENDING" -> "PENDING" [label="apply(runId, id)\n/ refused: DISPATCH_NOT_CONNECTED,\nnothing executed" ];
+"PENDING" -> "APPLIED" [label="apply after M7 integration\n(planned)" style=dashed, color="#888888", fontcolor="#777777"];
+note [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=11, label="Created with the run, always PENDING.\nDiscarding a non-PENDING proposal\nfails with ALREADY_RESOLVED.\nThe run itself is never modified."];
+note -> PENDING [style=dashed, arrowhead=none, color="#c9a227"];
+}

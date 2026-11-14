@@ -1,0 +1,29 @@
+sequenceDiagram
+autonumber
+actor S as Student
+participant RC as ReservationController (M2)
+participant RS as ReservationService (M2)
+participant EP as EventPublisher
+participant H as ReservationVehicleHandler (M3)
+participant VS as VehicleService (M3)
+participant PD as ParkingDock (M4)
+S->>RC: POST /api/m2/reservations/{id}/check-in
+RC->>RS: checkIn(id, userId)
+RS->>RS: reservation.checkIn(now) [now < expiresAt]
+RS->>EP: publish(ReservationCheckedInEvent)
+EP->>H: checkedIn(event) (same transaction)
+H->>VS: pickUp(vehicleId, userId)
+alt state ≠ RESERVED
+  VS-->>H: VEHICLE_NOT_AVAIL
+else battery < 20%
+  VS-->>H: BATTERY_TOO_LOW
+else reservedByUserId ≠ userId
+  VS-->>H: RESERVATION_MISMATCH
+else valid
+  VS->>PD: undockRentalVehicle(vehicleId)
+  VS->>VS: changeState(IN_USE), clearReservation()
+  VS->>VS: RentalSession.start(vehicleId, userId)
+  VS->>EP: publish(VehiclePickedUpEvent)
+end
+Note over RS,VS: an exception rolls back the whole transaction:<br/>the reservation stays CONFIRMED and the vehicle RESERVED
+RC-->>S: 200 CHECKED_IN, or 4xx with the error code

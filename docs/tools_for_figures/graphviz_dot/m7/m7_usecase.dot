@@ -1,0 +1,21 @@
+digraph G {
+imagepath="../../python"; rankdir=LR; splines=true; nodesep=0.35; ranksep=1.3; fontname="DejaVu Sans";
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", fontsize=11, arrowsize=0.8];
+"op" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><b>Operator</b></font></td></tr></table>>];
+subgraph cluster_sys { label=<<b>«subsystem» M7 — Vehicle Redistribution</b>>; fontsize=14; style="rounded"; color="#1f4e79"; penwidth=2; bgcolor="#f9fbfd";
+"UC-M7-01" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M7-01</b><br/>Create a redistribution<br/>task>];
+"UC-M7-05" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M7-05</b><br/>Check vehicle, duplicate<br/>and destination capacity>];
+"UC-M7-02" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M7-02</b><br/>Approve or reject<br/>a recommendation>];
+"UC-M7-03" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M7-03</b><br/>Track a task<br/>(start, done, failed)>];
+"UC-M7-04" [shape=ellipse, style=filled, fillcolor="#fff1c9", color="#d4b04a", penwidth=1.6, fontsize=11, label=<<b>UC-M7-04</b><br/>Propose redistribution<br/>from an alert>];
+}
+"m1" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>M1 (HubNearCapacity)</b></font></td></tr></table>>];
+"m8" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>M8 (What-if)</b></font></td></tr></table>>];
+"op" -> "UC-M7-01" [dir=none, color="#444444"];
+"op" -> "UC-M7-02" [dir=none, color="#444444"];
+"op" -> "UC-M7-03" [dir=none, color="#444444"];
+"UC-M7-04" -> "m1" [dir=none, color="#444444"];
+"UC-M7-02" -> "m8" [dir=none, color="#444444"];
+"UC-M7-01" -> "UC-M7-05" [style=dashed, color="#2e6fb0", fontcolor="#2e6fb0", label="«include»", constraint=false];
+"UC-M7-02" -> "UC-M7-05" [style=dashed, color="#2e6fb0", fontcolor="#2e6fb0", label="«include»", constraint=false];
+}
