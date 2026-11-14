@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { simulationApi as api, type Scenario, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
 import "./simulation.css";
@@ -21,7 +21,6 @@ export default function SimulationPage() {
   const [busy,setBusy]=useState(false); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
   const [compare,setCompare]=useState<string[]>([]); const [reuse,setReuse]=useState<string>("");
   const [repeatBookings,setRepeatBookings]=useState(false);
-  const scenarioNameInput = useRef<HTMLInputElement>(null);
   const inputSnapshot=runs.find(r=>r.id===reuse)?.snapshot || snapshot;
   const observed=inputSnapshot?.bookingWindow?.hubs.find(h=>h.hubId===scenario.hubId)?.bookings ?? 0;
   const effective=effectiveScenario(scenario,repeatBookings,inputSnapshot);
@@ -30,16 +29,6 @@ export default function SimulationPage() {
   const invalid=Object.keys(fieldErrors).length>0;
   const dirty=draftDiffers(effective,repeatBookings,reuse,active);
   function edit() {setError("");setNotice("");}
-  function startNewScenario() {
-    const hubId = snapshot?.hubs.find(hub => hub.id === defaults.hubId)?.id ?? snapshot?.hubs[0]?.id ?? defaults.hubId;
-    setScenario({ ...defaults, name: "New scenario", hubId });
-    setText("");
-    setActive(undefined);
-    setReuse("");
-    setRepeatBookings(false);
-    edit();
-    scenarioNameInput.current?.focus();
-  }
   function navigate(next:typeof tab) {setTab(next);edit();}
   async function refresh() {
     const [s,m,r]=await Promise.all([api.snapshot(),api.status(),api.list()]);setSnapshot(s);setMonitor(m);setRuns(r);setActive(current=>refreshActiveRun(current,r));
@@ -73,7 +62,7 @@ export default function SimulationPage() {
       <div className="m8-content" id="m8-workspace" tabIndex={-1}>
         <div className="m8-title"><div><h1>{tab==="studio"?"What-if Simulation":tab==="history"?"History & Comparison":"Network Snapshot"}</h1><p>{tab==="studio"?"Test a network change, see its impact, and let AI explore better plans.":tab==="history"?"Select two runs to compare KPIs. Reuse the same snapshot and seed to isolate scenario impact.":"Hub and vehicle data from PostgreSQL, booking counts from M2 and resource observations from M1/M6."}</p></div><button className="m8-button secondary" disabled={busy} onClick={()=>task(refresh)}><StudioIcon kind="refresh"/>Refresh</button></div>
         {tab==="studio"&&<ol className="m8-workflow" aria-label="Simulation workflow"><li><span>1</span><div><strong>Set the scenario</strong><small>Describe it or edit the form</small></div></li><li><span>2</span><div><strong>Run the simulation</strong><small>Code calculates the KPIs</small></div></li><li><span>3</span><div><strong>Explore AI plans</strong><small>Test, read feedback, refine</small></div></li></ol>}
-        {busy&&<div className="m8-alert" role="status">Processing… AI planning, when included, can take up to two minutes.</div>}
+        {busy&&<div className="m8-alert" role="status">Processing… AI planning can take a few minutes.</div>}
         {error && <div className="m8-alert error" role="alert">{error}</div>}
         {notice && <div className="m8-alert" role="status">{notice}</div>}
         {!snapshot && !error && <div className="m8-panel">Loading network…</div>}
@@ -82,7 +71,7 @@ export default function SimulationPage() {
             <section className="m8-panel m8-form">
               <div className="m8-section-head"><span className="m8-step" aria-hidden="true">1</span><div><h2>Scenario Inputs</h2><p>Choose what changes and how much demand to test.</p></div></div>
               <div className="m8-assistant"><div><strong>Describe the situation</strong><span className="m8-chip">{monitor?.aiConfigured?"AI ready":"Local rules"}</span></div><p>AI fills a draft. Review the values before running.</p><textarea name="description" autoComplete="off" aria-label="Scenario description" value={text} onChange={e=>setText(e.target.value)}/><button className="m8-button secondary" disabled={busy||!text.trim()} onClick={()=>task(async()=>{const result=await api.parse(text);setScenario(result.scenario);setRepeatBookings(false);setNotice(`${result.source==="LLM"?"AI":"Local rules"} filled the form. Review before running. ${result.warnings.join(" ")}`);})}>Fill Form from Description</button></div>
-              <label>Scenario name<input ref={scenarioNameInput} name="scenarioName" autoComplete="off" aria-label="Scenario name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name?"error-name":undefined} maxLength={100} value={scenario.name} onChange={e=>update("name",e.target.value)}/>{fieldErrors.name&&<span id="error-name" className="m8-field-error">{fieldErrors.name}</span>}</label>
+              <label>Scenario name<input name="scenarioName" autoComplete="off" aria-label="Scenario name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name?"error-name":undefined} maxLength={100} value={scenario.name} onChange={e=>update("name",e.target.value)}/>{fieldErrors.name&&<span id="error-name" className="m8-field-error">{fieldErrors.name}</span>}</label>
               <label>Affected hub<select name="hubId" aria-describedby={fieldErrors.hubId?"scenario-errors":undefined} aria-invalid={!!fieldErrors.hubId} value={scenario.hubId} onChange={e=>update("hubId",Number(e.target.value))}>{snapshot.hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
               <fieldset className="m8-demand"><legend>Rental Request Volume</legend><div className="m8-demand-options">
                 <label className={!repeatBookings?"selected":""}><input type="radio" name="requestSource" value="manual" checked={!repeatBookings} aria-describedby="request-source-help" onChange={()=>{edit();setScenario(effective);setRepeatBookings(false);}}/><span><strong>Enter a volume</strong><small>Test a what-if number</small></span></label>
@@ -93,8 +82,8 @@ export default function SimulationPage() {
               {repeatBookings&&inputSnapshot?.bookingWindow&&<p className="m8-field-hint">Captured window: {time(inputSnapshot.bookingWindow.from)}–{time(inputSnapshot.bookingWindow.to)}. Searches and rejected attempts are excluded.</p>}
               </fieldset>
               <div className="m8-field-grid">{numericFields.filter(([key])=>key!=="seed").map(renderNumericField)}</div>
-              <label className="m8-toggle"><input type="checkbox" checked={scenario.disabled} onChange={e=>update("disabled",e.target.checked)}/><span><strong>Close the hub during the simulation</strong><small>Changes affect the simulation copy only.</small></span></label>
-              <label className="m8-toggle"><input type="checkbox" checked={scenario.reroute} onChange={e=>update("reroute",e.target.checked)}/><span><strong>Allow requests to use other hubs</strong><small>Serve requests at other open hubs. Vehicles are not moved; travel time is not modeled.</small></span></label>
+              <label className="m8-toggle"><input type="checkbox" checked={scenario.disabled} onChange={e=>update("disabled",e.target.checked)}/><span><strong>Simulate this hub being closed</strong><small>No rentals can start at this hub during the simulation.</small></span></label>
+              <label className="m8-toggle"><input type="checkbox" checked={scenario.reroute} onChange={e=>update("reroute",e.target.checked)}/><span><strong>Let riders rent from another hub</strong><small>If this hub cannot serve a request, try another open hub with a vehicle available. Extra travel time is not counted.</small></span></label>
               <details className="m8-advanced"><summary>Snapshot & Repeatability</summary><p>Use the same snapshot and seed to compare scenarios fairly.</p><label>Snapshot source<select name="snapshotSource" value={reuse} onChange={e=>{edit();setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>{numericFields.filter(([key])=>key==="seed").map(renderNumericField)}</details>
               <p className="m8-input-summary">{Number.isFinite(effective.injectedRequests)?number(effective.injectedRequests):"—"} rental requests · {Number.isFinite(scenario.durationMins)?scenario.durationMins:"—"} min · {scenario.disabled?"hub closed":"hub open"}</p>
               {invalid&&<div id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.<ul>{Object.values(fieldErrors).map(e=><li key={e}>{e}</li>)}</ul></div>}
@@ -102,15 +91,23 @@ export default function SimulationPage() {
             </section>
             <section className="m8-results">
               <div className="m8-panel m8-preview"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">2</span><div><h2>Scenario Results</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Calculated by the simulator after you confirm the inputs."}</p></div><span className="m8-chip">{active?(dirty?"Draft changed":"Saved"):"Ready"}</span></div>
+                <div className="m8-empty">
+                  <h3>Starting network</h3>
+                  <p>{active ? "Vehicles available in the snapshot used for this run." : "Vehicles available before the simulation."}</p>
+                  <div className="m8-mini-network">{(active?.snapshot ?? inputSnapshot ?? snapshot).hubs.map(hub => {
+                    const available = (active?.snapshot ?? inputSnapshot ?? snapshot).vehicles.filter(
+                      vehicle => vehicle.hubId === hub.id && vehicle.state === "AVAILABLE" && vehicle.battery >= 20,
+                    ).length;
+                    return <span key={hub.id}>{hub.name}<b>{available} available {available === 1 ? "vehicle" : "vehicles"}</b></span>;
+                  })}</div>
+                </div>
                 {active?<>{dirty&&<div className="m8-alert" role="status">Results and recommendations below are from the previous run. Your draft changes have not been simulated.</div>}<div className="m8-kpis"><Metric label="Requests served" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Unserved at end" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Avg. wait · served only" value={active.kpi.served?number(active.kpi.meanWaitMins):"—"} unit={active.kpi.served?"min":""}/><Metric label="Peak queue" value={number(active.kpi.peakQueue)} unit="requests"/></div>
                   <div className="m8-baseline">Same network with the hub open: <strong>{number(active.baseline.failurePercent)}% failed</strong><span>Difference {number(active.kpi.failurePercent-active.baseline.failurePercent)} percentage points</span></div>
                   <div className="m8-chart"><ResponsiveContainer width="100%" height={240}><LineChart accessibilityLayer data={active.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="minute" tick={{fontSize:11}} minTickGap={30} unit="′"/><YAxis tick={{fontSize:11}}/><Tooltip/><Legend/><Line name="Served" type="monotone" dataKey="served" stroke="#1F4E79" strokeWidth={2.5} dot={false}/><Line name="Waiting" type="monotone" dataKey="waiting" stroke="#a15c07" strokeDasharray="5 3" strokeWidth={2.5} dot={false}/></LineChart></ResponsiveContainer></div>
                   <p className="m8-footnote">Mean wait includes served requests only. Requests still waiting at the horizon count as failed.</p>
-                  <div className="m8-actions">
-                    <button type="button" className="m8-button secondary" disabled={busy} onClick={startNewScenario}>Start new scenario</button>
-                  </div>
                   <div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Results by serving hub"><table><thead><tr><th>Serving hub</th><th>Served</th><th>Failed</th><th>Vehicles available at horizon</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
-                </>:<div className="m8-empty"><h3>Start with a Scenario</h3><p>Set the request volume and hub conditions, then run the simulation. You will see the original outcome here and AI-tested alternatives below.</p><div className="m8-mini-network">{snapshot.hubs.map(h=><span key={h.id}>{h.name}<b>{snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length} available {snapshot.vehicles.filter(v=>v.hubId===h.id&&v.state==="AVAILABLE"&&v.battery>=20).length===1?"vehicle":"vehicles"}</b></span>)}</div></div>}
+                </>:null}
+
               </div>
               {active&&<AgentPanel run={active} busy={busy} configured={!!monitor?.aiConfigured} onRetry={()=>task(async()=>{const updated=await api.retry(active.id,active.agent?.totalRounds??0);setActive(current=>acceptPlanningResult(current,updated));setRuns(await api.list());setNotice(`AI planning saved for ${updated.scenario.name}. The original snapshot and scenario are unchanged.`);})}/>}
               {(!active?.agent || active.recommendations.length > 0) && <div className="m8-panel"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">3</span><div><h2>Recommended plans</h2><p>Projected impact is checked in simulation. M7 checks current destination parking through M4.</p></div>{active && <span className="m8-chip">{active.recommendationSource === "TOOL_AGENT" ? "AI tool exploration" : active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>

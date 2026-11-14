@@ -35,8 +35,12 @@ try {
         if (-not $env:M8_LLM_KEY -and (Test-Path -LiteralPath $taskKeyFile)) {
             $taskSecureKey = (Get-Content -LiteralPath $taskKeyFile -Raw).Trim() | ConvertTo-SecureString
             $env:M8_LLM_KEY = [System.Net.NetworkCredential]::new('', $taskSecureKey).Password
-            if (-not $env:M8_LLM_URL) { $env:M8_LLM_URL = 'https://api.openai.com/v1/chat/completions' }
-            if (-not $env:M8_LLM_MODEL) { $env:M8_LLM_MODEL = 'gpt-5.6-sol' }
+        }
+        if ($env:M8_LLM_KEY) {
+            if (-not $env:M8_LLM_MODEL) { $env:M8_LLM_MODEL = 'gpt-6.1-sol' }
+            if (-not $env:M8_LLM_URL) {
+                $env:M8_LLM_URL = if ($env:M8_LLM_MODEL -like 'gpt-6.1-sol*') { 'https://api.openai.com/v1/responses' } else { 'https://api.openai.com/v1/chat/completions' }
+            }
         }
         $taskBackend = Start-Process -FilePath (Get-Command java).Source -ArgumentList @('-jar',('"' + $taskJar + '"'),'--server.address=127.0.0.1') -WorkingDirectory (Join-Path $taskRoot 'backend') -WindowStyle Hidden -RedirectStandardOutput (Join-Path $taskLogDir 'backend.log') -RedirectStandardError (Join-Path $taskLogDir 'backend-error.log') -PassThru
     } finally {

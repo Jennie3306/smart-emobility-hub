@@ -11,6 +11,44 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 class AgentTransportTest {
+    @Test void sendsSolMediumToolFeedbackThroughResponses() throws Exception {
+        var mapper = new ObjectMapper().findAndRegisterModules();
+        var requests = new ArrayList<JsonNode>();
+        var fixture = new AgentPlannerTest();
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/responses", exchange -> {
+            requests.add(mapper.readTree(exchange.getRequestBody()));
+            var output = mapper.createArrayNode();
+            if (requests.size() == 1) {
+                output.addObject().put("type", "reasoning").put("encrypted_content", "fixture");
+                output.addObject().put("type", "function_call").put("call_id", "call_1")
+                        .put("name", "simulate_plan").put("arguments", fixture.dispatch(1));
+            }
+            byte[] data = mapper.writeValueAsBytes(Map.of("status", "completed", "output", output));
+            exchange.sendResponseHeaders(200, data.length);
+            exchange.getResponseBody().write(data);
+            exchange.close();
+        });
+        server.start();
+        try {
+            var assistant = new ScenarioAssistant(mapper, Validation.buildDefaultValidatorFactory().getValidator(),
+                    "http://127.0.0.1:" + server.getAddress().getPort() + "/v1/chat/completions", "test-key", "gpt-6.1-sol");
+            var state = new AgentPlanner(mapper, new SimulationPlanTool(new SimulationEngine()), assistant)
+                    .extend(fixture.snapshot, fixture.scenario, null);
+            assertEquals(2, requests.size());
+            assertEquals("gpt-6.1-sol", requests.getFirst().path("model").asText());
+            assertEquals("medium", requests.getFirst().path("reasoning").path("effort").asText());
+            assertEquals("simulate_plan", requests.getFirst().path("tools").get(0).path("name").asText());
+            var input = requests.getLast().path("input");
+            assertEquals("fixture", input.get(2).path("encrypted_content").asText());
+            assertEquals("call_1", input.get(4).path("call_id").asText());
+            assertEquals(10, mapper.readTree(input.get(4).path("output").asText()).path("kpi").path("requests").asInt());
+            assertNotNull(state.best());
+        } finally {
+            server.stop(0);
+        }
+    }
+
     @Test void sendsFunctionSchemaAndReturnsKpiAsToolMessageOverHttp() throws Exception {
         var mapper=new ObjectMapper().findAndRegisterModules();var requests=new ArrayList<JsonNode>();
         var fixture=new AgentPlannerTest();

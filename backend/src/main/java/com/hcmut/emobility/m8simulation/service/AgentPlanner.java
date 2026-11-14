@@ -69,7 +69,12 @@ public class AgentPlanner {
                 } catch(Exception invalid) {evaluation=new PlanEvaluation(false,List.of(),null,"Invalid tool or arguments. Use only simulate_plan with actions; do not change scenario fields.");}
                 var round=new AgentRound(number,name,id,args,evaluation.valid(),evaluation.actions(),evaluation.kpi(),evaluation.feedback());
                 rounds.add(round);
-                messages.add(toolMessage(name,id,args));messages.add(Map.of("role","tool","tool_call_id",id,"content",feedback(round)));
+                if (answer.path("responses_output").isArray()) {
+                    messages.add(Map.of("responses_output", answer.path("responses_output")));
+                } else {
+                    messages.add(toolMessage(name,id,args));
+                }
+                messages.add(Map.of("role","tool","tool_call_id",id,"content",feedback(round)));
                 if(evaluation.valid() && !evaluation.actions().isEmpty() && better(evaluation,best==null?baseline:best)) best=evaluation;
             }
             return state(total,"ROUND_LIMIT","Three-round budget reached. Retry adds up to three more rounds on this saved snapshot.",rounds,best);

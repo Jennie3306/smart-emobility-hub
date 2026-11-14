@@ -18,13 +18,13 @@ Stop with ./scripts/stop-m8.ps1; PostgreSQL and its data remain intact.
 The startup script reads .local/m8-openai-key.dpapi, encrypted with Windows DPAPI
 for the current Windows user. Git ignores this file. It decrypts the key only for
 the backend launch; credentials never become Java command-line arguments or frontend configuration.
-Default endpoint: https://api.openai.com/v1/chat/completions. Model: gpt-5.6-sol.
+Default endpoint: https://api.openai.com/v1/responses. Model: gpt-6.1-sol with medium reasoning.
 The GPT-5 request omits temperature because this model rejects temperature=0.
 Override using M8_LLM_URL, M8_LLM_KEY and M8_LLM_MODEL. Never use VITE_* for keys.
 
 The provider receives descriptions and, for recommendations, the snapshot and KPIs.
 Parser requests use JSON mode; planning uses native function tools. Both have bounded
-output and a 35-second timeout per model call. Parameters are validated.
+output and a 90-second timeout per Responses call. Parameters are validated.
 Recommendations must pass resource/capacity checks and improve deterministic simulation results.
 Only dispatch and rerouting proposals are recognized. AI cannot execute operational actions.
 Parser failures fall back to labeled local rules. Agent failures retain verified plans
@@ -222,9 +222,8 @@ twice within a plan. No live execution tool is exposed. M4/M7 limitations still 
 Sessions are saved with the existing file-backed history. The latest 60 trace entries and
 best plan are retained; the provider receives at most nine recent paired tool exchanges
 plus the frozen scenario/snapshot and previous best. Provider errors do not trigger hidden
-retries. Each request times out after 35 seconds; a three-turn batch can take about two
-minutes. The current GPT-5.6 Sol chat provider requires `reasoning_effort: none` with
-function tools; parser behavior and the configured model/key are preserved.
+retries. GPT-6.1 Sol uses the Responses API with medium reasoning. Each request
+times out after 90 seconds. The legacy Chat Completions path retains its 35-second timeout.
 
 Endpoint: `POST /api/m8/runs/{id}/agent/retry?expectedRounds={totalRounds}` (Operator only).
 Protocol reference: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling).
