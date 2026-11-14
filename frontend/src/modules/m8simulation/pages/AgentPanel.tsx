@@ -3,11 +3,31 @@ import type { Run, PlanAction } from "../api/simulationApi";
 const count = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
 const wait = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
 
+function parkingLimitedDestinations(run: Run, actions: PlanAction[]) {
+  const inbound = new Map<number, number>();
+  const outbound = new Map<number, number>();
+  for (const action of actions) {
+    if (action.action !== "dispatch") continue;
+    inbound.set(action.toHubId, (inbound.get(action.toHubId) ?? 0) + action.amount);
+    outbound.set(action.fromHubId, (outbound.get(action.fromHubId) ?? 0) + action.amount);
+  }
+  return run.snapshot.hubs.filter(hub => {
+    const arrivals = inbound.get(hub.id);
+    const parking = run.snapshot.capacities?.find(item => item.hubId === hub.id);
+    if (!arrivals || !parking) return false;
+    const observedFree = Math.min(parking.freeSlots, parking.totalSlots - parking.usedSlots);
+    const parked = run.snapshot.vehicles.filter(vehicle => vehicle.hubId === hub.id).length;
+    const remaining = Math.min(observedFree - arrivals, hub.capacity - parked - arrivals + (outbound.get(hub.id) ?? 0));
+    return remaining <= 0;
+  });
+}
+
 export function AgentPanel({ run, busy, configured, onRetry }: {
   run: Run; busy: boolean; configured: boolean; onRetry: () => void;
 }) {
   const state = run.agent;
   const best = state?.best;
+  const parkingLimited = best?.valid && best.kpi ? parkingLimitedDestinations(run, best.actions) : [];
   const hub = (id: number) => run.snapshot.hubs.find(h => h.id === id)?.name ?? `Hub ${id}`;
   const action = (a: PlanAction) => a.action === "reroute"
     ? `Serve requests from ${hub(a.fromHubId)} at other open hubs`
@@ -36,6 +56,13 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <span className="m8-action-type">{a.action === "reroute" ? "Reroute requests" : "Move vehicles"}</span>
         <strong>{action(a)}</strong><p>{a.reason}</p>
       </li>)}</ol>
+      {parkingLimited.length > 0 && <div className="m8-alert">
+        <strong>Parking limit reached</strong>
+        {parkingLimited.map(destination => <p key={destination.id}>
+          {destination.name} has no parking slots left for additional transfers in this plan.
+        </p>)}
+        {best.kpi.failed > 0 && <p>{count.format(best.kpi.failed)} requests remain unserved across the network.</p>}
+      </div>}
       {best.actions.some(a => a.action === "reroute") && <p className="m8-footnote">Rerouting changes where requests are served. It does not relocate vehicles.</p>}
     </div> : <div className="m8-agent-empty"><h3>{state ? "No Improved Plan Yet" : "Explore a Better Plan"}</h3><p>{state
       ? "No valid tool result has improved this scenario. You can give AI another attempt."
