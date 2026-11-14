@@ -1,0 +1,24 @@
+sequenceDiagram
+autonumber
+actor OP as Operator
+participant C as SimulationController
+participant S as SimulationService
+participant P as JdbcSnapshotProvider
+participant A as ScenarioAssistant
+participant E as SimulationEngine
+participant R as RunStore
+OP->>C: POST /api/m8/runs (scenario, seed 42)
+C->>S: run(scenario, null, false)
+S->>P: capture()
+P-->>S: Snapshot (hubs, vehicles, bookings of last 30 min, M1 capacities)
+S->>A: validate(scenario, snapshot)
+S->>E: simulate(snapshot, scenario)
+E-->>S: KPI and timeline
+S->>E: simulate(snapshot, same scenario with hub open)
+E-->>S: baseline KPI
+S->>A: recommend(snapshot, scenario, kpi, engine)
+A->>E: simulate each candidate on a copy
+A-->>S: proposals that reduce failed requests
+S->>R: save(run)
+S-->>OP: Run (KPI, baseline, proposals, warnings)
+Note over S,R: no INSERT or UPDATE on any operational table

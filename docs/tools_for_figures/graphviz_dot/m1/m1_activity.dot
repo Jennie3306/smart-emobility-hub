@@ -1,0 +1,31 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>UC-M1-07 — Evaluate thresholds, raise and clear alerts (M1)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+t [label="Timer fires every 30 s\nBR-M1-05", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d0 [label="Previous cycle\nfinished?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+sk [label="Skip this run, write log", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+load [label="Load all hubs", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+h [label="Any hub left?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+rd [label="Read hub resource state", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+da [label="Data available?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+sk2 [label="Write log, skip this hub", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+cmp [label="Compute parking utilisation (BR-M1-01)\ncount available vehicles (BR-M1-08)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ty [label="Any alert type left?\ncapacity / low vehicle", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+br [label="Raise threshold breached?\n80 % / ≤ 2 vehicles", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+ex [label="Open alert of\nthis type exists?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+rf [label="Refresh latest figures,\nno duplicate alert (BR-M1-06)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+cr [label="Create alert in state OPEN", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+pub [label="Publish HubNearCapacityEvent\n(hubId, resourceType, percentage)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+cl [label="Open alert exists and\nbelow clear threshold?\n< 75 % / ≥ 4 vehicles", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+rs [label="Close alert:\ntransition to RESOLVED", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+push [label="Push changes to the\ndashboard over WebSocket", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> t -> d0; d0 -> sk [label="no"]; d0 -> load [label="yes"]; sk -> e;
+load -> h; h -> rd [label="yes"]; h -> push [label="no"]; push -> e;
+rd -> da; da -> sk2 [label="no"]; da -> cmp [label="yes"]; sk2 -> h [constraint=false];
+cmp -> ty; ty -> h [label="no", constraint=false]; ty -> br [label="yes"];
+br -> ex [label="yes"]; br -> cl [label="no"];
+ex -> rf [label="yes"]; ex -> cr [label="no"]; cr -> pub; pub -> ty [constraint=false]; rf -> ty [constraint=false];
+cl -> rs [label="yes"]; cl -> ty [label="no", constraint=false]; rs -> ty [constraint=false];
+{rank=same; rf; cr; rs}
+}

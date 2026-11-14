@@ -1,0 +1,25 @@
+sequenceDiagram
+autonumber
+participant M1 as AlertService (M1)
+participant H as RedistributionEventHandler
+participant RS as RecommendationService
+actor OP as Operator
+participant DS as RedistributionService
+participant PD as ParkingDock (M4)
+participant EP as EventPublisher
+M1->>H: HubNearCapacityEvent(hub 1, VEHICLE, 1) after commit
+H->>RS: proposeForAlert(1, VEHICLE, alert id)
+RS->>RS: no open proposal, donor keeps 4, amount = min(need, spare, room)
+RS-->>OP: proposal PENDING, move 3 from hub 2 to hub 1
+OP->>RS: approve(id)
+loop vehicles at hub 2, highest battery first, keep one at the source
+  RS->>DS: createRedistributionTask(vehicle, 2, 1)
+  DS->>DS: not reserved, no active task, destination has room
+end
+RS->>EP: RecommendationApproved(id, REDISTRIBUTE)
+OP->>DS: updateTaskStatus(task, IN_PROGRESS)
+DS->>PD: undockRentalVehicle (space freed at hub 2)
+DS->>EP: DispatchStarted, M3 sets IN_TRANSIT
+OP->>DS: updateTaskStatus(task, DONE)
+DS->>PD: dockRentalVehicle(vehicle, hub 1)
+DS->>EP: DispatchCompleted, M3 AVAILABLE at hub 1, M1 recounts

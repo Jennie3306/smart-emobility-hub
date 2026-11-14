@@ -1,0 +1,27 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>UC-M2-03 — Reserve a vehicle, with conflict checks (M2)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+a [label="Student presses Reserve\nPOST /api/m2/reservations", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+r0 [label="Student role and\nvehicleId present?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x0 [label="400 VALIDATION_FAILED /\n403 ACCESS_DENIED", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d1 [label="Vehicle exists?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x1 [label="VEHICLE_NOT_FOUND (404)", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d2 [label="Vehicle AVAILABLE?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x2 [label="VEHICLE_NOT_AVAILABLE (409)\nchoose another vehicle", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d3 [label="Student already has an\nactive vehicle reservation?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x3 [label="RESERVATION_LIMIT_EXCEEDED (409)\nlink to the current reservation", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d4 [label="Vehicle already has an\nactive reservation?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x4 [label="RESOURCE_CONFLICT (409)\nreload search results", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+c [label="Create PENDING, confirm → CONFIRMED\nexpiresAt = now + 15 min,\nset activeResourceKey / activeUserKey", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+sv [label="saveAndFlush → INSERT", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d5 [label="UNIQUE key\nviolated?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x5 [label="RESOURCE_CONFLICT (409),\nrollback, no event", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+p [label="Publish ReservationConfirmedEvent\n(M3: vehicle → RESERVED, same transaction)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ok [label="Commit; 201 Created\ncountdown 15:00 on the screen", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18]; e2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> a -> r0; r0 -> x0 [label="no"]; r0 -> d1 [label="yes"];
+d1 -> x1 [label="no"]; d1 -> d2 [label="yes"]; d2 -> x2 [label="no"]; d2 -> d3 [label="yes"];
+d3 -> x3 [label="yes"]; d3 -> d4 [label="no"]; d4 -> x4 [label="yes"]; d4 -> c [label="no"];
+c -> sv -> d5; d5 -> x5 [label="yes: a parallel request won"]; d5 -> p [label="no"]; p -> ok -> e;
+x0 -> e2; x1 -> e2; x2 -> e2; x3 -> e2; x4 -> e2; x5 -> e2;
+}

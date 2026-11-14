@@ -1,0 +1,23 @@
+digraph G {
+rankdir=TB; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+nodesep=1.6; ranksep=1.3;
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> "FREE";
+"FREE" [];
+"RESERVED" [];
+"OCCUPIED" [];
+"BLOCKED" [];
+"FREE" -> "RESERVED" [label="book(reservationId)\n[capacity, type, charger]" ];
+"RESERVED" -> "OCCUPIED" [label="checkIn(reservationId)\n[15 min before ≤ now < start + 15 min]" ];
+"RESERVED" -> "FREE" [label="cancel / ReservationExpired (no-show)\n/ booking CANCELLED or NO_SHOW" ];
+"OCCUPIED" -> "FREE" [label="checkOut / auto check-out\n[end + 15 min] / COMPLETED" ];
+"FREE" -> "OCCUPIED" [label="dock(rental vehicle)\n[BR-M4-08]" style=dashed];
+"OCCUPIED" -> "FREE" [label="undock (pick-up,\nredistribution)" style=dashed];
+"FREE" -> "BLOCKED" [label="ChargerFailed / Operator block" color="#c0504d", fontcolor="#c0504d"];
+"RESERVED" -> "BLOCKED" [label="ChargerFailed\n/ cancel the reservation (M2)" color="#c0504d", fontcolor="#c0504d"];
+"OCCUPIED" -> "BLOCKED" [label="ChargerFailed\n/ keep the stay" color="#c0504d", fontcolor="#c0504d"];
+"BLOCKED" -> "FREE" [label="charger back in service (M5) or Operator unblock\n[no reservation, no vehicle]" ];
+"BLOCKED" -> "OCCUPIED" [label="unblock [a vehicle is still parked]" ];
+}
