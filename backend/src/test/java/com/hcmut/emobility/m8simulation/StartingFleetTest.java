@@ -20,4 +20,16 @@ class StartingFleetTest {
         assertEquals(1, StartingFleet.override(revised, "1:0").vehicles().size());
         assertThrows(IllegalArgumentException.class, () -> StartingFleet.override(source, "2:5"));
     }
+    @Test void capsVehicleIncreasesAtFreeSlotsAndDoesNotAssumeMissingParking() {
+        var hub = new Hub(1, "Metro", 40, 2);
+        var vehicles = List.of(new Vehicle(1, 1L, 90, "AVAILABLE"));
+        var source = new Snapshot("live", Instant.EPOCH, List.of(hub), vehicles, List.of(), "MANUAL_SCENARIO",
+                null, List.of(new CapacityState(1, 40, 31, 9, 2, 0)));
+        var full = StartingFleet.override(source, "1:10");
+        assertEquals(0, full.capacities().getFirst().freeSlots());
+        assertThrows(IllegalArgumentException.class, () -> StartingFleet.override(source, "1:11"));
+        var missing = new Snapshot("old", Instant.EPOCH, List.of(hub), vehicles, List.of(), "MANUAL_SCENARIO");
+        assertThrows(IllegalArgumentException.class, () -> StartingFleet.override(missing, "1:2"));
+        assertTrue(StartingFleet.override(missing, "1:0").vehicles().isEmpty());
+    }
 }

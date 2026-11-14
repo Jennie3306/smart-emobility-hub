@@ -11,6 +11,10 @@ import { effectiveScenario, draftFromPlan, numericFields, hubNumberFields, valid
 const defaults:Scenario={name:"Peak-hour hub closure",hubId:1,disabled:true,injectedRequests:100,durationMins:120,arrivalWindowMins:60,tripMins:30,reroute:false,seed:42};
 const number=(n:number)=>n.toLocaleString("en-GB",{maximumFractionDigits:1});
 const time=(date:string)=>new Date(date).toLocaleString("en-GB",{hour:"2-digit",minute:"2-digit",day:"2-digit",month:"2-digit"});
+function parkingAt(snapshot: Snapshot, hubId: number) {
+  return snapshot.capacities?.find(c => c.hubId === hubId && c.totalSlots > 0
+    && c.usedSlots >= 0 && c.freeSlots >= 0 && c.usedSlots + c.freeSlots <= c.totalSlots);
+}
 function message(error:unknown) { return (error as {response?:{data?:{message?:string}}}).response?.data?.message || "Unable to connect. Please try again."; }
 
 export default function SimulationPage() {
@@ -154,9 +158,11 @@ export default function SimulationPage() {
                   <h3>Starting network</h3>
                   <p>{active && !dirty ? "Starting vehicles for this saved run. Edit to test a new run." : "Set available vehicles for the next run. Edits affect simulation only."}</p>
                   <div className="m8-mini-network">{(inputSnapshot ?? snapshot).hubs.map(hub => {
-                    const captured = (inputSnapshot ?? snapshot).vehicles.filter(
-                      vehicle => vehicle.hubId === hub.id && vehicle.state === "AVAILABLE" && vehicle.battery >= 20,
-                    ).length;
+                    const source = inputSnapshot ?? snapshot;
+                    const assigned = source.vehicles.filter(vehicle => vehicle.hubId === hub.id);
+                    const captured = assigned.filter(vehicle => vehicle.state === "AVAILABLE" && vehicle.battery >= 20).length;
+                    const parking = parkingAt(source, hub.id);
+                    const max = Math.min(1000, captured + Math.max(0, Math.min(parking?.freeSlots ?? 0, hub.capacity - assigned.length)));
                     const available = startingVehicles[hub.id] ?? captured;
                     function adjust(count: number) {
                       edit();
@@ -167,13 +173,18 @@ export default function SimulationPage() {
                         return next;
                       });
                     }
+                    const delta = available - captured;
                     return <span key={hub.id}>{hub.name}
+                      <small className="m8-parking-count">{parking
+                        ? `${Math.max(0, parking.usedSlots + delta)} / ${parking.totalSlots} slots used · ${Math.min(parking.freeSlots + parking.usedSlots, Math.max(0, parking.freeSlots - delta))} free${delta !== 0 || source.hypotheticalFleet ? " · Simulated" : ""}`
+                        : "Parking data unavailable"}</small>
+                      <small className="m8-parking-count">Max available vehicles: {max}</small>
                       <span className="m8-fleet-stepper">
                         <button className="m8-button secondary" type="button" aria-label={`Remove one available vehicle from ${hub.name}`}
                           disabled={busy || available <= 0} onClick={() => adjust(available - 1)}>−</button>
                         <b aria-live="polite">{available} available</b>
                         <button className="m8-button secondary" type="button" aria-label={`Add one available vehicle to ${hub.name}`}
-                          disabled={busy || available >= 1000} onClick={() => adjust(available + 1)}>+</button>
+                          disabled={busy || available >= max} onClick={() => adjust(available + 1)}>+</button>
                       </span>
                     </span>;
                   })}</div>
@@ -228,7 +239,10 @@ export default function SimulationPage() {
                       {dispatchReview === `${active.id}:${r.id}` && ["PENDING", "PARTIAL"].includes(r.status) && (
                         <div className="m8-dispatch-review">
                           <strong>{r.amount - (r.dispatch?.tasks.length ?? 0)} vehicles · {hubName(r.fromHubId)} → {hubName(r.toHubId)}</strong>
-                          <p>M7 checks live parking and creates dispatch tasks. Track vehicle movement in M7.</p>
+                          <p>{parkingAt(active.snapshot, r.toHubId)
+                            ? `${parkingAt(active.snapshot, r.toHubId)?.freeSlots} free destination slots in the simulation snapshot. `
+                            : "Destination parking data unavailable in the snapshot. "}
+                            M7 checks live parking before creating tasks.</p>
                           <div className="m8-actions">
                             <button className="m8-button primary" disabled={busy || !monitor?.applyEnabled} onClick={() => task(async () => {
                               const updated = await api.apply(active.id, r.id);

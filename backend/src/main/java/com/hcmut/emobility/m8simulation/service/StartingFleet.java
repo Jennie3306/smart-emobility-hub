@@ -30,6 +30,19 @@ final class StartingFleet {
                     && "AVAILABLE".equals(v.state()) && v.battery() >= 20).toList();
             int delta = entry.getValue() - eligible.size();
             if (delta == 0) continue;
+            if (delta > 0) {
+                var hub = snapshot.hubs().stream().filter(h -> h.id() == hubId).findFirst().orElseThrow();
+                int assigned = (int) vehicles.stream().filter(v -> Objects.equals(v.hubId(), hubId)).count();
+                int free = snapshot.capacities().stream().filter(c -> c.hubId() == hubId && c.totalSlots() > 0
+                                && c.usedSlots() >= 0 && c.freeSlots() >= 0 && c.usedSlots() <= c.totalSlots()
+                                && c.freeSlots() <= c.totalSlots() - c.usedSlots())
+                        .mapToInt(CapacityState::freeSlots).findFirst().orElse(0);
+                int limit = eligible.size() + Math.max(0, Math.min(free, hub.capacity() - assigned));
+                if (entry.getValue() > limit) {
+                    throw new IllegalArgumentException(hub.name() + " can start with at most " + limit
+                            + " available vehicles based on parking in this snapshot.");
+                }
+            }
             deltas.put(hubId, delta);
             if (delta < 0) {
                 var removed = new HashSet<>(eligible.subList(entry.getValue(), eligible.size()));
@@ -43,7 +56,7 @@ final class StartingFleet {
             int delta = deltas.getOrDefault(c.hubId(), 0);
             if (delta == 0) return c;
             return new CapacityState(c.hubId(), c.totalSlots(), Math.max(0, c.usedSlots() + delta),
-                    Math.clamp(c.freeSlots() - delta, 0, Math.max(0, c.totalSlots())),
+                    Math.clamp(c.freeSlots() - delta, 0, Math.max(0, c.freeSlots() + c.usedSlots())),
                     c.operationalChargers(), c.busyChargers());
         }).toList();
         return new Snapshot(UUID.randomUUID().toString(), snapshot.capturedAt(), snapshot.hubs(), vehicles,
