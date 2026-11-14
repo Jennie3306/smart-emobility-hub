@@ -14,8 +14,8 @@ function parkingLimitedDestinations(run: Run, actions: PlanAction[]) {
   return run.snapshot.hubs.filter(hub => {
     const arrivals = inbound.get(hub.id);
     const parking = run.snapshot.capacities?.find(item => item.hubId === hub.id);
-    if (!arrivals || !parking) return false;
-    const observedFree = Math.min(parking.freeSlots, parking.totalSlots - parking.usedSlots);
+    if (!arrivals || parking?.rentalFreeSlots == null) return false;
+    const observedFree = Math.max(0, parking.rentalFreeSlots - (parking.incomingRentalTasks ?? 0));
     const parked = run.snapshot.vehicles.filter(vehicle => vehicle.hubId === hub.id).length;
     const remaining = Math.min(observedFree - arrivals, hub.capacity - parked - arrivals + (outbound.get(hub.id) ?? 0));
     return remaining <= 0;
@@ -89,7 +89,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <strong>Dispatch limits</strong>
         <ul>
           {parkingLimited.map(destination => <li key={destination.id}>
-            {destination.name}: 0 slots left for additional transfers after this simulated plan.
+            {destination.name}: 0 rental-bike slots left for additional transfers after this simulated plan.
           </li>)}
           {exhaustedDonors.map(supply => <li key={supply.hubId}>
             {hub(supply.hubId)}: {count.format(supply.initial)} spare vehicles at other open hubs before the plan, with one kept at each donor. None remain available to transfer.
@@ -113,7 +113,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <p className="m8-footnote">{r.feedback}</p>
       </details></li>)}</ol>
     </details> : null}
-    <details className="m8-agent-limits"><summary>Simulation Limits</summary><p>Every candidate uses the same snapshot, demand, seed and time settings. Parking uses captured M1 observations. M7 checks current parking through M4 when creating and completing dispatch tasks.</p>{best && <p>{best.feedback}</p>}</details>
+    <details className="m8-agent-limits"><summary>Simulation Limits</summary><p>Every candidate uses the same snapshot, demand, seed and time settings. Dispatch uses captured rental-bike parking minus incoming M7 tasks. M7 checks current parking through M4 when creating and completing dispatch tasks.</p>{best && <p>{best.feedback}</p>}</details>
     <p className="m8-preview-note">Preview only. Exploring or retrying a plan never changes live vehicles.</p>
   </section>;
 }

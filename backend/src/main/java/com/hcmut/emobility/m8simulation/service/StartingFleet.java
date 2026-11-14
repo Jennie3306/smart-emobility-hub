@@ -36,7 +36,7 @@ final class StartingFleet {
                 int free = snapshot.capacities().stream().filter(c -> c.hubId() == hubId && c.totalSlots() > 0
                                 && c.usedSlots() >= 0 && c.freeSlots() >= 0 && c.usedSlots() <= c.totalSlots()
                                 && c.freeSlots() <= c.totalSlots() - c.usedSlots())
-                        .mapToInt(CapacityState::freeSlots).findFirst().orElse(0);
+                        .mapToInt(CapacityState::transferSlots).findFirst().orElse(0);
                 int limit = eligible.size() + Math.max(0, Math.min(free, hub.capacity() - assigned));
                 if (entry.getValue() > limit) {
                     throw new IllegalArgumentException(hub.name() + " can start with at most " + limit
@@ -57,7 +57,8 @@ final class StartingFleet {
             if (delta == 0) return c;
             return new CapacityState(c.hubId(), c.totalSlots(), Math.max(0, c.usedSlots() + delta),
                     Math.clamp(c.freeSlots() - delta, 0, Math.max(0, c.freeSlots() + c.usedSlots())),
-                    c.operationalChargers(), c.busyChargers());
+                    c.operationalChargers(), c.busyChargers(),
+                    c.rentalFreeSlots() == null ? null : Math.max(0, c.rentalFreeSlots() - delta), c.incomingRentalTasks());
         }).toList();
         return new Snapshot(UUID.randomUUID().toString(), snapshot.capturedAt(), snapshot.hubs(), vehicles,
                 snapshot.deviceStates(), snapshot.demandSource(), snapshot.bookingWindow(), capacities, true);

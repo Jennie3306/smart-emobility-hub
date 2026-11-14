@@ -15,6 +15,11 @@ function parkingAt(snapshot: Snapshot, hubId: number) {
   return snapshot.capacities?.find(c => c.hubId === hubId && c.totalSlots > 0
     && c.usedSlots >= 0 && c.freeSlots >= 0 && c.usedSlots + c.freeSlots <= c.totalSlots);
 }
+function dispatchParkingNote(snapshot: Snapshot, id: number) {
+  const parking = snapshot.capacities?.find(item => item.hubId === id);
+  if (parking?.rentalFreeSlots == null) return "Rental-bike parking unavailable. Capture a fresh snapshot.";
+  return `${Math.max(0, parking.rentalFreeSlots - (parking.incomingRentalTasks ?? 0))} rental-bike slots available in the snapshot after incoming tasks.`;
+}
 function message(error:unknown) { return (error as {response?:{data?:{message?:string}}}).response?.data?.message || "Unable to connect. Please try again."; }
 
 export default function SimulationPage() {
@@ -56,6 +61,7 @@ export default function SimulationPage() {
   const baselineDelta = active ? Math.round((active.kpi.failurePercent - active.baseline.failurePercent) * 10) / 10 : 0;
   const selected=runs.filter(r=>compare.includes(r.id));
   const hubs=active?.snapshot.hubs || snapshot?.hubs || [];
+  const rentalParking = (id:number) => active?.snapshot.capacities?.find(c => c.hubId===id)?.rentalFreeSlots != null;
   const hubName=(id:number)=>hubs.find(h=>h.id===id)?.name || `Hub ${id}`;
   const renderNumericField=([key,label,min,max]:typeof numericFields[number])=><label key={key} htmlFor={`scenario-${key}`}>{label}<input id={`scenario-${key}`} name={key} autoComplete="off" aria-label={label} type="number" min={min} max={max} step={1} aria-invalid={!!fieldErrors[key]} aria-describedby={`hint-${key}${fieldErrors[key]?` error-${key}`:""}`} disabled={key==="injectedRequests"&&repeatBookings} value={Number.isFinite(effective[key])?effective[key]:""} onChange={e=>update(key,e.target.valueAsNumber)}/><span id={`hint-${key}`} className="m8-field-hint">{{injectedRequests:"One request is one attempted rental.",durationMins:"How long the simulation runs.",arrivalWindowMins:"Requests arrive within this window.",tripMins:"Time before a rented vehicle returns.",seed:"Same seed repeats the arrival pattern."}[key]}</span>{fieldErrors[key]&&<span id={`error-${key}`} className="m8-field-error">{fieldErrors[key]}</span>}</label>;
   return <div className="m8-app">
@@ -163,7 +169,10 @@ export default function SimulationPage() {
                     const assigned = source.vehicles.filter(vehicle => vehicle.hubId === hub.id);
                     const captured = assigned.filter(vehicle => vehicle.state === "AVAILABLE" && vehicle.battery >= 20).length;
                     const parking = parkingAt(source, hub.id);
-                    const max = Math.min(1000, captured + Math.max(0, Math.min(parking?.freeSlots ?? 0, hub.capacity - assigned.length)));
+                    const rental = source.capacities?.find(c => c.hubId === hub.id);
+                    const rentalRoom = rental?.rentalFreeSlots == null ? null
+                      : Math.max(0, rental.rentalFreeSlots - (rental.incomingRentalTasks ?? 0));
+                    const max = Math.min(1000, captured + Math.max(0, Math.min(rentalRoom ?? 0, hub.capacity - assigned.length)));
                     const available = startingVehicles[hub.id] ?? captured;
                     function adjust(count: number) {
                       edit();
@@ -179,6 +188,8 @@ export default function SimulationPage() {
                       <small className="m8-parking-count">{parking
                         ? `${Math.max(0, parking.usedSlots + delta)} / ${parking.totalSlots} slots used · ${Math.min(parking.freeSlots + parking.usedSlots, Math.max(0, parking.freeSlots - delta))} free${delta !== 0 ? " · Simulated" : ""}`
                         : "Parking data unavailable"}</small>
+                      <small className="m8-parking-count">{rentalRoom == null ? "Rental-bike parking unavailable"
+                        : `${Math.max(0, (rental?.rentalFreeSlots ?? 0) - delta - (rental?.incomingRentalTasks ?? 0))} rental-bike slots available for transfers`}</small>
                       <span className="m8-fleet-stepper">
                         <button className="m8-button secondary" type="button" aria-label={`Remove one available vehicle from ${hub.name}`}
                           disabled={busy || available <= 0} onClick={() => adjust(available - 1)}>−</button>
@@ -211,6 +222,7 @@ export default function SimulationPage() {
                       <h3>{r.action === "reroute" ? "Route requests to available hubs" : `Dispatch ${r.amount} vehicles`}</h3>
                       {r.action === "dispatch" && <p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}
                       <p className="m8-footnote">{r.reason}</p>
+                      {r.action === "dispatch" && !rentalParking(r.toHubId) && <p className="m8-footnote">Capture a new snapshot to verify rental-bike parking before applying.</p>}
                       {!r.id.startsWith("agent-") && <strong className="m8-benefit">Projected unserved rate {number(r.projectedFailurePercent)}%</strong>}
                       {r.dispatch && <>
                         <p role="status">{r.dispatch.tasks.length}/{r.amount} tasks created{r.status === "NEEDS_REVIEW" ? " · Needs review" : ""}</p>
@@ -227,7 +239,7 @@ export default function SimulationPage() {
                             setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot.");
                           }}>Try this plan</button>
                         ) : (
-                          <button className="m8-button secondary" disabled={busy || !monitor?.applyEnabled || active.snapshot.hypotheticalFleet || !["PENDING", "PARTIAL"].includes(r.status)}
+                          <button className="m8-button secondary" disabled={busy || !monitor?.applyEnabled || active.snapshot.hypotheticalFleet || !rentalParking(r.toHubId) || !["PENDING", "PARTIAL"].includes(r.status)}
                             aria-expanded={dispatchReview === `${active.id}:${r.id}`}
                             onClick={() => setDispatchReview(`${active.id}:${r.id}`)}>Review dispatch</button>
                         )}
@@ -239,9 +251,7 @@ export default function SimulationPage() {
                       {dispatchReview === `${active.id}:${r.id}` && ["PENDING", "PARTIAL"].includes(r.status) && (
                         <div className="m8-dispatch-review">
                           <strong>{r.amount - (r.dispatch?.tasks.length ?? 0)} vehicles · {hubName(r.fromHubId)} → {hubName(r.toHubId)}</strong>
-                          <p>{parkingAt(active.snapshot, r.toHubId)
-                            ? `${parkingAt(active.snapshot, r.toHubId)?.freeSlots} free destination slots in the simulation snapshot. `
-                            : "Destination parking data unavailable in the snapshot. "}
+                          <p>{dispatchParkingNote(active.snapshot, r.toHubId)}
                             M7 checks live parking before creating tasks.</p>
                           <div className="m8-actions">
                             <button className="m8-button primary" disabled={busy || !monitor?.applyEnabled} onClick={() => task(async () => {

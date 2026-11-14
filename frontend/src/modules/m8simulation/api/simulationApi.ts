@@ -2,7 +2,7 @@ import { api } from "@/shared/api/client";
 export interface Hub { id: number; name: string; capacity: number; chargingPoints: number }
 export interface Vehicle { id: number; hubId: number | null; battery: number; state: string }
 export interface BookingWindow { from:string; to:string; windowMins:number; hubs:{hubId:number;bookings:number;activeHolds:number}[] }
-export interface CapacityState {hubId:number;totalSlots:number;usedSlots:number;freeSlots:number;operationalChargers:number;busyChargers:number}
+export interface CapacityState {hubId:number;totalSlots:number;usedSlots:number;freeSlots:number;rentalFreeSlots?:number|null;incomingRentalTasks?:number|null;operationalChargers:number;busyChargers:number}
 export interface Snapshot { id: string; capturedAt: string; hubs: Hub[]; vehicles: Vehicle[]; deviceStates: {hubId:number;type:string;resourceId:number;state:string;observedAt:string}[]; demandSource: string; bookingWindow?:BookingWindow|null; capacities?:CapacityState[]; hypotheticalFleet?:boolean }
 export interface HubSettings { hubId:number; disabled:boolean; injectedRequests:number; arrivalWindowMins:number; tripMins:number; reroute:boolean; repeatBookings:boolean; closeFromMins:number; reopenAtMins:number|null }
 export interface Scenario { name:string; hubId:number; disabled:boolean; injectedRequests:number; durationMins:number; arrivalWindowMins:number; tripMins:number; reroute:boolean; seed:number; affectedHubs?:HubSettings[]|null }

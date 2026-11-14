@@ -14,7 +14,7 @@ public class SimulationPlanTool {
         if(actions==null || actions.size()>4) return rejected("Use at most four actions.");
         List<Vehicle> vehicles=new ArrayList<>(snapshot.vehicles());
         Map<Long,Integer> remaining=new HashMap<>();
-        for(CapacityState c:snapshot.capacities()) remaining.put(c.hubId(),Math.max(0,Math.min(c.freeSlots(),c.totalSlots()-c.usedSlots())));
+        for(CapacityState c:snapshot.capacities()) remaining.put(c.hubId(),c.transferSlots());
         Set<Long> moved=new HashSet<>();
         for(PlanAction a:actions) {
             if(a==null || a.reason()==null || a.reason().length()>500) return rejected("Each action needs a reason of at most 500 characters.");
@@ -26,7 +26,8 @@ public class SimulationPlanTool {
                 return rejected("Dispatch needs distinct known open hubs and a positive amount.");
             long occupied=vehicles.stream().filter(v->Objects.equals(v.hubId(),a.toHubId())).count();
             if(a.amount()>remaining.getOrDefault(a.toHubId(),0) || occupied+a.amount()>target.capacity())
-                return rejected("Insufficient captured parking space; M4 reservations still require live revalidation.");
+                return rejected(target.name() + ": only " + Math.max(0, Math.min(remaining.getOrDefault(a.toHubId(),0), target.capacity()-occupied))
+                        + " rental-bike slots remain for dispatch (parking limit). Car slots are excluded.");
             var donor=vehicles.stream().filter(v->Objects.equals(v.hubId(),a.fromHubId()) && "AVAILABLE".equals(v.state()) && v.battery()>=20).toList();
             var eligible=donor.stream().filter(v->!moved.contains(v.id())).toList();
             if(a.amount()>donor.size()-1 || a.amount()>eligible.size()) return rejected("Leave one eligible vehicle at the donor; do not move a vehicle twice.");
@@ -37,7 +38,7 @@ public class SimulationPlanTool {
         }
         Snapshot copy=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),snapshot.capacities());
         return new PlanEvaluation(true,List.copyOf(actions),engine.simulate(copy,scenario).kpi(),
-            "Simulation only. Demand, rerouting, seed and time parameters are unchanged. Parking uses provisional M1 observations; M4/M7 must revalidate before execution.");
+            "Simulation only. Demand, rerouting, seed and time parameters are unchanged. Rental-bike parking excludes incoming M7 tasks; M4/M7 must revalidate before execution.");
     }
     private PlanEvaluation rejected(String reason) {return new PlanEvaluation(false,List.of(),null,reason);}
 }

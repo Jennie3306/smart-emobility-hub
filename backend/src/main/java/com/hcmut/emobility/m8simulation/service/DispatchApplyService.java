@@ -35,6 +35,9 @@ public class DispatchApplyService {
                     || rec.fromHubId() == rec.toHubId() || rec.amount() < 1) {
                 throw new BusinessException("NOT_APPLICABLE", "Only a pending dispatch recommendation can be applied.");
             }
+            if (run.scenario() != null && run.snapshot().capacities().stream().noneMatch(c -> c.hubId() == rec.toHubId() && c.rentalFreeSlots() != null)) {
+                throw new BusinessException("RENTAL_PARKING_UNKNOWN", "Capture a fresh snapshot to verify rental-bike parking before applying.");
+            }
             var tasks = new ArrayList<>(rec.dispatch() == null ? List.<DispatchTask>of() : rec.dispatch().tasks());
             String m7Id = rec.dispatch() == null ? null : rec.dispatch().m7RecommendationId();
             if (m7Id == null) {

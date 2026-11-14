@@ -192,7 +192,7 @@ public class ScenarioAssistant {
     public Proposals recommend(Snapshot snapshot,Scenario scenario,Kpi kpi,SimulationEngine engine) {
         List<String> warnings=new ArrayList<>(); List<Recommendation> candidates=new ArrayList<>(); String source="LOCAL_RULES";
         if(configured()) try {
-            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Keep the operator's rerouting settings unchanged. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination parking capacity, and not use a closed source or target. Available vehicles must have state AVAILABLE and battery >=20. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
+            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Keep the operator's rerouting settings unchanged. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination rental-bike parking after incoming tasks (exclude car spaces), and not use a closed source or target. Available vehicles must have state AVAILABLE and battery >=20. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
             if(!result.path("actions").isArray()) throw new IllegalArgumentException();
             for(JsonNode a:result.path("actions")) {
                 if(candidates.size()==3) break;
@@ -245,7 +245,7 @@ public class ScenarioAssistant {
         if (result.kpi().failed() >= original.failed()) return null;
         String reason = candidate.reason();
         if ("dispatch".equals(candidate.action())) {
-            reason += " Parking uses captured M1 observations and requires M4/M7 live revalidation.";
+            reason += " Parking uses captured rental-bike parking and incoming tasks and requires M4/M7 live revalidation.";
         }
         return new Recommendation(candidate.id(), candidate.action(), candidate.fromHubId(), candidate.toHubId(),
                 candidate.amount(), reason, candidate.status(), result.kpi().failurePercent());
@@ -256,7 +256,7 @@ public class ScenarioAssistant {
         CapacityState observed=snapshot.capacities().stream().filter(c->c.hubId()==hubId).findFirst().orElse(null);
         if(hub==null || observed==null || observed.totalSlots()<0 || observed.usedSlots()<0) return 0;
         long assigned=snapshot.vehicles().stream().filter(v->Objects.equals(v.hubId(),hubId)).count();
-        long room=Math.min((long)hub.capacity()-assigned,Math.min(observed.freeSlots(),(long)observed.totalSlots()-observed.usedSlots()));
+        long room=Math.min((long)hub.capacity()-assigned,observed.transferSlots());
         return (int)Math.max(0,room);
     }
 }

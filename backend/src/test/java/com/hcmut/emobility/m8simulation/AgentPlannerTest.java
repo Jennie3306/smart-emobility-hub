@@ -15,7 +15,7 @@ class AgentPlannerTest {
     final SimulationPlanTool tool=new SimulationPlanTool(engine);
     final Snapshot snapshot=new Snapshot("fixed",Instant.EPOCH,List.of(new Hub(1,"A",10,2),new Hub(2,"B",10,2)),
         List.of(new Vehicle(1,2L,90,"AVAILABLE"),new Vehicle(2,2L,90,"AVAILABLE"),new Vehicle(3,2L,90,"AVAILABLE")),List.of(),"MANUAL_SCENARIO",null,
-        List.of(new CapacityState(1,10,9,1,2,0),new CapacityState(2,10,3,7,2,0)));
+        List.of(new CapacityState(1,10,9,1,2,0, 1, 0),new CapacityState(2,10,3,7,2,0, 7, 0)));
     final Scenario scenario=new Scenario("test",1,false,10,60,1,30,false,42);
     JsonNode call(String id,String args) throws Exception {return mapper.readTree("{\"role\":\"assistant\",\"content\":null,\"tool_calls\":[{\"id\":\""+id+"\",\"type\":\"function\",\"function\":{\"name\":\"simulate_plan\",\"arguments\":"+mapper.writeValueAsString(args)+"}}]}");}
     String dispatch(int n){return "{\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":2,\"toHubId\":1,\"amount\":"+n+",\"reason\":\"test\"}]}";}
@@ -25,6 +25,14 @@ class AgentPlannerTest {
         assertTrue(result.valid());assertTrue(result.kpi().failed()<10);
         assertEquals(10,result.kpi().requests());assertEquals(2L,snapshot.vehicles().getFirst().hubId());
         assertFalse(tool.evaluate(snapshot,scenario,List.of(new PlanAction("dispatch",2,1,1,"a"),new PlanAction("dispatch",2,1,1,"b"))).valid());
+    }
+    @Test void excludesCarSpacesAndExistingIncomingTasksFromDispatch() {
+        var mixed = new Snapshot(snapshot.id(), snapshot.capturedAt(), snapshot.hubs(), snapshot.vehicles(),
+                List.of(), snapshot.demandSource(), null, List.of(new CapacityState(1, 10, 7, 3, 0, 0, 2, 1)));
+        var rejected = tool.evaluate(mixed, scenario, List.of(new PlanAction("dispatch", 2, 1, 2, "Two vehicles")));
+        assertFalse(rejected.valid());
+        assertTrue(rejected.feedback().contains("only 1 rental-bike slots"));
+        assertTrue(tool.evaluate(mixed, scenario, List.of(new PlanAction("dispatch", 2, 1, 1, "One vehicle"))).valid());
     }
     @Test void modelReceivesToolFeedbackAndStopsAtThreeThenRetryContinues() throws Exception {
         List<List<Map<String,Object>>> seen=new ArrayList<>();

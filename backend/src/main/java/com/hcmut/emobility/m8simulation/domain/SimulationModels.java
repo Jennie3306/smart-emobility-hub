@@ -17,7 +17,12 @@ public final class SimulationModels {
     public record BookingWindow(Instant from,Instant to,int windowMins,List<HubDemand> hubs) {
         public BookingWindow { hubs=List.copyOf(hubs); }
     }
-    public record CapacityState(long hubId,int totalSlots,int usedSlots,int freeSlots,int operationalChargers,int busyChargers) {}
+    public record CapacityState(long hubId,int totalSlots,int usedSlots,int freeSlots,int operationalChargers,int busyChargers,
+                                Integer rentalFreeSlots, Integer incomingRentalTasks) {
+        public int transferSlots() {
+            return rentalFreeSlots == null ? 0 : Math.max(0, rentalFreeSlots - (incomingRentalTasks == null ? 0 : incomingRentalTasks));
+        }
+    }
     public record Snapshot(String id, Instant capturedAt, List<Hub> hubs, List<Vehicle> vehicles,
                            List<DeviceState> deviceStates, String demandSource,BookingWindow bookingWindow,List<CapacityState> capacities, boolean hypotheticalFleet) {
         public Snapshot(String id, Instant capturedAt, List<Hub> hubs, List<Vehicle> vehicles, List<DeviceState> devices,
