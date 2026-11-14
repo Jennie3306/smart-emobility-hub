@@ -9,7 +9,7 @@ export interface Kpi { requests:number; served:number; failed:number; failurePer
 export interface Recommendation {
   id: string; action: string; fromHubId: number; toHubId: number; amount: number;
   reason: string; status: string; projectedFailurePercent: number;
-  dispatch?: { tasks: { vehicleId: number; taskId: number }[]; unconfirmedVehicleId: number | null; message: string | null } | null;
+  dispatch?: { tasks: { vehicleId: number | null; taskId: number }[]; unconfirmedVehicleId: number | null; message: string | null; m7RecommendationId?: string | null } | null;
 }
 export interface PlanAction {action:"reroute"|"dispatch";fromHubId:number;toHubId:number;amount:number;reason:string}
 export interface PlanEvaluation {valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string}

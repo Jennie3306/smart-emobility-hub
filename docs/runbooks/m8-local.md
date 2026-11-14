@@ -92,18 +92,16 @@ English display labels for seeded hubs do not change live Hub rows.
 
 ### Apply dispatch contract
 
-- M8 reads fresh inventory and active M7 tasks. It selects available source vehicles
-  with at least 20% battery in ID order, leaving one eligible vehicle at the source.
+- M8 registers the saved dispatch action through `RedistributionRecommendations.propose`,
+  using its recommendation ID as the external reference. M7 selects vehicles from live inventory.
 - M7 checks destination capacity against the M4 pool and subtracts active incoming tasks.
   At completion it assigns a space through M4. A destination can fill up before arrival,
   in which case M7 rejects completion until space is available.
-- M8 calls `POST /api/m7/redistributions` once per vehicle with the
-  operator session. Each returned task ID is recorded under the saved recommendation.
-  A definitive rejection can leave a partial result. Retry skips confirmed task IDs.
-- An intent is saved before calling M7. If a response is lost, that recommendation
-  requires manual review against the M7 task list. There is no automatic retry for an uncertain
-  outcome because the per-vehicle M7 endpoint accepts no idempotency key. The local
-  run file serializes requests in one process. Shared deployment needs durable storage.
+- M8 calls `approve` with the authenticated operator and stores the M7 recommendation ID,
+  status and cumulative task IDs. Partial results can be retried against the same M7 proposal.
+- M8 saves its approval intent before calling M7. An interruption after approval requires
+  reconciliation against the M7 recommendation and its tasks. The run file serializes
+  M8 requests within one process.
 - Apply creates tasks in `CREATED`. M7 publishes the shared `DispatchCompletedEvent`
   after each task reaches `DONE`; M3 moves the vehicle and M1 updates the dashboard.
   AI plan cards apply individual dispatch actions. Their displayed KPI is for the full
@@ -112,9 +110,7 @@ English display labels for seeded hubs do not change live Hub rows.
 ### Final integration checklist
 
 1. Verify M7 uses the M4 parking pool for the destination capacity and arrival checks.
-2. Reuse M7 `GET /api/m7/redistributions`
-   for active tasks and `POST /api/m7/redistributions` with `vehicleId`, `sourceHubId` and
-   `destinationHubId` to create each task.
+2. Use the M7 recommendation contract for proposal registration and approval.
 3. In an isolated environment, verify successful Apply, a full destination, partial
    creation, duplicate Apply, a lost response, and parking cleanup after failure. Follow
    a created task through `IN_PROGRESS` and `DONE`, then check M3 location and M1 counts.
@@ -122,6 +118,23 @@ English display labels for seeded hubs do not change live Hub rows.
    module needs a change for a verified integration issue, keep that diff limited to the
    affected API or event and avoid reformatting adjacent code. Follow repository ownership
    rules for shared events and migrations.
+
+```mermaid
+flowchart TD
+    A[Operator enters a description or edits inputs in M8] --> B[AI can fill the draft]
+    B --> C[Operator confirms the scenario and runs it]
+    C --> D[M8 captures a snapshot and computes KPIs]
+    D --> E[AI proposes actions and tests them with the simulator]
+    E --> F[Operator approves a saved dispatch action]
+    F --> G[M8 registers and approves the proposal through M7]
+    G --> H[M7 selects vehicles and checks M4 destination capacity]
+    H --> I[M7 creates tasks and M8 shows task IDs]
+    I --> J[Operator starts the tasks in M7]
+    J --> K[M4 releases source spaces]
+    K --> L[Operator marks arrival in M7]
+    L --> M[M4 assigns destination spaces]
+    M --> N[M7 emits completion and M3 and M1 update]
+```
 
 ## Verify
 

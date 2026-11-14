@@ -13,7 +13,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
     ? "Serve rental requests at other open hubs"
     : `Move ${count.format(a.amount)} vehicles from ${hub(a.fromHubId)} to ${hub(a.toHubId)}`;
   const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
-  const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "NEEDS_REVIEW"].includes(item.status));
+  const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW"].includes(item.status));
 
   return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={busy}>
     <div className="m8-section-head">

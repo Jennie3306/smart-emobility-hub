@@ -35,8 +35,8 @@ public final class SimulationModels {
                       int peakQueue, List<HubKpi> hubs) {}
     public record Point(int minute, int served, int waiting, int failed) {}
     public record EngineResult(Kpi kpi, List<Point> timeline) {}
-    public record DispatchTask(long vehicleId, long taskId) {}
-    public record DispatchProgress(List<DispatchTask> tasks, Long unconfirmedVehicleId, String attemptId, String message) {
+    public record DispatchTask(Long vehicleId, long taskId) {}
+    public record DispatchProgress(List<DispatchTask> tasks, Long unconfirmedVehicleId, String attemptId, String message, String m7RecommendationId) {
         public DispatchProgress { tasks = List.copyOf(tasks); }
     }
     public record Recommendation(String id, String action, long fromHubId, long toHubId, int amount,

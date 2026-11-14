@@ -2,7 +2,7 @@ package com.hcmut.emobility.m8simulation.controller;
 
 import com.hcmut.emobility.m8simulation.domain.SimulationModels.*;
 import com.hcmut.emobility.m8simulation.service.*;
-import jakarta.servlet.http.HttpServletRequest;
+import java.security.Principal;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
@@ -29,9 +29,8 @@ public class SimulationController {
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/discard")
     public Run discard(@PathVariable String id,@PathVariable String recommendationId) throws IOException { return service.discard(id,recommendationId); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/apply")
-    public Run apply(@PathVariable String id, @PathVariable String recommendationId, HttpServletRequest request) throws IOException {
-        var session = request.getSession(false);
-        return dispatch.apply(id, recommendationId, session == null ? null : session.getId());
+    public Run apply(@PathVariable String id, @PathVariable String recommendationId, Principal operator) throws IOException {
+        return dispatch.apply(id, recommendationId, operator.getName());
     }
     @PostMapping("/runs/{id}/agent/retry") public Run retry(@PathVariable String id,@RequestParam int expectedRounds) throws IOException {return service.retry(id,expectedRounds);}
 }

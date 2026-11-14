@@ -87,7 +87,7 @@ public class SimulationService {
         store.save(updated);return updated;
     }
     private void ensurePlanningEditable(Run run) {
-        if (run.recommendations().stream().anyMatch(r -> List.of("PARTIAL", "APPLIED", "NEEDS_REVIEW").contains(r.status()))) {
+        if (run.recommendations().stream().anyMatch(r -> List.of("PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW").contains(r.status()))) {
             throw new BusinessException("DISPATCH_ALREADY_STARTED", "Start a new scenario to explore another plan after dispatch has started.");
         }
     }

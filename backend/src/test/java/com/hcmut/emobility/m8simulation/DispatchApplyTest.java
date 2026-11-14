@@ -11,51 +11,47 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
-import java.util.Set;
+import com.hcmut.emobility.shared.contracts.RedistributionRecommendations;
+import com.hcmut.emobility.shared.contracts.RedistributionRecommendations.ApprovalResult;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class DispatchApplyTest {
     @TempDir Path dir;
-    private final M7DispatchClient m7 = mock(M7DispatchClient.class);
-    private final SnapshotProvider snapshots = mock(SnapshotProvider.class);
+    private final RedistributionRecommendations m7 = mock(RedistributionRecommendations.class);
 
-    @Test void retryCreatesOnlyMissingTasksAndReplayReturnsOriginalIds() throws Exception {
-        var store = store();
-        var apply = new DispatchApplyService(snapshots, store, m7);
-        when(m7.activeVehicles("session")).thenReturn(Set.of());
-        when(m7.create("session", 1, 10, 20)).thenReturn(101L);
-        when(m7.create("session", 2, 10, 20))
-                .thenThrow(new M7DispatchClient.Rejected("DESTINATION_FULL")).thenReturn(102L);
-        when(snapshots.capture()).thenReturn(snapshot());
+    @Test void partialRetryReusesM7RecommendationAndAccumulatesTaskIds() throws Exception {
+        var apply = new DispatchApplyService(store(), m7);
+        when(m7.propose("M8_SIMULATION", "rec", 10, 20, 2, "Demand")).thenReturn("75");
+        when(m7.approve("75", "operator"))
+                .thenReturn(new ApprovalResult("75", "PARTIAL", List.of(101L), "Destination full"),
+                        new ApprovalResult("75", "APPROVED", List.of(102L), null));
 
-        var partial = apply.apply("run", "rec", "session").recommendations().getFirst();
+        var partial = apply.apply("run", "rec", "operator").recommendations().getFirst();
         assertEquals("PARTIAL", partial.status());
-        assertTrue(partial.dispatch().message().contains("DESTINATION_FULL"));
-        assertEquals(List.of(new DispatchTask(1, 101)), partial.dispatch().tasks());
-        var reloaded = new DispatchApplyService(snapshots, openStore(), m7);
-        var finished = reloaded.apply("run", "rec", "session");
-        assertEquals("APPLIED", finished.recommendations().getFirst().status());
-        assertEquals(List.of(new DispatchTask(1, 101), new DispatchTask(2, 102)),
+        assertEquals("75", partial.dispatch().m7RecommendationId());
+        assertEquals(List.of(new DispatchTask(null, 101)), partial.dispatch().tasks());
+        var reloaded = new DispatchApplyService(openStore(), m7);
+        var finished = reloaded.apply("run", "rec", "operator");
+        assertEquals("APPROVED", finished.recommendations().getFirst().status());
+        assertEquals(List.of(new DispatchTask(null, 101), new DispatchTask(null, 102)),
                 finished.recommendations().getFirst().dispatch().tasks());
-        assertEquals(finished, reloaded.apply("run", "rec", "session"));
-        verify(m7, times(1)).create("session", 1, 10, 20);
-        verify(m7, times(2)).create("session", 2, 10, 20);
+        assertEquals(finished, reloaded.apply("run", "rec", "operator"));
+        verify(m7, times(1)).propose("M8_SIMULATION", "rec", 10, 20, 2, "Demand");
+        verify(m7, times(2)).approve("75", "operator");
     }
 
-    @Test void ambiguousOutcomeBlocksReplayEvenAfterReload() throws Exception {
-        var store = store();
-        when(m7.activeVehicles("session")).thenReturn(Set.of());
-        when(m7.create("session", 1, 10, 20)).thenThrow(new IllegalStateException("lost response"));
-        when(snapshots.capture()).thenReturn(snapshot());
+    @Test void resolvedExternallyRequiresReviewWithoutCreatingAnotherProposal() throws Exception {
+        var apply = new DispatchApplyService(store(), m7);
+        when(m7.propose("M8_SIMULATION", "rec", 10, 20, 2, "Demand")).thenReturn("75");
+        when(m7.approve("75", "operator")).thenThrow(new BusinessException(
+                "RECOMMENDATION_ALREADY_RESOLVED", "Recommendation is already approved"));
 
-        var result = new DispatchApplyService(snapshots, store, m7).apply("run", "rec", "session");
+        var result = apply.apply("run", "rec", "operator");
         assertEquals("NEEDS_REVIEW", result.recommendations().getFirst().status());
-        assertEquals(result, new DispatchApplyService(snapshots, openStore(), m7)
-                .apply("run", "rec", "session"));
-        verify(m7, times(1)).create("session", 1, 10, 20);
-        verify(m7, never()).create("session", 2, 10, 20);
+        assertEquals(result, new DispatchApplyService(openStore(), m7).apply("run", "rec", "operator"));
+        verify(m7, times(1)).approve("75", "operator");
     }
 
     @Test void savedAiPlanExposesStableDispatchCardAndKeepsRerouteInSimulation() throws Exception {

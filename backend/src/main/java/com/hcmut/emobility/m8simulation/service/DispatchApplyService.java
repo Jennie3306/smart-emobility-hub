@@ -2,88 +2,65 @@ package com.hcmut.emobility.m8simulation.service;
 
 import com.hcmut.emobility.m8simulation.domain.SimulationModels.*;
 import com.hcmut.emobility.shared.common.BusinessException;
-import org.springframework.http.HttpStatus;
+import com.hcmut.emobility.shared.contracts.RedistributionRecommendations;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
 
 @Service
 public class DispatchApplyService {
-    private final SnapshotProvider snapshots;
     private final RunStore store;
-    private final M7DispatchClient m7;
+    private final RedistributionRecommendations m7;
 
-    public DispatchApplyService(SnapshotProvider snapshots, RunStore store, M7DispatchClient m7) {
-        this.snapshots = snapshots;
+    public DispatchApplyService(RunStore store, RedistributionRecommendations m7) {
         this.store = store;
         this.m7 = m7;
     }
 
-    public Run apply(String runId, String recommendationId, String sessionId) throws IOException {
-        // RunStore is local and single-process. Serialize approvals and other updates to the saved run.
+    public Run apply(String runId, String recommendationId, String operator) throws IOException {
         synchronized (store) {
-            return applyLocked(runId, recommendationId, sessionId);
-        }
-    }
-
-    private Run applyLocked(String runId, String recommendationId, String sessionId) throws IOException {
-        Run run = store.get(runId);
-        Recommendation rec = run.recommendations().stream().filter(r -> r.id().equals(recommendationId))
-                .findFirst().orElseThrow();
-        if ("APPLIED".equals(rec.status()) || "NEEDS_REVIEW".equals(rec.status())) return run;
-        if (run.recommendations().stream().anyMatch(item -> "NEEDS_REVIEW".equals(item.status()))) {
-            throw new BusinessException("DISPATCH_REVIEW_REQUIRED", "Review the unconfirmed dispatch before applying another recommendation from this run.");
-        }
-        if (!"dispatch".equals(rec.action()) || !List.of("PENDING", "PARTIAL").contains(rec.status())
-                || rec.fromHubId() == rec.toHubId() || rec.amount() < 1) {
-            throw new BusinessException("NOT_APPLICABLE", "Only a pending dispatch recommendation can be applied.");
-        }
-        if (sessionId == null) throw new BusinessException("SESSION_REQUIRED", "Sign in again to apply this recommendation.", HttpStatus.UNAUTHORIZED);
-
-        var tasks = new ArrayList<>(rec.dispatch() == null ? List.<DispatchTask>of() : rec.dispatch().tasks());
-        var active = m7.activeVehicles(sessionId);
-        var live = snapshots.capture();
-        if (live.hubs().stream().noneMatch(hub -> hub.id() == rec.toHubId()))
-            throw new BusinessException("DESTINATION_UNAVAILABLE", "The destination hub is no longer available.");
-        var vehicles = live.vehicles().stream()
-                .filter(v -> Objects.equals(v.hubId(), rec.fromHubId()) && "AVAILABLE".equals(v.state()) && v.battery() >= 20)
-                .filter(v -> !active.contains(v.id()) && tasks.stream().noneMatch(task -> task.vehicleId() == v.id()))
-                .sorted(Comparator.comparingLong(Vehicle::id)).toList();
-        int limit = Math.min(rec.amount() - tasks.size(), Math.max(0, vehicles.size() - 1));
-        for (Vehicle vehicle : vehicles.subList(0, limit)) {
-            String attemptId = UUID.randomUUID().toString();
-            run = save(run, rec, "NEEDS_REVIEW", tasks, vehicle.id(), attemptId,
-                    "Task outcome is unconfirmed. Check the M7 task list before creating another task.");
-            long taskId;
-            try {
-                taskId = m7.create(sessionId, vehicle.id(), rec.fromHubId(), rec.toHubId());
-            } catch (M7DispatchClient.Rejected rejected) {
-                return finish(run, rec, tasks, "M7 declined vehicle #" + vehicle.id() + " (" + rejected.getMessage() + ").");
-            } catch (RuntimeException uncertain) {
-                return run;
+            Run run = store.get(runId);
+            Recommendation rec = run.recommendations().stream().filter(r -> r.id().equals(recommendationId))
+                    .findFirst().orElseThrow();
+            if (List.of("APPLIED", "APPROVED", "NEEDS_REVIEW").contains(rec.status())) return run;
+            if (run.recommendations().stream().anyMatch(item -> "NEEDS_REVIEW".equals(item.status()))) {
+                throw new BusinessException("DISPATCH_REVIEW_REQUIRED", "Review the unconfirmed dispatch before applying another recommendation from this run.");
             }
-            tasks.add(new DispatchTask(vehicle.id(), taskId));
-            run = finish(run, rec, tasks, null);
+            if (!"dispatch".equals(rec.action()) || !List.of("PENDING", "PARTIAL").contains(rec.status())
+                    || rec.fromHubId() == rec.toHubId() || rec.amount() < 1) {
+                throw new BusinessException("NOT_APPLICABLE", "Only a pending dispatch recommendation can be applied.");
+            }
+            var tasks = new ArrayList<>(rec.dispatch() == null ? List.<DispatchTask>of() : rec.dispatch().tasks());
+            String m7Id = rec.dispatch() == null ? null : rec.dispatch().m7RecommendationId();
+            if (m7Id == null) {
+                int remaining = rec.amount() - tasks.size();
+                if (remaining <= 0) return save(run, rec, "APPROVED", tasks, null, null);
+                m7Id = m7.propose("M8_SIMULATION", rec.id(), rec.fromHubId(), rec.toHubId(), remaining, rec.reason());
+            }
+            run = save(run, rec, "NEEDS_REVIEW", tasks, m7Id,
+                    "Check the M7 recommendation and its tasks before retrying an unconfirmed approval.");
+            RedistributionRecommendations.ApprovalResult result;
+            try {
+                result = m7.approve(m7Id, operator);
+            } catch (BusinessException ex) {
+                if (!"RECOMMENDATION_ALREADY_RESOLVED".equals(ex.getCode())
+                        && !"RECOMMENDATION_NOT_FOUND".equals(ex.getCode())) throw ex;
+                return save(run, rec, "NEEDS_REVIEW", tasks, m7Id, ex.getMessage());
+            }
+            for (Long taskId : result.taskIds()) {
+                if (tasks.stream().noneMatch(task -> task.taskId() == taskId)) {
+                    tasks.add(new DispatchTask(null, taskId));
+                }
+            }
+            return save(run, rec, result.status(), tasks, result.recommendationId(), result.message());
         }
-        if (tasks.size() < rec.amount()) {
-            return finish(run, rec, tasks, "Too few eligible vehicles at the source. One eligible vehicle must remain there.");
-        }
-        return run;
-    }
-
-    private Run finish(Run run, Recommendation rec, List<DispatchTask> tasks, String message) throws IOException {
-        String status = tasks.size() == rec.amount() ? "APPLIED" : tasks.isEmpty() ? "PENDING" : "PARTIAL";
-        return save(run, rec, status, tasks, null, null, message);
     }
 
     private Run save(Run run, Recommendation rec, String status, List<DispatchTask> tasks,
-                     Long vehicleId, String attemptId, String message) throws IOException {
-        var updated = rec.withDispatch(status, new DispatchProgress(tasks, vehicleId, attemptId, message));
+                     String m7Id, String message) throws IOException {
+        var updated = rec.withDispatch(status, new DispatchProgress(tasks, null, null, message, m7Id));
         Run next = run.withRecommendations(run.recommendations().stream()
                 .map(item -> item.id().equals(rec.id()) ? updated : item).toList());
         store.save(next);

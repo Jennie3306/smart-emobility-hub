@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
 import { simulationApi as api, type Scenario, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
@@ -109,7 +110,8 @@ export default function SimulationPage() {
                       <strong className="m8-benefit">{r.id.startsWith("agent-") ? "Full plan failure rate" : "Projected failure rate"}: {number(r.projectedFailurePercent)}%</strong>
                       {r.dispatch && <>
                         <p role="status">{r.dispatch.tasks.length}/{r.amount} tasks created{r.status === "NEEDS_REVIEW" ? " · Needs review" : ""}</p>
-                        {r.dispatch.tasks.length > 0 && <ul>{r.dispatch.tasks.map(task => <li key={task.taskId}>Task #{task.taskId} · Vehicle #{task.vehicleId}</li>)}</ul>}
+                        {r.dispatch.tasks.length > 0 && <ul>{r.dispatch.tasks.map(task => <li key={task.taskId}>Task #{task.taskId}{task.vehicleId != null && ` · Vehicle #${task.vehicleId}`}</li>)}</ul>}
+                        {r.dispatch.m7RecommendationId && <Link to="/m7/redistribution">View M7 recommendation #{r.dispatch.m7RecommendationId}</Link>}
                         {r.dispatch.message && <p className="m8-footnote">{r.dispatch.message}</p>}
                         {r.dispatch.unconfirmedVehicleId != null && <p className="m8-footnote">Review vehicle #{r.dispatch.unconfirmedVehicleId}.</p>}
                       </>}
@@ -126,7 +128,7 @@ export default function SimulationPage() {
                               const updated = await api.apply(active.id, r.id);
                               setActive(updated);
                               setRuns(current => current.map(run => run.id === updated.id ? updated : run));
-                            })}>{r.status === "PARTIAL" ? "Create remaining tasks" : "Apply dispatch"}</button>
+                            })}>{r.status === "PARTIAL" ? "Create remaining tasks" : "Approve & execute"}</button>
                         )}
                         <button className="m8-button secondary" disabled={busy || r.status !== "PENDING"}
                           onClick={() => task(async () => { setActive(await api.discard(active.id, r.id)); setRuns(await api.list()); })}>
