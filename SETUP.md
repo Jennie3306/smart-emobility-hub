@@ -142,7 +142,6 @@ Cả tám module đã có nghiệp vụ, API, màn hình và test; các việc �
 | Việc | Ai |
 |---|---|
 | M8 gọi hợp đồng `RedistributionRecommendations` của M7 (propose / approve), bật *Approve & execute* | TV8 |
-| Điền username thật vào `.github/CODEOWNERS` | TV1 |
 | Quay video demo khoảng 3 phút theo `docs/demo/kich-ban-demo.md` | Cả nhóm |
 
 Sơ đồ của report và ảnh chụp giao diện: `docs/tools_for_figures` (xem README trong đó).

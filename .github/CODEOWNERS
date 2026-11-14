@@ -1,18 +1,26 @@
-# BAT BUOC: thay @tv1 ... @tv8 bang username GitHub that cua tung thanh vien,
-# neu khong GitHub se bo qua dong do va khong tu gan reviewer.
+# Owner of each part of the code; GitHub asks them to review PRs that touch it.
 #
-#   TV1 = @________   TV2 = @________   TV3 = @________   TV4 = @________
-#   TV5 = @________   TV6 = @________   TV7 = @________   TV8 = @________
+#   TV1 = @Jennie3306        TV2 = @CoDa-git19       TV3 = @Hungdeptrai5383   TV4 = @datnt596
+#   TV5 = @trantienhung      TV6 = @HoangHieuu       TV7 = @kduc243           TV8 = @Zzuay
 
-/backend/src/main/java/com/hcmut/emobility/shared/          @tv3
-/backend/src/main/resources/db/migration/                   @tv4
-/backend/src/main/java/com/hcmut/emobility/m1monitoring/    @tv1
-/backend/src/main/java/com/hcmut/emobility/m2reservation/   @tv2
-/backend/src/main/java/com/hcmut/emobility/m3vehicle/       @tv3
-/backend/src/main/java/com/hcmut/emobility/m4parking/       @tv4
-/backend/src/main/java/com/hcmut/emobility/m5charging/      @tv5
-/backend/src/main/java/com/hcmut/emobility/m6simulator/     @tv6
-/backend/src/main/java/com/hcmut/emobility/m7dispatch/      @tv7
-/backend/src/main/java/com/hcmut/emobility/m8simulation/    @tv8
-/frontend/src/shared/                                       @tv6
-/frontend/src/design-system/                                @tv5
+/backend/src/main/java/com/hcmut/emobility/shared/          @Hungdeptrai5383
+/backend/src/main/resources/db/migration/                   @datnt596
+/backend/src/main/java/com/hcmut/emobility/m1monitoring/    @Jennie3306
+/backend/src/main/java/com/hcmut/emobility/m2reservation/   @CoDa-git19
+/backend/src/main/java/com/hcmut/emobility/m3vehicle/       @Hungdeptrai5383
+/backend/src/main/java/com/hcmut/emobility/m4parking/       @datnt596
+/backend/src/main/java/com/hcmut/emobility/m5charging/      @trantienhung
+/backend/src/main/java/com/hcmut/emobility/m6simulator/     @HoangHieuu
+/backend/src/main/java/com/hcmut/emobility/m7dispatch/      @kduc243
+/backend/src/main/java/com/hcmut/emobility/m8simulation/    @Zzuay
+
+/frontend/src/modules/m1monitoring/                         @Jennie3306
+/frontend/src/modules/m2reservation/                        @CoDa-git19
+/frontend/src/modules/m3vehicle/                            @Hungdeptrai5383
+/frontend/src/modules/m4parking/                            @datnt596
+/frontend/src/modules/m5charging/                           @trantienhung
+/frontend/src/modules/m6simulator/                          @HoangHieuu
+/frontend/src/modules/m7dispatch/                           @kduc243
+/frontend/src/modules/m8simulation/                         @Zzuay
+/frontend/src/shared/                                       @HoangHieuu
+/frontend/src/shared/ui/                                    @trantienhung
