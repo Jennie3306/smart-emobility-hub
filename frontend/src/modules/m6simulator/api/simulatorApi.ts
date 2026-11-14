@@ -29,10 +29,10 @@ export interface SimulatorStatus {
 
 export function normalizeSeed(input: string): string {
   const value = input.trim();
-  if (!/^-?\d+$/.test(value)) throw new Error("Seed phải là số nguyên, không dùng phần thập phân.");
+  if (!/^-?\d+$/.test(value)) throw new Error("The seed must be a whole number, without decimals.");
   const seed = BigInt(value);
   if (seed < -9223372036854775808n || seed > 9223372036854775807n) {
-    throw new Error("Seed nằm ngoài phạm vi Long: -9223372036854775808 đến 9223372036854775807.");
+    throw new Error("The seed is outside the Java long range: -9223372036854775808 to 9223372036854775807.");
   }
   return seed.toString();
 }
@@ -63,14 +63,14 @@ export function describeApiError(error: unknown) {
   const response = axios.isAxiosError<ApiError>(error) ? error.response : undefined;
   const status = response?.status;
   const advice: Record<number, string> = {
-    400: "Dữ liệu không hợp lệ. Kiểm tra scenario và seed rồi thử lại.",
-    401: "Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.",
-    403: "Chỉ tài khoản Operator được sử dụng simulator.",
-    409: "Một run đang chạy. Làm mới trạng thái rồi chạy lại khi run kết thúc.",
+    400: "Invalid data. Check the scenario and the seed, then try again.",
+    401: "Your session has expired. Sign in again to continue.",
+    403: "Only Operator accounts can use the simulator.",
+    409: "A run is in progress. Refresh the status and run again when it has finished.",
   };
   return {
     status,
-    message: (status && advice[status]) || "Không thể liên lạc hoặc hoàn tất yêu cầu. Kiểm tra kết nối rồi thử lại.",
+    message: (status && advice[status]) || "The request could not be sent or completed. Check the connection and try again.",
     code: response?.data?.code,
     details: response?.data?.details,
   };

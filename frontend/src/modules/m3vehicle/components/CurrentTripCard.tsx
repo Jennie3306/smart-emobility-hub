@@ -48,16 +48,19 @@ export function CurrentTripCard({ hubLabel, pickupHubId, refreshKey }: Props) {
   const started = new Date(trip.startTime);
 
   return (
-    <section aria-label="Current trip" className="rounded border p-4 space-y-2">
-      <h2 className="font-semibold">Current trip</h2>
-      <dl className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
-        <div><dt className="text-slate-500">Vehicle</dt><dd className="font-medium">{trip.vehicleCode}</dd></div>
-        <div>
-          <dt className="text-slate-500">Started</dt>
-          <dd>{started.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {duration(tripMinutes(trip.startTime, now))}</dd>
+    <section aria-label="Current trip" className="space-y-3 rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-semibold text-slate-900">Current trip</h2>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-200"><span className="h-1.5 w-1.5 rounded-full bg-current" />{trip.vehicleState}</span>
+      </div>
+      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+        <div className="rounded-lg bg-white p-3"><dt className="text-xs text-slate-500">Vehicle</dt><dd className="mt-0.5 font-bold text-slate-900">{trip.vehicleCode}</dd></div>
+        <div className="rounded-lg bg-white p-3">
+          <dt className="text-xs text-slate-500">Started</dt>
+          <dd className="mt-0.5 font-semibold text-slate-900">{started.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · {duration(tripMinutes(trip.startTime, now))}</dd>
         </div>
-        <div><dt className="text-slate-500">Location</dt><dd>{location}</dd></div>
-        <div><dt className="text-slate-500">Battery</dt><dd>{trip.batteryLevel}%</dd></div>
+        <div className="rounded-lg bg-white p-3"><dt className="text-xs text-slate-500">Location</dt><dd className="mt-0.5 font-semibold text-slate-900">{location}</dd></div>
+        <div className="rounded-lg bg-white p-3"><dt className="text-xs text-slate-500">Battery</dt><dd className="mt-0.5 font-bold text-slate-900">{trip.batteryLevel}%</dd></div>
       </dl>
     </section>
   );

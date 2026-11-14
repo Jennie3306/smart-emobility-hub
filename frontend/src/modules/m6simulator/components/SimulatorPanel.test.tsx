@@ -20,13 +20,13 @@ afterEach(cleanup);
 
 async function ready() {
   render(<SimulatorPanel />);
-  await screen.findByText("Chưa có run nào trong phiên backend này.");
+  await screen.findByText("No run yet in this backend session.");
   return userEvent.setup();
 }
 
 it("shows real disabled scheduler, null interval and empty latest run", async () => {
   await ready();
-  expect(screen.getByText("Đang tắt")).toBeTruthy();
+  expect(screen.getByText("Off")).toBeTruthy();
   expect(screen.getByText("—")).toBeTruthy();
   expect(screen.getAllByRole("option")).toHaveLength(3);
 });
@@ -36,27 +36,27 @@ it.each(["NORMAL_TICK", "VEHICLE_FAILURE", "CHARGER_FAILURE"] as const)("sends %
   await user.selectOptions(screen.getByLabelText("Scenario"), scenario);
   vi.mocked(simulatorApi.run).mockResolvedValue({ ...result, scenario });
   vi.mocked(simulatorApi.status).mockResolvedValue({ ...idle, state: "SUCCEEDED", latestRun: { ...result, scenario } });
-  await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
+  await user.click(screen.getByRole("button", { name: "Run scenario" }));
   expect(simulatorApi.run).toHaveBeenCalledWith(scenario, "100");
   expect(await screen.findByText(result.runId)).toBeTruthy();
   expect(screen.getByText("DeviceReadingReported")).toBeTruthy();
   expect(screen.getByText(result.outboundEvents[0].eventId)).toBeTruthy();
-  expect(screen.getByText("Trùng inbound ID")).toBeTruthy();
+  expect(screen.getByText("Duplicate inbound ID")).toBeTruthy();
 });
 
 it("rejects fractional seed locally without a POST", async () => {
   const user = await ready();
   await user.clear(screen.getByLabelText("Seed"));
   await user.type(screen.getByLabelText("Seed"), "1.5");
-  await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
-  expect(screen.getByRole("alert").textContent).toContain("số nguyên");
+  await user.click(screen.getByRole("button", { name: "Run scenario" }));
+  expect(screen.getByRole("alert").textContent).toContain("whole number");
   expect(simulatorApi.run).not.toHaveBeenCalled();
 });
 
 it.each([400, 401, 403])("shows HTTP %s and keeps the entered seed on run failure", async status => {
   const user = await ready();
   vi.mocked(simulatorApi.run).mockRejectedValue(failure(status));
-  await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
+  await user.click(screen.getByRole("button", { name: "Run scenario" }));
   expect((await screen.findByRole("alert")).textContent).toContain(`HTTP ${status}`);
   expect((screen.getByLabelText("Seed") as HTMLInputElement).value).toBe("100");
   expect(screen.queryByText(result.runId)).toBeNull();
@@ -66,23 +66,23 @@ it("refreshes on 409 without retrying the POST and blocks while backend is runni
   const user = await ready();
   vi.mocked(simulatorApi.run).mockRejectedValue(failure(409));
   vi.mocked(simulatorApi.status).mockResolvedValue({ ...idle, state: "RUNNING", schedulerEnabled: true, intervalMs: 5000 });
-  await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
+  await user.click(screen.getByRole("button", { name: "Run scenario" }));
   expect((await screen.findByRole("alert")).textContent).toContain("HTTP 409");
-  await screen.findByText("Đang bật");
-  expect((screen.getByRole("button", { name: "Chạy scenario" }) as HTMLButtonElement).disabled).toBe(true);
+  await screen.findByText("On");
+  expect((screen.getByRole("button", { name: "Run scenario" }) as HTMLButtonElement).disabled).toBe(true);
   expect(simulatorApi.run).toHaveBeenCalledTimes(1);
   vi.mocked(simulatorApi.status).mockResolvedValue(idle);
-  await user.click(screen.getByRole("button", { name: "Làm mới trạng thái" }));
-  await waitFor(() => expect((screen.getByRole("button", { name: "Chạy scenario" }) as HTMLButtonElement).disabled).toBe(false));
+  await user.click(screen.getByRole("button", { name: "Refresh status" }));
+  await waitFor(() => expect((screen.getByRole("button", { name: "Run scenario" }) as HTMLButtonElement).disabled).toBe(false));
 });
 
 it("prevents duplicate clicks during a pending POST", async () => {
   const user = await ready();
   let finish!: (run: SimulationRun) => void;
   vi.mocked(simulatorApi.run).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
-  await user.dblClick(screen.getByRole("button", { name: "Chạy scenario" }));
+  await user.dblClick(screen.getByRole("button", { name: "Run scenario" }));
   expect(simulatorApi.run).toHaveBeenCalledTimes(1);
-  expect((screen.getByRole("button", { name: "Đang chạy…" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "Running…" }) as HTMLButtonElement).disabled).toBe(true);
   vi.mocked(simulatorApi.status).mockResolvedValue({ ...idle, state: "SUCCEEDED", latestRun: result });
   await act(async () => finish(result));
   await screen.findByText(result.runId);
@@ -92,23 +92,23 @@ it("shows status errors, disables run, and can retry a failed GET", async () => 
   vi.mocked(simulatorApi.status).mockRejectedValueOnce(failure(403));
   render(<SimulatorPanel />);
   expect((await screen.findByRole("alert")).textContent).toContain("HTTP 403");
-  expect((screen.getByRole("button", { name: "Chạy scenario" }) as HTMLButtonElement).disabled).toBe(true);
-  await userEvent.click(screen.getByRole("button", { name: "Làm mới trạng thái" }));
-  await screen.findByText("Chưa có run nào trong phiên backend này.");
+  expect((screen.getByRole("button", { name: "Run scenario" }) as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "Refresh status" }));
+  await screen.findByText("No run yet in this backend session.");
 });
 
 it("refreshes a failed run and displays server error and partial counts", async () => {
   const user = await ready();
   vi.mocked(simulatorApi.run).mockRejectedValue(failure(500));
   vi.mocked(simulatorApi.status).mockResolvedValue({ ...idle, state: "FAILED", latestRun: { ...result, processedCount: 1, error: "Consumer test failure" } });
-  await user.click(screen.getByRole("button", { name: "Chạy scenario" }));
-  expect(await screen.findByText("Run thất bại: Consumer test failure")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Run scenario" }));
+  expect(await screen.findByText("Run failed: Consumer test failure")).toBeTruthy();
   expect(screen.getByText(result.runId)).toBeTruthy();
 });
 
 it("keeps an unreachable backend visibly distinct from an empty run", async () => {
   vi.mocked(simulatorApi.status).mockRejectedValue(new Error("offline"));
   render(<SimulatorPanel />);
-  expect((await screen.findByRole("alert")).textContent).toContain("Kiểm tra kết nối");
-  expect(screen.getByText("Kết quả chưa tải được.")).toBeTruthy();
+  expect((await screen.findByRole("alert")).textContent).toContain("Check the connection");
+  expect(screen.getByText("The result could not be loaded.")).toBeTruthy();
 });

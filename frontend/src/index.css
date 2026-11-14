@@ -1,3 +1,43 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Design system (TV5): shared look for every module. Pages use these classes and the
+   components in src/shared/ui instead of styling each screen by hand. */
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body { @apply bg-canvas font-sans text-slate-800 antialiased; }
+  :focus-visible { @apply outline outline-2 outline-offset-2 outline-brand-light; }
+}
+
+@layer components {
+  .card { @apply rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]; }
+
+  .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply bg-brand text-white hover:bg-brand-light; }
+  .btn-secondary { @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50; }
+  .btn-danger { @apply border border-red-200 bg-white text-red-700 hover:bg-red-50; }
+  .btn-accent { @apply bg-accent text-white hover:bg-accent-light; }
+  .btn-sm { @apply rounded-md px-2.5 py-1 text-xs; }
+
+  .label { @apply block text-sm font-medium text-slate-700; }
+  .input { @apply mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition focus:border-brand-light focus:ring-2 focus:ring-brand-light/20 disabled:bg-slate-100 disabled:text-slate-500; }
+  .hint { @apply text-xs text-slate-500; }
+
+  .table-ui { @apply w-full border-collapse text-left text-sm; }
+  .table-ui thead th { @apply whitespace-nowrap bg-slate-50 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500; }
+  .table-ui tbody td { @apply border-t border-slate-100 px-4 py-3 align-middle; }
+  .table-ui tbody tr { @apply transition-colors; }
+  .table-ui tbody tr:hover { @apply bg-slate-50/70; }
+
+  .eyebrow { @apply text-[11px] font-bold uppercase tracking-[0.14em] text-accent; }
+  .link { @apply font-medium text-brand underline-offset-2 hover:underline; }
+}
+
+/* M8 brings its own workspace chrome; inside the shared shell only its content and tabs are used. */
+.app-shell .m8-app { margin: 0; min-height: 0; background: transparent; border-radius: 0; }
+.app-shell .m8-sidebar, .app-shell .m8-top { display: none; }
+.app-shell .m8-mobile-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 16px; }
+.app-shell .m8-mobile-nav button { background: white; border: 1px solid #dce3ea; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: #1F4E79; }
+.app-shell .m8-mobile-nav button[aria-current=page] { background: #1F4E79; color: white; border-color: #1F4E79; }
+.app-shell .m8-content { padding: 0; }

@@ -6,16 +6,16 @@ import type { Utilisation } from '../api/types';
  */
 export function UtilisationBar({ u }: { u: Utilisation }) {
   const p = u.parkingPercent;
-  if (p === null) return <span className="text-gray-400 text-sm">khong co du lieu</span>;
+  if (p === null) return <span className="text-sm text-slate-400">No data</span>;
 
-  const color = p >= 80 ? 'bg-red-500' : p >= 50 ? 'bg-amber-500' : 'bg-green-500';
+  const color = p >= 80 ? 'bg-red-500' : p >= 50 ? 'bg-amber-500' : 'bg-emerald-500';
   return (
     <div className="flex items-center gap-2">
-      <div className="h-2 w-28 rounded bg-gray-200">
-        <div className={`h-2 rounded ${color}`} style={{ width: `${p}%` }} />
+      <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-200">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${p}%` }} />
       </div>
-      <span className="text-sm tabular-nums">{p}%</span>
-      {u.dataAnomaly && <span title="Inconsistent data">!</span>}
+      <span className="whitespace-nowrap text-xs font-medium tabular-nums text-slate-600">{p}%</span>
+      {u.dataAnomaly && <span className="text-xs font-bold text-amber-600" title="Inconsistent data">!</span>}
     </div>
   );
 }
