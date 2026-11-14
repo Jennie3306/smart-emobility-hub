@@ -22,6 +22,9 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
     </div>
     {state && <p role="status" className={failed ? "m8-alert error" : "m8-agent-status"}>{state.message}</p>}
     {busy && <p role="status" className="m8-agent-status">Testing plans and reading feedback… Each attempt uses up to 3 rounds.</p>}
+    {best?.actions.some(a => a.action === "reroute") && <p className="m8-alert">
+      Historical plan. It changed rerouting settings under the previous rules. Run the scenario again for a dispatch plan that preserves your settings.
+    </p>}
     {best?.kpi ? <div className="m8-agent-best">
       <div className="m8-outcome-title"><h3>Best Tested Plan</h3><span className="m8-chip success">{count.format(run.kpi.failed - best.kpi.failed)} fewer unserved requests</span></div>
       <dl className="m8-plan-outcome">

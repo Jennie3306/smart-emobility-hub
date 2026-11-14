@@ -15,18 +15,11 @@ public class SimulationPlanTool {
         List<Vehicle> vehicles=new ArrayList<>(snapshot.vehicles());
         Map<Long,Integer> remaining=new HashMap<>();
         for(CapacityState c:snapshot.capacities()) remaining.put(c.hubId(),Math.max(0,Math.min(c.freeSlots(),c.totalSlots()-c.usedSlots())));
-        var settings = new LinkedHashMap<Long, HubSettings>();
-        for (var hub : scenario.settings()) settings.put(hub.hubId(), hub);
         Set<Long> moved=new HashSet<>();
         for(PlanAction a:actions) {
             if(a==null || a.reason()==null || a.reason().length()>500) return rejected("Each action needs a reason of at most 500 characters.");
-            if("reroute".equals(a.action())) {
-                var hub = settings.get(a.fromHubId());
-                if(hub == null || hub.reroute() || a.toHubId()!=0 || a.amount()!=0)
-                    return rejected("Reroute requires fromHubId=affected hub, toHubId=0, amount=0 and must not already be enabled.");
-                settings.put(hub.hubId(), hub.withReroute());continue;
-            }
-            if(!"dispatch".equals(a.action())) return rejected("Only reroute and dispatch are allowed; no execution tool exists.");
+            if (!"dispatch".equals(a.action()))
+                return rejected("Only dispatch is allowed. The operator's rerouting settings are fixed.");
             Hub target=snapshot.hubs().stream().filter(h->h.id()==a.toHubId()).findFirst().orElse(null);
             if(target==null || a.fromHubId()==a.toHubId() || a.amount()<1
                     || scenario.closedAtStart(a.fromHubId()) || scenario.closedAtStart(a.toHubId()))
@@ -43,9 +36,8 @@ public class SimulationPlanTool {
             // Released donor space is not treated as authoritative parking availability.
         }
         Snapshot copy=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),snapshot.capacities());
-        Scenario fixed=scenario.withSettings(List.copyOf(settings.values()));
-        return new PlanEvaluation(true,List.copyOf(actions),engine.simulate(copy,fixed).kpi(),
-            "Simulation only. Demand, seed and time parameters are unchanged. Parking uses provisional M1 observations; M4/M7 must revalidate before execution.");
+        return new PlanEvaluation(true,List.copyOf(actions),engine.simulate(copy,scenario).kpi(),
+            "Simulation only. Demand, rerouting, seed and time parameters are unchanged. Parking uses provisional M1 observations; M4/M7 must revalidate before execution.");
     }
     private PlanEvaluation rejected(String reason) {return new PlanEvaluation(false,List.of(),null,reason);}
 }

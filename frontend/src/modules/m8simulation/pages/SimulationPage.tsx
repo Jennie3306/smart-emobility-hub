@@ -123,7 +123,7 @@ export default function SimulationPage() {
                     <p className="m8-field-hint">Minutes from the start. Leave reopening blank to stay closed until the end.</p>
                   </div>}
                   <label className="m8-toggle"><input type="checkbox" checked={hub.reroute} onChange={e=>updateHub(index,{reroute:e.target.checked})}/>
-                    <span><strong>Let riders rent from another hub</strong><small>Try another open hub if this hub cannot serve the request. Extra travel time is excluded.</small></span></label>
+                    <span><strong>Let riders rent from another hub while closed</strong><small>While this hub is closed, try another open hub. Extra travel time is excluded. AI keeps this setting.</small></span></label>
                   {Object.entries(hubErrors[index]).map(([key,error])=><p key={key} className="m8-field-error">{error}</p>)}
                   {settings.length>1 && <button className="m8-button secondary" type="button" onClick={()=>{
                     edit(); setScenario(withHubSettings(scenario,settings.filter((_,i)=>i!==index)));

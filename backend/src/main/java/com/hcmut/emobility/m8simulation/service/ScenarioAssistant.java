@@ -192,12 +192,12 @@ public class ScenarioAssistant {
     public Proposals recommend(Snapshot snapshot,Scenario scenario,Kpi kpi,SimulationEngine engine) {
         List<String> warnings=new ArrayList<>(); List<Recommendation> candidates=new ArrayList<>(); String source="LOCAL_RULES";
         if(configured()) try {
-            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Also allow action reroute for an affected hub with reroute false; use its ID as fromHubId, toHubId=0, amount=0. Prefer reroute when no feasible dispatch exists. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination parking capacity, and not use a closed source or target. Available vehicles must have state AVAILABLE and battery >=20. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
+            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Keep the operator's rerouting settings unchanged. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination parking capacity, and not use a closed source or target. Available vehicles must have state AVAILABLE and battery >=20. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
             if(!result.path("actions").isArray()) throw new IllegalArgumentException();
             for(JsonNode a:result.path("actions")) {
                 if(candidates.size()==3) break;
                 String action=a.path("action").asText("dispatch");
-                if(!action.equals("dispatch") && !action.equals("reroute")) continue;
+                if(!action.equals("dispatch")) continue;
                 candidates.add(new Recommendation(UUID.randomUUID().toString(),action,a.path("fromHubId").asLong(),a.path("toHubId").asLong(),a.path("amount").asInt(),a.path("reason").asText("Simulation proposal"),"PENDING",0));
             }
             source="LLM";
@@ -229,16 +229,8 @@ public class ScenarioAssistant {
                     if (checked != null) { accepted.add(checked); break; }
                 }
             }
-            if (!hub.reroute() && accepted.stream().noneMatch(r -> r.action().equals("reroute") && r.fromHubId() == hub.hubId())) {
-                var checked = verifyProposal(tool, snapshot, scenario, kpi, proposal("reroute", hub.hubId(), 0, 0,
-                        "Let riders rent from another open hub."), warnings);
-                if (checked != null) {
-                    source = accepted.isEmpty() ? "LOCAL_RULES" : source.equals("LLM") ? "LLM_AND_LOCAL_RULES" : source;
-                    accepted.add(checked);
-                }
-            }
         }
-        if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Try reopening the hub or enabling rerouting.");
+        if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Check donor vehicles, destination parking and hub closures.");
         if(kpi.failed()>0) warnings.add("Dispatch projections use captured M1 parking observations. M7 checks the current M4 parking pool when tasks are created and completed.");
         return new Proposals(List.copyOf(accepted),source,List.copyOf(warnings));
     }

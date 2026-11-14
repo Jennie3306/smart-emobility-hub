@@ -21,12 +21,18 @@ class SimulationEngineTest {
     @Test void sameSeedIsReproducibleAndConservesRequests() {
         var result=engine.simulate(snapshot,scenario(false,true));
         assertEquals(result,engine.simulate(snapshot,scenario(false,true)));
-        assertEquals(10,result.kpi().served()+result.kpi().failed()); assertEquals(4,result.kpi().served());
+        assertEquals(10,result.kpi().served()+result.kpi().failed()); assertEquals(2,result.kpi().served());
+        assertEquals(0,result.kpi().hubs().getLast().served());
     }
     @Test void reroutingUsesOtherHubsAndBatteryThresholdIsRespected() {
         var result=engine.simulate(snapshot,scenario(true,true));
         assertEquals(2,result.kpi().served()); assertEquals(0,result.kpi().hubs().getFirst().served());
         assertEquals(15,result.kpi().meanWaitMins());
+    }
+    @Test void plannerCannotEnableRerouting() {
+        var tool = new SimulationPlanTool(engine);
+        var action = new com.hcmut.emobility.m8simulation.domain.AgentModels.PlanAction("reroute", 1, 0, 0, "Try another hub");
+        assertFalse(tool.evaluate(snapshot, scenario(true, false), List.of(action)).valid());
     }
     @Test void zeroDemandHasFiniteZeroKpis() {
         var result=engine.simulate(snapshot,new Scenario("zero",1,false,0,60,1,30,false,42));

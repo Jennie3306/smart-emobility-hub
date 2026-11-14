@@ -12,12 +12,11 @@ import static org.junit.jupiter.api.Assertions.*;
 class RecommendationTest {
     private final SimulationEngine engine=new SimulationEngine();
     private final ScenarioAssistant assistant=new ScenarioAssistant(new ObjectMapper().findAndRegisterModules(),Validation.buildDefaultValidatorFactory().getValidator(),"","","");
-    @Test void rerouteProposalIsVerifiedAgainstTheSameSnapshot() {
+    @Test void localRecommendationsRespectDisabledRerouting() {
         var snapshot=new Snapshot("s",Instant.EPOCH,List.of(new Hub(1,"Hub A",10,2),new Hub(2,"Hub B",10,2)),List.of(new Vehicle(1,1L,90,"AVAILABLE"),new Vehicle(2,2L,90,"AVAILABLE")),List.of(),"test");
         var scenario=new Scenario("closed",1,true,10,60,1,30,false,42);
         var proposals=assistant.recommend(snapshot,scenario,engine.simulate(snapshot,scenario).kpi(),engine);
-        assertEquals(1,proposals.items().size());assertEquals("reroute",proposals.items().getFirst().action());
-        assertEquals(80,proposals.items().getFirst().projectedFailurePercent());
+        assertTrue(proposals.items().isEmpty());
     }
     @Test void dispatchKeepsOneDonorVehicleAndRejectsFullDestination() {
         var vehicles=List.of(new Vehicle(1,2L,90,"AVAILABLE"),new Vehicle(2,2L,90,"AVAILABLE"),new Vehicle(3,2L,90,"AVAILABLE"));

@@ -48,7 +48,7 @@ public class SimulationEngine {
                 long origin = r.hub().hubId();
                 if (blocked.contains(origin)) continue;
                 Long target = !closed.contains(origin) && available.get(origin)>0 ? origin : null;
-                if (target==null && r.hub().reroute()) {
+                if (closed.contains(origin) && r.hub().reroute()) {
                     target=snapshot.hubs().stream().map(Hub::id)
                         .filter(id -> id!=origin && !closed.contains(id) && available.get(id)>0).findFirst().orElse(null);
                 }

@@ -26,7 +26,7 @@ The provider receives descriptions and, for recommendations, the snapshot and KP
 Parser requests use JSON mode; planning uses native function tools. Both have bounded
 output and a 90-second timeout per Responses call. Parameters are validated.
 Recommendations must pass resource/capacity checks and improve deterministic simulation results.
-Only dispatch and rerouting proposals are recognized. AI cannot execute operational actions.
+The AI planner only proposes dispatch. Operator-controlled rerouting applies only while the origin hub is closed.
 Parser failures fall back to labeled local rules. Agent failures retain verified plans
 and require explicit Retry; no hidden fallback is presented as an AI tool result.
 AI configured means credentials are loaded; it does not prove a call succeeded.
@@ -214,7 +214,7 @@ not used by Retry; Save & run creates a new run instead. Older saved runs can st
 session with Start AI planning. Simultaneous retries on one run and stale round versions
 return HTTP 409; Refresh loads the latest saved planning state without changing the draft.
 
-Only `reroute` and hypothetical `dispatch` actions exist. Demand, seed, closure and time
+Only hypothetical `dispatch` actions are available to the planner. Rerouting, demand, seed, closure and time
 parameters cannot be changed through the tool. Every candidate starts from a fresh copy,
 combined actions share conservative parking/donor limits, and a vehicle cannot be moved
 twice within a plan. No live execution tool is exposed. M4/M7 limitations still apply.
