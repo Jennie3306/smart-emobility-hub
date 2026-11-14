@@ -1,8 +1,7 @@
 # M8 — local setup and integration
 
 Branch: feature/m8-UI_whatif. Includes M1 1656510, M2 5e59464, M3 6ed46b4
-and M6 5583c1c, with integration fixes. Integration/QA through ade654b was pushed as WIP;
-newer tool-planner work remains on this feature branch until explicitly published.
+and M6 5583c1c, with local integration fixes. These changes have not been pushed.
 
 ## Start and sign in
 
@@ -18,17 +17,14 @@ Stop with ./scripts/stop-m8.ps1; PostgreSQL and its data remain intact.
 The startup script reads .local/m8-openai-key.dpapi, encrypted with Windows DPAPI
 for the current Windows user. Git ignores this file. It decrypts the key only for
 the backend launch; credentials never become Java command-line arguments or frontend configuration.
-Default endpoint: https://api.openai.com/v1/responses. Model: gpt-6.1-sol with medium reasoning.
-The GPT-5 request omits temperature because this model rejects temperature=0.
+Default endpoint: https://api.openai.com/v1/chat/completions. Model: gpt-4.1-mini.
 Override using M8_LLM_URL, M8_LLM_KEY and M8_LLM_MODEL. Never use VITE_* for keys.
 
 The provider receives descriptions and, for recommendations, the snapshot and KPIs.
-Parser requests use JSON mode; planning uses native function tools. Both have bounded
-output and a 90-second timeout per Responses call. Parameters are validated.
+Requests use JSON mode, bounded output and a 35-second timeout. Parameters are validated.
 Recommendations must pass resource/capacity checks and improve deterministic simulation results.
-The AI planner only proposes dispatch. Operator-controlled rerouting applies only while the origin hub is closed.
-Parser failures fall back to labeled local rules. Agent failures retain verified plans
-and require explicit Retry; no hidden fallback is presented as an AI tool result.
+Only dispatch and rerouting proposals are recognized. AI cannot execute operational actions.
+Provider failures show sanitized status/error codes and fall back to labeled local rules.
 AI configured means credentials are loaded; it does not prove a call succeeded.
 A parser result marked AI confirms an actual successful provider response.
 
@@ -44,8 +40,7 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
   These RAM observations are not transactionally synchronized with the database snapshot
   and do not overwrite authoritative M3 vehicle state in the engine.
 - Independently verified proposals and persistent Discard.
-- Apply creates M7 tasks for a saved dispatch recommendation. M7 checks parking through
-  M4 when creating a task and assigns the destination space when the vehicle arrives.
+- Apply returns 409 DISPATCH_NOT_CONNECTED until M7 provides execution and revalidation.
 - Accepted M2 bookings from the captured 30-minute window can supply the scenario volume.
   The saved snapshot retains that window, so editing an old run repeats its original volume.
 - A 30-minute network check repeats recent accepted bookings against current resources,
@@ -62,8 +57,6 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
 ## Modeling assumptions
 
 - Requests arrive within arrivalWindowMins using a seeded random schedule.
-- Only the affected hub generates requests. Donor and alternate hubs have no independent
-  demand in a scenario, so moving vehicles or rerouting can overstate the real benefit.
 - Only AVAILABLE vehicles with battery >=20% serve requests; full M2 reservation behavior is not modeled.
 - Accepted bookings are not total demand: rejected attempts and searches are excluded.
   Cancelled or completed bookings still count as historical accepted arrivals.
@@ -83,58 +76,11 @@ English display labels for seeded hubs do not change live Hub rows.
 - TV2: booking persistence and the accepted-booking read contract are integrated;
   total attempted demand remains unavailable.
 - TV3: review the local rental lifecycle/event and snapshot contract changes.
-- TV4 / M4: M7 uses the shared parking pool through `ParkingDock`. M8 scenario history
-  is still stored locally.
-- TV7 / M7: M8 already calls the existing per-vehicle task API. Keep that API unless
-  verification uncovers a contract issue. M8 owns the recommendation and its task IDs.
-- TV1 / M1 and TV3 / M3: verify dashboard counts and vehicle location after M7 emits
-  `DispatchCompletedEvent`. Showing newly created tasks on the dashboard is separate.
-
-### Apply dispatch contract
-
-- M8 registers the saved dispatch action through `RedistributionRecommendations.propose`,
-  using its recommendation ID as the external reference. M7 selects vehicles from live inventory.
-- M7 checks destination capacity against the M4 pool and subtracts active incoming tasks.
-  At completion it assigns a space through M4. A destination can fill up before arrival,
-  in which case M7 rejects completion until space is available.
-- M8 calls `approve` with the authenticated operator and stores the M7 recommendation ID,
-  status and cumulative task IDs. Partial results can be retried against the same M7 proposal.
-- M8 saves its approval intent before calling M7. An interruption after approval requires
-  reconciliation against the M7 recommendation and its tasks. The run file serializes
-  M8 requests within one process.
-- Apply creates tasks in `CREATED`. M7 publishes the shared `DispatchCompletedEvent`
-  after each task reaches `DONE`; M3 moves the vehicle and M1 updates the dashboard.
-  AI plan cards apply individual dispatch actions. Their displayed KPI is for the full
-  tested plan. Rerouting remains a simulation setting.
-
-### Final integration checklist
-
-1. Verify M7 uses the M4 parking pool for the destination capacity and arrival checks.
-2. Use the M7 recommendation contract for proposal registration and approval.
-3. In an isolated environment, verify successful Apply, a full destination, partial
-   creation, duplicate Apply, a lost response, and parking cleanup after failure. Follow
-   a created task through `IN_PROGRESS` and `DONE`, then check M3 location and M1 counts.
-4. Keep final formatting and integration edits in M8 and its documentation. If a teammate's
-   module needs a change for a verified integration issue, keep that diff limited to the
-   affected API or event and avoid reformatting adjacent code. Follow repository ownership
-   rules for shared events and migrations.
-
-```mermaid
-flowchart TD
-    A[Operator enters a description or edits inputs in M8] --> B[AI can fill the draft]
-    B --> C[Operator confirms the scenario and runs it]
-    C --> D[M8 captures a snapshot and computes KPIs]
-    D --> E[AI proposes actions and tests them with the simulator]
-    E --> F[Operator approves a saved dispatch action]
-    F --> G[M8 registers and approves the proposal through M7]
-    G --> H[M7 selects vehicles and checks M4 destination capacity]
-    H --> I[M7 creates tasks and M8 shows task IDs]
-    I --> J[Operator starts the tasks in M7]
-    J --> K[M4 releases source spaces]
-    K --> L[Operator marks arrival in M7]
-    L --> M[M4 assigns destination spaces]
-    M --> N[M7 emits completion and M3 and M1 update]
-```
+- TV4: review V20 M2 persistence migration already applied locally; approve the separate
+  M8 schema, operational hub state and M4 parking validation contract. M4 remains a stub.
+- TV7: Apply contract with live revalidation, deduplication and execution status.
+  RecommendationApprovedEvent currently lacks dispatch details; M8 does not alter it.
+- M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
 
 ## Verify
 
@@ -163,7 +109,7 @@ restart persistence, bounds, M8 roles, recommendation feasibility and M3 user-ID
 For a demo, open History & comparison and View & edit on
 Integration demo - repeat recent bookings. Compare it with another saved run, or use
 Try this plan to preview rerouting. Saving a new run can call the configured LLM.
-At the time of this smoke test, M7 Apply was unavailable and M4 parking validation was pending. M8 history is file-backed.
+M7 Apply is unavailable, M4 parking validation is pending, and M8 history is file-backed.
 
 ## Exploratory QA fixes — 27 October 2026
 
@@ -193,44 +139,3 @@ reroute run with 100 requests / 12 served / 88 failed on the same snapshot. Edit
 showed Draft changed and an explicit previous-results notice. At 320px, the comparison
 region scrolls internally (243px client / 270px content) with no document overflow.
 The two QA-fix runs remain in history; no booking, Apply or live-resource mutation occurred.
-
-## Tool-calling AI planner — 1 November 2026
-
-When AI is configured, Save & run starts a bounded planning session instead of the old
-single-pass recommendation request. The model calls `simulate_plan`, receives deterministic
-KPIs or validation feedback, then can revise the complete candidate on the same snapshot.
-Each batch allows at most **three model turns**, with one tool call per turn and at most
-four actions per plan. A final text response or provider error can end a batch early.
-The last tool result at the limit is included in the next Retry context.
-
-The AI planning panel shows each round, tested actions, validation errors and KPIs. It
-retains the best improving plan (fewer failed requests, then lower mean wait); a later bad
-plan or provider failure cannot replace it. Invalid proposals never receive invented KPIs.
-The original run's KPIs remain visible separately from the best plan's projected KPIs.
-
-`Retry · +3 rounds` explicitly permits up to three more model turns on the **saved**
-scenario/snapshot, including its previous attempts and best plan. Edited draft fields are
-not used by Retry; Save & run creates a new run instead. Older saved runs can start a
-session with Start AI planning. Simultaneous retries on one run and stale round versions
-return HTTP 409; Refresh loads the latest saved planning state without changing the draft.
-
-Only hypothetical `dispatch` actions are available to the planner. Rerouting, demand, seed, closure and time
-parameters cannot be changed through the tool. Every candidate starts from a fresh copy,
-combined actions share conservative parking/donor limits, and a vehicle cannot be moved
-twice within a plan. No live execution tool is exposed. M4/M7 limitations still apply.
-
-Sessions are saved with the existing file-backed history. The latest 60 trace entries and
-best plan are retained; the provider receives at most nine recent paired tool exchanges
-plus the frozen scenario/snapshot and previous best. Provider errors do not trigger hidden
-retries. GPT-6.1 Sol uses the Responses API with medium reasoning. Each request
-times out after 90 seconds. The legacy Chat Completions path retains its 35-second timeout.
-
-Endpoint: `POST /api/m8/runs/{id}/agent/retry?expectedRounds={totalRounds}` (Operator only).
-Protocol reference: [OpenAI function calling](https://developers.openai.com/api/docs/guides/function-calling).
-
-Live evidence: Agent loop demo - closed Metro Hub (`bc47d41c-9a78-4ad2-a512-bd08b7c3bf6d`).
-After one provider-configuration failure, explicit Retry made three actual tool calls:
-rerouting served 12/100, then two dispatch candidates were rejected (donor retention and
-closed source). Best failure count stayed 88. A UI Retry consumed one further turn and
-the model stopped early; saved history reached five total rounds. This is one live
-scenario, not a broad model-quality benchmark.
