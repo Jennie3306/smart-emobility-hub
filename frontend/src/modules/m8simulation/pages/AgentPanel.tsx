@@ -22,6 +22,25 @@ function parkingLimitedDestinations(run: Run, actions: PlanAction[]) {
   });
 }
 
+function donorSupply(run: Run, actions: PlanAction[], targetId: number) {
+  const sent = new Map<number, number>();
+  for (const action of actions) {
+    if (action.action === "dispatch") sent.set(action.fromHubId, (sent.get(action.fromHubId) ?? 0) + action.amount);
+  }
+  let initial = 0;
+  let remaining = 0;
+  const settings = run.scenario.affectedHubs ?? [{...run.scenario, closeFromMins: 0}];
+  for (const hub of run.snapshot.hubs) {
+    if (hub.id === targetId) continue;
+    if (settings.some(item => item.hubId === hub.id && item.disabled && item.closeFromMins === 0)) continue;
+    const available = run.snapshot.vehicles.filter(v => v.hubId === hub.id && v.state === "AVAILABLE" && v.battery >= 20).length;
+    const spare = Math.max(0, available - 1);
+    initial += spare;
+    remaining += Math.max(0, spare - (sent.get(hub.id) ?? 0));
+  }
+  return {initial, remaining};
+}
+
 export function AgentPanel({ run, busy, configured, onRetry }: {
   run: Run; busy: boolean; configured: boolean; onRetry: () => void;
 }) {
@@ -32,6 +51,11 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
   const action = (a: PlanAction) => a.action === "reroute"
     ? `Serve requests from ${hub(a.fromHubId)} at other open hubs`
     : `Move ${count.format(a.amount)} vehicles from ${hub(a.fromHubId)} to ${hub(a.toHubId)}`;
+  const exhaustedDonors = (best?.valid ? best.kpi : run.kpi)?.hubs
+    .filter(row => row.failed > 0)
+    .map(row => ({hubId: row.hubId, ...donorSupply(run, best?.actions ?? [], row.hubId)}))
+    .filter(supply => supply.remaining === 0) ?? [];
+  const latestSummary = state?.rounds.filter(round => round.valid && round.summary).at(-1)?.summary;
   const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
   const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW"].includes(item.status));
 
@@ -52,6 +76,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <div><dt>Rentals served</dt><dd>{count.format(best.kpi.served)} <small>of {count.format(best.kpi.requests)}</small></dd></div>
         <div><dt>Average wait <small>(served only)</small></dt><dd>{best.kpi.served ? <>{wait.format(best.kpi.meanWaitMins)} <small>min</small></> : "—"}</dd></div>
       </dl>
+      {best.summary && <p className="m8-footnote"><strong>AI summary</strong> · {best.summary}</p>}
       <ol className="m8-plan-actions">{best.actions.map((a, i) => <li key={i}>
         <span className="m8-action-type">{a.action === "reroute" ? "Reroute requests" : "Move vehicles"}</span>
         <strong>{action(a)}</strong><p>{a.reason}</p>
@@ -67,6 +92,10 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
     </div> : <div className="m8-agent-empty"><h3>{state ? "No Improved Plan Yet" : "Explore a Better Plan"}</h3><p>{state
       ? "No valid tool result has improved this scenario. You can give AI another attempt."
       : "AI can test rerouting requests or moving vehicles, read the calculated KPIs, and refine its next proposal."}</p></div>}
+      {exhaustedDonors.map(supply => <p className="m8-alert" key={supply.hubId}>
+        <strong>Donor supply exhausted.</strong> Only {count.format(supply.initial)} vehicles could be moved from other open hubs to serve {hub(supply.hubId)} while leaving one at each donor.
+      </p>)}
+    {!best?.kpi && latestSummary && <p className="m8-footnote"><strong>AI summary</strong> · {latestSummary}</p>}
     <div className="m8-retry-bar">
       <div><strong>{state ? "Continue This Saved Scenario" : "Start Plan Exploration"}</strong><p>Up to 3 more rounds. AI may stop early.</p></div>
       <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{busy ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
@@ -79,6 +108,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
         <summary><span>Round {r.number}</span><span className={`m8-round-status ${r.valid ? "tested" : ""}`}>{r.valid ? "Simulated" : r.tool ? "Rejected" : "No tool call"}</span>{r.valid && r.kpi && <span className="m8-round-kpi">{count.format(r.kpi.served)} served · {count.format(r.kpi.failed)} unserved</span>}</summary>
         {r.actions.map((a, i) => <p key={i}><strong>{action(a)}</strong> — {a.reason}</p>)}
         {r.valid && r.kpi && <p>Average wait for served requests: {r.kpi.served ? `${wait.format(r.kpi.meanWaitMins)} min` : "not applicable"}.</p>}
+        {r.summary && <p><strong>AI summary</strong> · {r.summary}</p>}
         <p className="m8-footnote">{r.feedback}</p>
       </details></li>)}</ol>
     </details> : null}

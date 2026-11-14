@@ -38,6 +38,19 @@ class AgentPlannerTest {
         assertEquals(6,next.totalRounds());assertEquals(6,seen.size());assertEquals(first.best().kpi(),next.best().kpi());
         assertTrue(seen.get(3).stream().anyMatch(m->"tool".equals(m.get("role"))));
     }
+    @Test void savesStructuredSummaryAlongsideVerifiedKpis() {
+        var summary = "The destination has one free parking slot.";
+        var planner = new AgentPlanner(mapper, tool, messages -> {
+            assertTrue(messages.get(1).get("content").toString().contains("transferableVehicles"));
+            var arguments = (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(dispatch(1));
+            arguments.put("summary", summary);
+            return call("structured", arguments.toString());
+        });
+        var state = planner.extend(snapshot, scenario, null);
+        assertEquals(summary, state.best().summary());
+        assertEquals(summary, state.rounds().getFirst().summary());
+        assertTrue(state.best().kpi().failed() < 10);
+    }
     @Test void providerFailureKeepsPreviousBestAndDoesNotRetryAutomatically() throws Exception {
         var first=new AgentPlanner(mapper,tool,m->call("ok",dispatch(1))).extend(snapshot,scenario,null);
         int[] calls={0};

@@ -13,8 +13,8 @@ export interface Recommendation {
   dispatch?: { tasks: { vehicleId: number | null; taskId: number }[]; unconfirmedVehicleId: number | null; message: string | null; m7RecommendationId?: string | null } | null;
 }
 export interface PlanAction {action:"reroute"|"dispatch";fromHubId:number;toHubId:number;amount:number;reason:string}
-export interface PlanEvaluation {valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string}
-export interface AgentRound {number:number;tool:string;valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string}
+export interface PlanEvaluation {valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string;summary?:string|null}
+export interface AgentRound {number:number;tool:string;valid:boolean;actions:PlanAction[];kpi:Kpi|null;feedback:string;summary?:string|null}
 export interface AgentState {totalRounds:number;status:string;message:string;rounds:AgentRound[];best:PlanEvaluation|null}
 export interface Run { id:string;createdAt:string;scenario:Scenario;snapshot:Snapshot;kpi:Kpi;baseline:Kpi;timeline:{minute:number;served:number;waiting:number;failed:number}[];recommendations:Recommendation[];recommendationSource:string;warnings:string[];agent?:AgentState|null }
 export interface Monitor {lastChecked:string|null;warnings:string[];intervalMins:number;demandConnected:boolean;applyEnabled:boolean;aiConfigured:boolean;demandDescription?:string;forecasts?:{hubId:number;hubName:string;recentBookings:number;activeHolds:number;projectedServed:number;projectedFailed:number}[]}

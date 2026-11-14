@@ -6,9 +6,18 @@ import java.util.List;
 public final class AgentModels {
     private AgentModels() {}
     public record PlanAction(String action,long fromHubId,long toHubId,int amount,String reason) {}
-    public record PlanEvaluation(boolean valid,List<PlanAction> actions,Kpi kpi,String feedback) {}
+    public record PlanEvaluation(boolean valid,List<PlanAction> actions,Kpi kpi,String feedback,String summary) {
+        public PlanEvaluation(boolean valid,List<PlanAction> actions,Kpi kpi,String feedback) {
+            this(valid,actions,kpi,feedback,null);
+        }
+    }
     public record AgentRound(int number,String tool,String callId,String arguments,boolean valid,
-                             List<PlanAction> actions,Kpi kpi,String feedback) {}
+                             List<PlanAction> actions,Kpi kpi,String feedback,String summary) {
+        public AgentRound(int number,String tool,String callId,String arguments,boolean valid,
+                          List<PlanAction> actions,Kpi kpi,String feedback) {
+            this(number,tool,callId,arguments,valid,actions,kpi,feedback,null);
+        }
+    }
     public record AgentState(int totalRounds,String status,String message,List<AgentRound> rounds,PlanEvaluation best) {
         public AgentState {rounds=List.copyOf(rounds);}
     }
