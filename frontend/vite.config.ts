@@ -13,6 +13,8 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // CORS allows only this origin: fail instead of silently moving to 5174 (login would get 403).
+    strictPort: true,
     proxy: {
       // goi /api/... tu FE se duoc chuyen sang backend, cookie giu nguyen
       "/api": { target: "http://localhost:8080", changeOrigin: true },

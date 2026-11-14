@@ -30,7 +30,7 @@ public enum IncidentStatus {
         };
         if (target == null) {
             throw new BusinessException("INVALID_STATE_TRANSITION",
-                    "Khong the thuc hien " + action + " khi Incident o trang thai " + this);
+                    "Action " + action + " is not allowed while the incident is " + this);
         }
         return target;
     }
