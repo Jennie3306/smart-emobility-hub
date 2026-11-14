@@ -61,7 +61,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
 
   return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={busy}>
     <div className="m8-section-head">
-      <div><h2>AI Plan Exploration</h2><p>AI proposes a plan. The simulator tests it and sends the results back.</p></div>
+      <h2>AI Plan Exploration</h2>
       <span className="m8-chip">{state ? `${state.totalRounds} total rounds` : "Not started"}</span>
     </div>
     {state && <p role="status" className={failed ? "m8-alert error" : "m8-agent-status"}>{state.message}</p>}
@@ -78,29 +78,31 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
       </dl>
       {best.summary && <p className="m8-footnote"><strong>AI summary</strong> · {best.summary}</p>}
       <ol className="m8-plan-actions">{best.actions.map((a, i) => <li key={i}>
-        <span className="m8-action-type">{a.action === "reroute" ? "Reroute requests" : "Move vehicles"}</span>
         <strong>{action(a)}</strong><p>{a.reason}</p>
       </li>)}</ol>
-      {parkingLimited.length > 0 && <div className="m8-alert">
-        <strong>Parking limit reached</strong>
-        {parkingLimited.map(destination => <p key={destination.id}>
-          {destination.name} has no parking slots left for additional transfers in this plan.
-        </p>)}
-        {best.kpi.failed > 0 && <p>{count.format(best.kpi.failed)} requests remain unserved across the network.</p>}
-      </div>}
       {best.actions.some(a => a.action === "reroute") && <p className="m8-footnote">Rerouting changes where requests are served. It does not relocate vehicles.</p>}
     </div> : <div className="m8-agent-empty"><h3>{state ? "No Improved Plan Yet" : "Explore a Better Plan"}</h3><p>{state
       ? "No valid tool result has improved this scenario. You can give AI another attempt."
-      : "AI can test rerouting requests or moving vehicles, read the calculated KPIs, and refine its next proposal."}</p></div>}
-      {exhaustedDonors.map(supply => <p className="m8-alert" key={supply.hubId}>
-        <strong>Donor supply exhausted.</strong> Only {count.format(supply.initial)} vehicles could be moved from other open hubs to serve {hub(supply.hubId)} while leaving one at each donor.
-      </p>)}
+      : "Test vehicle transfers on this saved snapshot."}</p></div>}
+    {(parkingLimited.length > 0 || exhaustedDonors.length > 0) && (
+      <section className={(best?.kpi?.failed ?? run.kpi.failed) > 0 ? "m8-alert" : "m8-footnote"} aria-label="Dispatch limits">
+        <strong>Dispatch limits</strong>
+        <ul>
+          {parkingLimited.map(destination => <li key={destination.id}>
+            {destination.name}: 0 slots left for additional transfers after this simulated plan.
+          </li>)}
+          {exhaustedDonors.map(supply => <li key={supply.hubId}>
+            {hub(supply.hubId)}: {count.format(supply.initial)} spare vehicles at other open hubs before the plan, with one kept at each donor. None remain available to transfer.
+          </li>)}
+        </ul>
+      </section>
+    )}
     {!best?.kpi && latestSummary && <p className="m8-footnote"><strong>AI summary</strong> · {latestSummary}</p>}
     <div className="m8-retry-bar">
       <div><strong>{state ? "Continue This Saved Scenario" : "Start Plan Exploration"}</strong><p>Up to 3 more rounds. AI may stop early.</p></div>
       <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{busy ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
     </div>
-    <p className="m8-footnote m8-run-context">{run.scenario.name} · {count.format(run.kpi.requests)} requests · seed {run.scenario.seed}. Retry uses this saved scenario and snapshot, including previous attempts. Form edits apply only when you run a new scenario.</p>
+    <p className="m8-footnote m8-run-context">{run.scenario.name} · {count.format(run.kpi.requests)} requests · seed {run.scenario.seed}. Retry uses this saved snapshot. Run again to test draft edits.</p>
     {!configured && <p className="m8-alert">AI is unavailable until a provider is configured.</p>}
     {dispatchStarted && <p className="m8-footnote">Dispatch has started. Run a new scenario to explore a different plan.</p>}
     {state?.rounds.length ? <details className="m8-planning-history"><summary>Review Planning History <span>{state.totalRounds} rounds{state.totalRounds > state.rounds.length ? " · latest 60 shown" : ""}</span></summary>
