@@ -1,12 +1,12 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from "recharts";
-import { simulationApi as api, type Scenario, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
+import { simulationApi as api, type Scenario, type HubSettings, type Snapshot, type Run, type Monitor, type Kpi } from "../api/simulationApi";
 import "./simulation.css";
 import { AgentPanel } from "./AgentPanel";
 import { StudioIcon } from "./StudioIcon";
 import { refreshActiveRun, acceptPlanningResult } from "./planningState";
-import { effectiveScenario, draftFromPlan, numericFields, validateDraft, draftDiffers } from "./scenarioDraft";
+import { effectiveScenario, draftFromPlan, numericFields, hubNumberFields, validateHubSettings, validateDraft, draftDiffers, hubSettings, withHubSettings } from "./scenarioDraft";
 
 const defaults:Scenario={name:"Peak-hour hub closure",hubId:1,disabled:true,injectedRequests:100,durationMins:120,arrivalWindowMins:60,tripMins:30,reroute:false,seed:42};
 const number=(n:number)=>n.toLocaleString("en-GB",{maximumFractionDigits:1});
@@ -22,11 +22,12 @@ export default function SimulationPage() {
   const [compare,setCompare]=useState<string[]>([]); const [reuse,setReuse]=useState<string>("");
   const [repeatBookings,setRepeatBookings]=useState(false);
   const inputSnapshot=runs.find(r=>r.id===reuse)?.snapshot || snapshot;
-  const observed=inputSnapshot?.bookingWindow?.hubs.find(h=>h.hubId===scenario.hubId)?.bookings ?? 0;
-  const effective=effectiveScenario(scenario,repeatBookings,inputSnapshot);
+  const settings = hubSettings(scenario, repeatBookings);
+  const effective = effectiveScenario(withHubSettings(scenario, settings), false, inputSnapshot);
+  const effectiveHubs = hubSettings(effective);
   const fieldErrors=validateDraft(effective,inputSnapshot);
-  if(repeatBookings&&!inputSnapshot?.bookingWindow) fieldErrors.requestSource="This snapshot has no booking window. Choose manual volume or another snapshot.";
-  const invalid=Object.keys(fieldErrors).length>0;
+  const hubErrors = effectiveHubs.map(hub => validateHubSettings(hub, scenario.durationMins, inputSnapshot));
+  const invalid=!!(fieldErrors.name || fieldErrors.durationMins || fieldErrors.seed || hubErrors.some(errors => Object.keys(errors).length));
   const dirty=draftDiffers(effective,repeatBookings,reuse,active);
   function edit() {setError("");setNotice("");}
   function navigate(next:typeof tab) {setTab(next);edit();}
@@ -36,6 +37,11 @@ export default function SimulationPage() {
   useEffect(()=>{refresh().catch(e=>setError(message(e)));},[]);
   async function task(action:()=>Promise<void>) {setBusy(true);setError("");setNotice("");try {await action();} catch(e){if((e as {response?:{data?:{code?:string}}}).response?.data?.code==="STALE_AGENT_STATE")await refresh().catch(()=>{});setError(message(e));} finally{setBusy(false);} }
   function update(key:keyof Scenario,value:Scenario[keyof Scenario]) {edit();setScenario(s=>({...s,[key]:value}));}
+  function updateHub(index: number, change: Partial<HubSettings>) {
+    edit();
+    setScenario(current => withHubSettings(current, hubSettings(current, repeatBookings)
+      .map((hub, i) => i === index ? {...hub, ...change} : hub)));
+  }
   function load(run:Run) {setError("");setActive(run);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setTab("studio");setNotice("Reusing the saved snapshot for a fair comparison. You can also capture a new snapshot.");}
   const selected=runs.filter(r=>compare.includes(r.id));
   const hubs=active?.snapshot.hubs || snapshot?.hubs || [];
@@ -72,22 +78,64 @@ export default function SimulationPage() {
               <div className="m8-section-head"><span className="m8-step" aria-hidden="true">1</span><div><h2>Scenario Inputs</h2><p>Choose what changes and how much demand to test.</p></div></div>
               <div className="m8-assistant"><div><strong>Describe the situation</strong><span className="m8-chip">{monitor?.aiConfigured?"AI ready":"Local rules"}</span></div><p>AI fills a draft. Review the values before running.</p><textarea name="description" autoComplete="off" aria-label="Scenario description" value={text} onChange={e=>setText(e.target.value)}/><button className="m8-button secondary" disabled={busy||!text.trim()} onClick={()=>task(async()=>{const result=await api.parse(text);setScenario(result.scenario);setRepeatBookings(false);setNotice(`${result.source==="LLM"?"AI":"Local rules"} filled the form. Review before running. ${result.warnings.join(" ")}`);})}>Fill Form from Description</button></div>
               <label>Scenario name<input name="scenarioName" autoComplete="off" aria-label="Scenario name" aria-invalid={!!fieldErrors.name} aria-describedby={fieldErrors.name?"error-name":undefined} maxLength={100} value={scenario.name} onChange={e=>update("name",e.target.value)}/>{fieldErrors.name&&<span id="error-name" className="m8-field-error">{fieldErrors.name}</span>}</label>
-              <label>Affected hub<select name="hubId" aria-describedby={fieldErrors.hubId?"scenario-errors":undefined} aria-invalid={!!fieldErrors.hubId} value={scenario.hubId} onChange={e=>update("hubId",Number(e.target.value))}>{snapshot.hubs.map(h=><option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
-              <fieldset className="m8-demand"><legend>Rental Request Volume</legend><div className="m8-demand-options">
-                <label className={!repeatBookings?"selected":""}><input type="radio" name="requestSource" value="manual" checked={!repeatBookings} aria-describedby="request-source-help" onChange={()=>{edit();setScenario(effective);setRepeatBookings(false);}}/><span><strong>Enter a volume</strong><small>Test a what-if number</small></span></label>
-                <label className={repeatBookings?"selected":""}><input type="radio" name="requestSource" value="bookings" checked={repeatBookings} disabled={!inputSnapshot?.bookingWindow} aria-describedby="request-source-help" onChange={()=>{edit();setScenario(effective);setRepeatBookings(true);}}/><span><strong>Use recent bookings</strong><small>Captured 30-minute count</small></span></label>
-              </div><p id="request-source-help" className="m8-field-hint">{repeatBookings?`${observed} accepted bookings at ${inputSnapshot?.hubs.find(h=>h.id===scenario.hubId)?.name??"this hub"}. The count comes from the selected snapshot, not all attempted rentals.`:"Enter how many rental requests should arrive at the affected hub. This is a hypothetical volume, not measured demand."}</p>
-              {repeatBookings&&observed===0&&<p className="m8-demand-warning" role="status">No accepted bookings in this window. This will simulate 0 requests. Choose Enter a volume to test demand.</p>}
-              {!inputSnapshot?.bookingWindow&&<p className="m8-field-hint">This older snapshot has no booking count. Enter a volume or choose a newer snapshot.</p>}
-              {repeatBookings&&inputSnapshot?.bookingWindow&&<p className="m8-field-hint">Captured window: {time(inputSnapshot.bookingWindow.from)}–{time(inputSnapshot.bookingWindow.to)}. Searches and rejected attempts are excluded.</p>}
-              </fieldset>
-              <div className="m8-field-grid">{numericFields.filter(([key])=>key!=="seed").map(renderNumericField)}</div>
-              <label className="m8-toggle"><input type="checkbox" checked={scenario.disabled} onChange={e=>update("disabled",e.target.checked)}/><span><strong>Simulate this hub being closed</strong><small>No rentals can start at this hub during the simulation.</small></span></label>
-              <label className="m8-toggle"><input type="checkbox" checked={scenario.reroute} onChange={e=>update("reroute",e.target.checked)}/><span><strong>Let riders rent from another hub</strong><small>If this hub cannot serve a request, try another open hub with a vehicle available. Extra travel time is not counted.</small></span></label>
+              {renderNumericField(numericFields[1])}
+              <div className="m8-affected-hubs">
+                <h3>Affected hubs</h3>
+                {settings.map((hub, index) => <fieldset className="m8-affected-hub" key={index}>
+                  <legend>Affected hub {index + 1}</legend>
+                  <label>Hub<select value={hub.hubId} aria-invalid={!!hubErrors[index].hubId} onChange={e=>updateHub(index,{hubId:Number(e.target.value)})}>
+                    {(inputSnapshot ?? snapshot).hubs.filter(h=>h.id===hub.hubId || !settings.some(item=>item.hubId===h.id))
+                      .map(h=><option key={h.id} value={h.id}>{h.name}</option>)}
+                  </select></label>
+                  <label>Rental request source<select value={hub.repeatBookings ? "bookings" : "manual"}
+                    onChange={e=>updateHub(index,{repeatBookings:e.target.value==="bookings"})}>
+                    <option value="manual">Enter a volume</option>
+                    <option value="bookings" disabled={!inputSnapshot?.bookingWindow}>Use recent bookings</option>
+                  </select></label>
+                  {hub.repeatBookings && <p className="m8-field-hint">{inputSnapshot?.bookingWindow
+                    ? `${effectiveHubs[index].injectedRequests} accepted bookings in the captured 30-minute window.`
+                    : "This snapshot has no booking data. Enter a volume or choose another snapshot."}</p>}
+                  <div className="m8-field-grid">
+                    {hubNumberFields.map(([key,label,min,max]) => <label key={key}>{label}
+                      <input type="number" min={min} max={max} step={1} aria-invalid={!!hubErrors[index][key]}
+                        disabled={key==="injectedRequests" && hub.repeatBookings}
+                        value={Number.isFinite(effectiveHubs[index][key]) ? effectiveHubs[index][key] : ""}
+                        onChange={e=>updateHub(index,{[key]:e.target.valueAsNumber})}/>
+                    </label>)}
+                  </div>
+                  <label className="m8-toggle"><input type="checkbox" checked={hub.disabled} onChange={e=>updateHub(index,{disabled:e.target.checked})}/>
+                    <span><strong>Simulate this hub being closed</strong><small>Set when rentals pause and resume at this hub.</small></span></label>
+                  {hub.disabled && <div className="m8-field-grid">
+                    <label>Close at minute<input type="number" min={0} step={1} aria-invalid={!!hubErrors[index].closeFromMins}
+                      value={Number.isFinite(hub.closeFromMins) ? hub.closeFromMins : ""}
+                      onChange={e=>updateHub(index,{closeFromMins:e.target.valueAsNumber})}/></label>
+                    <label>Reopen at minute<input type="number" min={1} step={1} placeholder="Until the end"
+                      aria-invalid={!!hubErrors[index].reopenAtMins} value={hub.reopenAtMins ?? ""}
+                      onChange={e=>updateHub(index,{reopenAtMins:e.target.value === "" ? null : e.target.valueAsNumber})}/></label>
+                    <p className="m8-field-hint">Minutes from the start. Leave reopening blank to stay closed until the end.</p>
+                  </div>}
+                  <label className="m8-toggle"><input type="checkbox" checked={hub.reroute} onChange={e=>updateHub(index,{reroute:e.target.checked})}/>
+                    <span><strong>Let riders rent from another hub</strong><small>Try another open hub if this hub cannot serve the request. Extra travel time is excluded.</small></span></label>
+                  {Object.entries(hubErrors[index]).map(([key,error])=><p key={key} className="m8-field-error">{error}</p>)}
+                  {settings.length>1 && <button className="m8-button secondary" type="button" onClick={()=>{
+                    edit(); setScenario(withHubSettings(scenario,settings.filter((_,i)=>i!==index)));
+                  }}>Remove hub {index+1}</button>}
+                </fieldset>)}
+                {(() => {
+                  const next = (inputSnapshot ?? snapshot).hubs.find(h=>!settings.some(item=>item.hubId===h.id));
+                  return <button className="m8-button secondary" type="button" disabled={!next} onClick={()=>{
+                    if (!next) return;
+                    edit();
+                    setScenario(withHubSettings(scenario, [...settings, {hubId: next.id, disabled: false,
+                      injectedRequests: 0, arrivalWindowMins: Math.min(60, scenario.durationMins || 60), tripMins: 30,
+                      reroute: false, repeatBookings: false, closeFromMins: 0, reopenAtMins: null}]));
+                  }}>Add affected hub</button>;
+                })()}
+              </div>
               <details className="m8-advanced"><summary>Snapshot & Repeatability</summary><p>Use the same snapshot and seed to compare scenarios fairly.</p><label>Snapshot source<select name="snapshotSource" value={reuse} onChange={e=>{edit();setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>{numericFields.filter(([key])=>key==="seed").map(renderNumericField)}</details>
-              <p className="m8-input-summary">{Number.isFinite(effective.injectedRequests)?number(effective.injectedRequests):"—"} rental requests · {Number.isFinite(scenario.durationMins)?scenario.durationMins:"—"} min · {scenario.disabled?"hub closed":"hub open"}</p>
-              {invalid&&<div id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.<ul>{Object.values(fieldErrors).map(e=><li key={e}>{e}</li>)}</ul></div>}
-              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined,repeatBookings);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"Save & Run Simulation"}</button>
+              <p className="m8-input-summary">{settings.length} affected {settings.length === 1 ? "hub" : "hubs"} · {number(effectiveHubs.reduce((total,hub)=>total+(hub.injectedRequests || 0),0))} rental requests · {scenario.durationMins || "—"} min</p>
+              {invalid && <p id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.</p>}
+              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"Save & Run Simulation"}</button>
             </section>
             <section className="m8-results">
               <div className="m8-panel m8-preview"><div className="m8-section-head"><span className="m8-step" aria-hidden="true">2</span><div><h2>Scenario Results</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Calculated by the simulator after you confirm the inputs."}</p></div><span className="m8-chip">{active?(dirty?"Draft changed":"Saved"):"Ready"}</span></div>
@@ -102,10 +150,10 @@ export default function SimulationPage() {
                   })}</div>
                 </div>
                 {active?<>{dirty&&<div className="m8-alert" role="status">Results and recommendations below are from the previous run. Your draft changes have not been simulated.</div>}<div className="m8-kpis"><Metric label="Requests served" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Unserved at end" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Avg. wait · served only" value={active.kpi.served?number(active.kpi.meanWaitMins):"—"} unit={active.kpi.served?"min":""}/><Metric label="Peak queue" value={number(active.kpi.peakQueue)} unit="requests"/></div>
-                  <div className="m8-baseline">Same network with the hub open: <strong>{number(active.baseline.failurePercent)}% failed</strong><span>Difference {number(active.kpi.failurePercent-active.baseline.failurePercent)} percentage points</span></div>
+                  <div className="m8-baseline">Same network with all hubs open: <strong>{number(active.baseline.failurePercent)}% failed</strong><span>Difference {number(active.kpi.failurePercent-active.baseline.failurePercent)} percentage points</span></div>
                   <div className="m8-chart"><ResponsiveContainer width="100%" height={240}><LineChart accessibilityLayer data={active.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="minute" tick={{fontSize:11}} minTickGap={30} unit="′"/><YAxis tick={{fontSize:11}}/><Tooltip/><Legend/><Line name="Served" type="monotone" dataKey="served" stroke="#1F4E79" strokeWidth={2.5} dot={false}/><Line name="Waiting" type="monotone" dataKey="waiting" stroke="#a15c07" strokeDasharray="5 3" strokeWidth={2.5} dot={false}/></LineChart></ResponsiveContainer></div>
                   <p className="m8-footnote">Mean wait includes served requests only. Requests still waiting at the horizon count as failed.</p>
-                  <div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Results by serving hub"><table><thead><tr><th>Serving hub</th><th>Served</th><th>Failed</th><th>Vehicles available at horizon</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
+                  <div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Results by hub"><table><thead><tr><th>Hub</th><th>Served here</th><th>Unserved from here</th><th>Vehicles available at horizon</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
                 </>:null}
 
               </div>
@@ -129,7 +177,7 @@ export default function SimulationPage() {
                       <div className="m8-actions">
                         {r.action === "reroute" ? (
                           <button className="m8-button primary" disabled={busy || r.status !== "PENDING"} onClick={() => {
-                            const plan = draftFromPlan(active);
+                            const plan = draftFromPlan(active, r.fromHubId);
                             edit(); setScenario(plan.scenario); setReuse(plan.reuse); setRepeatBookings(plan.repeatBookings);
                             setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot.");
                           }}>Try this plan</button>
@@ -159,12 +207,12 @@ export default function SimulationPage() {
                   <li>Only the affected hub generates requests. Other hubs have no demand of their own in this run, so rerouting or moving vehicles may look more effective than it would in practice.</li>
                   {active.warnings.map((w,i)=><li key={i}>{w}</li>)}
                 </ul>
-                <p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="TOOL_AGENT"?"AI tool exploration":active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Charging and battery depletion are not modeled.</p>
+                <p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":active.snapshot.demandSource==="MIXED_SCENARIO"?"Manual requests and repeated bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="TOOL_AGENT"?"AI tool exploration":active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Charging and battery depletion are not modeled.</p>
               </details>}
             </section>
           </div>
         </>}
-        {tab==="history" && <><section className="m8-panel"><div className="m8-section-head"><h2>Saved runs</h2><span className="m8-chip">{compare.length}/2 selected for comparison</span></div>{runs.length===0?<p className="m8-muted">No saved runs yet. Create your first scenario in What-if Studio.</p>:<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Saved runs table"><table><thead><tr><th>Select</th><th>Scenario</th><th>Created</th><th>Served</th><th>Failed</th><th>Wait · served only</th><th/></tr></thead><tbody>{runs.map(r=><tr key={r.id}><td><input aria-label={`Compare ${r.scenario.name}`} type="checkbox" checked={compare.includes(r.id)} disabled={!compare.includes(r.id)&&compare.length===2} onChange={e=>setCompare(e.target.checked?[...compare,r.id]:compare.filter(id=>id!==r.id))}/></td><td><strong>{r.scenario.name}</strong><small>{r.scenario.injectedRequests} request · seed {r.scenario.seed}</small></td><td>{time(r.createdAt)}</td><td>{r.kpi.served}</td><td>{number(r.kpi.failurePercent)}%</td><td>{r.kpi.served?`${number(r.kpi.meanWaitMins)} min`:"—"}</td><td><button className="m8-button secondary" onClick={()=>load(r)}>View & edit</button></td></tr>)}</tbody></table></div>}</section>{selected.length===2&&<section className="m8-panel m8-comparison"><h2>KPI comparison</h2>{selected[0].snapshot.id!==selected[1].snapshot.id&&<div className="m8-alert">These runs use different snapshots. Differences may reflect changes in the network.</div>}{selected[0].scenario.seed!==selected[1].scenario.seed&&<div className="m8-alert">Seeds differ, so request arrival times are not identical.</div>}<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="KPI comparison table"><table><thead><tr><th>Metric</th>{selected.map(r=><th key={r.id}>{r.scenario.name}</th>)}</tr></thead><tbody>{([['requests','Requests'],['served','Served'],['failed','Failed'],['failurePercent','Failure rate (%)'],['meanWaitMins','Mean wait · served only (min)'],['peakQueue','Peak queue']] as [keyof Kpi,string][]).map(([key,label])=><tr key={key}><td>{label}</td>{selected.map(r=><td key={r.id}>{key==="meanWaitMins"&&r.kpi.served===0?"—":number(r.kpi[key] as number)}</td>)}</tr>)}</tbody></table></div></section>}</>}
+        {tab==="history" && <><section className="m8-panel"><div className="m8-section-head"><h2>Saved runs</h2><span className="m8-chip">{compare.length}/2 selected for comparison</span></div>{runs.length===0?<p className="m8-muted">No saved runs yet. Create your first scenario in What-if Studio.</p>:<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Saved runs table"><table><thead><tr><th>Select</th><th>Scenario</th><th>Created</th><th>Served</th><th>Failed</th><th>Wait · served only</th><th/></tr></thead><tbody>{runs.map(r=><tr key={r.id}><td><input aria-label={`Compare ${r.scenario.name}`} type="checkbox" checked={compare.includes(r.id)} disabled={!compare.includes(r.id)&&compare.length===2} onChange={e=>setCompare(e.target.checked?[...compare,r.id]:compare.filter(id=>id!==r.id))}/></td><td><strong>{r.scenario.name}</strong><small>{r.kpi.requests} requests · seed {r.scenario.seed}</small></td><td>{time(r.createdAt)}</td><td>{r.kpi.served}</td><td>{number(r.kpi.failurePercent)}%</td><td>{r.kpi.served?`${number(r.kpi.meanWaitMins)} min`:"—"}</td><td><button className="m8-button secondary" onClick={()=>load(r)}>View & edit</button></td></tr>)}</tbody></table></div>}</section>{selected.length===2&&<section className="m8-panel m8-comparison"><h2>KPI comparison</h2>{selected[0].snapshot.id!==selected[1].snapshot.id&&<div className="m8-alert">These runs use different snapshots. Differences may reflect changes in the network.</div>}{selected[0].scenario.seed!==selected[1].scenario.seed&&<div className="m8-alert">Seeds differ, so request arrival times are not identical.</div>}<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="KPI comparison table"><table><thead><tr><th>Metric</th>{selected.map(r=><th key={r.id}>{r.scenario.name}</th>)}</tr></thead><tbody>{([['requests','Requests'],['served','Served'],['failed','Failed'],['failurePercent','Failure rate (%)'],['meanWaitMins','Mean wait · served only (min)'],['peakQueue','Peak queue']] as [keyof Kpi,string][]).map(([key,label])=><tr key={key}><td>{label}</td>{selected.map(r=><td key={r.id}>{key==="meanWaitMins"&&r.kpi.served===0?"—":number(r.kpi[key] as number)}</td>)}</tr>)}</tbody></table></div></section>}</>}
         {tab==="network"&&snapshot&&<><div className="m8-network-head"><span className="m8-chip">Snapshot · {time(snapshot.capturedAt)}</span><button className="m8-button secondary" disabled={busy} onClick={()=>task(async()=>{await api.iot();await refresh();setNotice("Received M6 demo observations. They are displayed separately from PostgreSQL vehicle state.");})}><StudioIcon kind="refresh"/>Read Demo IoT Observations</button></div><div className="m8-hub-grid">{snapshot.hubs.map(h=>{const vehicles=snapshot.vehicles.filter(v=>v.hubId===h.id);return <section className="m8-panel" key={h.id}><span className="m8-chip">HUB {String(h.id).padStart(2,'0')}</span><h2>{h.name}</h2><div className="m8-hub-count">{vehicles.filter(v=>v.state==="AVAILABLE"&&v.battery>=20).length}<small> available vehicles</small></div><p className="m8-footnote">{vehicles.length} assigned vehicles · {h.capacity} parking spaces · {h.chargingPoints} chargers</p>{vehicles.map(v=><div className="m8-vehicle" key={v.id}><span>Vehicle #{v.id}</span><span>{v.battery}% · {v.state}</span></div>)}</section>;})}</div><section className="m8-panel"><h2>M6 device observations</h2>{snapshot.deviceStates.length?<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Device observations"><table><thead><tr><th>Resource</th><th>Hub</th><th>State</th><th>Received</th></tr></thead><tbody>{snapshot.deviceStates.map(d=><tr key={`${d.type}:${d.resourceId}`}><td>{d.type} #{d.resourceId}</td><td>{hubName(d.hubId)}</td><td>{d.state}</td><td>{time(d.observedAt)}</td></tr>)}</tbody></table></div>:<p className="m8-muted">No M6 observations received in this backend session.</p>}</section></>}
         {tab==="network"&&monitor&&<section className="m8-panel"><div className="m8-section-head"><div><h2>Repeat recent booking volume</h2><p>{monitor.demandDescription}</p></div><button className="m8-button secondary" disabled={busy} onClick={()=>task(async()=>{setMonitor(await api.check());setSnapshot(await api.snapshot());setNotice("Booking-volume check completed. Live vehicles were not changed.");})}>Run check now</button></div>{monitor.warnings.map((warning,i)=><p className="m8-muted" key={i}>{warning}</p>)}<div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Booking volume forecast"><table><thead><tr><th>Hub</th><th>Bookings / 30 min</th><th>Active holds</th><th>Projected served</th><th>Projected failed</th></tr></thead><tbody>{monitor.forecasts?.map(f=><tr key={f.hubId}><td>{f.hubName}</td><td>{f.recentBookings}</td><td>{f.activeHolds}</td><td>{f.projectedServed}</td><td>{f.projectedFailed}</td></tr>)}</tbody></table></div></section>}
         {tab==="network"&&snapshot?.capacities&&<section className="m8-panel"><h2>M1 resource observations</h2><p className="m8-footnote">Monitoring read model, including seeded demo observations. This is not a parking reservation service.</p><div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Observed hub capacity"><table><thead><tr><th>Hub</th><th>Used / total parking</th><th>Free parking</th><th>Busy / operational chargers</th></tr></thead><tbody>{snapshot.capacities.map(c=><tr key={c.hubId}><td>{snapshot.hubs.find(h=>h.id===c.hubId)?.name}</td><td>{c.usedSlots} / {c.totalSlots}</td><td>{c.freeSlots}</td><td>{c.busyChargers} / {c.operationalChargers}</td></tr>)}</tbody></table></div></section>}

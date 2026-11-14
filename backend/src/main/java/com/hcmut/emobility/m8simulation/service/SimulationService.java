@@ -30,23 +30,28 @@ public class SimulationService {
     }
     public Run run(Scenario scenario,String snapshotRunId,boolean repeatRecentBookings) throws IOException {
         Snapshot snapshot=snapshotRunId==null?snapshots.capture():store.get(snapshotRunId).snapshot();
-        if(repeatRecentBookings) {
+        List<HubSettings> settings = scenario.settings();
+        boolean repeats = repeatRecentBookings || settings.stream().anyMatch(HubSettings::repeatBookings);
+        boolean manual = !repeatRecentBookings && settings.stream().anyMatch(h -> !h.repeatBookings());
+        if(repeats) {
             if(snapshot.bookingWindow()==null) throw new IllegalArgumentException("This older snapshot has no M2 booking data. Capture a new snapshot.");
-            long affectedHubId=scenario.hubId();
-            int bookings=snapshot.bookingWindow().hubs().stream().filter(h->h.hubId()==affectedHubId).mapToInt(HubDemand::bookings).findFirst().orElse(0);
-            scenario=new Scenario(scenario.name(),scenario.hubId(),scenario.disabled(),bookings,scenario.durationMins(),scenario.arrivalWindowMins(),scenario.tripMins(),scenario.reroute(),scenario.seed());
+            var demand = snapshot.bookingWindow().hubs().stream()
+                    .collect(java.util.stream.Collectors.toMap(HubDemand::hubId, HubDemand::bookings));
+            scenario = scenario.withSettings(settings.stream()
+                    .map(h -> repeatRecentBookings || h.repeatBookings() ? h.withRequests(demand.getOrDefault(h.hubId(), 0), true) : h)
+                    .toList());
         }
         snapshot=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),snapshot.vehicles(),snapshot.deviceStates(),
-                repeatRecentBookings?"M2_BOOKING_VOLUME_REPEAT":"MANUAL_SCENARIO",snapshot.bookingWindow(),snapshot.capacities());
+                repeats ? (manual ? "MIXED_SCENARIO" : "M2_BOOKING_VOLUME_REPEAT") : "MANUAL_SCENARIO",snapshot.bookingWindow(),snapshot.capacities());
         assistant.validate(scenario,snapshot);
         EngineResult result=engine.simulate(snapshot,scenario);
-        Kpi baseline=engine.simulate(snapshot,new Scenario(scenario.name(),scenario.hubId(),false,scenario.injectedRequests(),
-                scenario.durationMins(),scenario.arrivalWindowMins(),scenario.tripMins(),scenario.reroute(),scenario.seed())).kpi();
+        Kpi baseline=engine.simulate(snapshot,scenario.withSettings(scenario.settings().stream().map(HubSettings::opened).toList())).kpi();
         AgentState agent=assistant.configured()?planner.extend(snapshot,scenario,null):null;
         var proposals=agent==null?assistant.recommend(snapshot,scenario,result.kpi(),engine)
             :new ScenarioAssistant.Proposals(List.of(),"TOOL_AGENT",List.of("AI plans call simulate_plan and use actual KPI feedback. Only improving validated plans are retained. No live execution."));
         var warnings=new ArrayList<>(proposals.warnings());
-        warnings.add(repeatRecentBookings?"Repeats accepted M2 booking volume from the captured 30-minute window; this is not a forecast of all attempted requests.":"Demand is manually specified, not measured arrival traffic.");
+        if (repeats) warnings.add("Booking-based demand repeats each selected hub's accepted M2 bookings from the captured 30-minute window.");
+        if (manual) warnings.add("Manually entered demand represents hypothetical rental requests.");
         warnings.add("Trips return to origin; charging, battery depletion and travel times are not modeled.");
         if(snapshot.deviceStates().size()>0) warnings.add("M6 device observations are displayed separately; database vehicle state is authoritative for the engine.");
         Run run=new Run(UUID.randomUUID().toString(),Instant.now(),scenario,snapshot,result.kpi(),baseline,result.timeline(),proposals.items(),proposals.source(),List.copyOf(warnings),agent);

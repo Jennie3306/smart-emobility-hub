@@ -32,6 +32,29 @@ class SimulationEngineTest {
         var result=engine.simulate(snapshot,new Scenario("zero",1,false,0,60,1,30,false,42));
         assertEquals(0,result.kpi().failurePercent()); assertEquals(0,result.kpi().meanWaitMins());
     }
+    @Test void independentlyConfiguredHubsShareVehiclesAndNeverRerouteToAClosedHub() {
+        var scenario = new Scenario("Multiple hubs", 10, 42, List.of(
+                new HubSettings(1, true, 2, 1, 3, false, false),
+                new HubSettings(2, false, 2, 1, 5, true, false)));
+
+        var result = engine.simulate(snapshot, scenario);
+        assertEquals(4, result.kpi().requests());
+        assertEquals(2, result.kpi().served());
+        assertEquals(2, result.kpi().hubs().getFirst().failed());
+        assertEquals(2, result.kpi().hubs().getLast().served());
+        assertEquals(2.5, result.kpi().meanWaitMins());
+        assertEquals(result, engine.simulate(snapshot, scenario));
+    }
+    @Test void waitingRequestsCanUseTheirHubAsSoonAsItReopens() {
+        var scenario = new Scenario("Scheduled closure", 10, 42, List.of(
+                new HubSettings(1, true, 1, 1, 3, false, false, 0, 4),
+                new HubSettings(2, true, 1, 1, 5, false, false, 2, 6)));
+        var result = engine.simulate(snapshot, scenario);
+        assertEquals(1, result.timeline().getFirst().served());
+        assertEquals(1, result.timeline().get(3).served());
+        assertEquals(2, result.timeline().get(4).served());
+        assertEquals(2, result.kpi().meanWaitMins());
+    }
     @Test void rejectsUnknownHubAndInvalidArrivalWindow() {
         assertThrows(IllegalArgumentException.class,()->engine.simulate(snapshot,new Scenario("bad",99,false,1,60,1,30,false,42)));
         assertThrows(IllegalArgumentException.class,()->engine.simulate(snapshot,new Scenario("bad",1,false,1,60,61,30,false,42)));

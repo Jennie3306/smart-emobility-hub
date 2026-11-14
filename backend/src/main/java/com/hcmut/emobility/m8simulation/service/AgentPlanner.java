@@ -95,7 +95,7 @@ public class AgentPlanner {
     static Map<String,Object> toolDefinition() {
         var action=Map.of("type","object","additionalProperties",false,"required",List.of("action","fromHubId","toHubId","amount","reason"),"properties",Map.of(
             "action",Map.of("type","string","enum",List.of("reroute","dispatch")),"fromHubId",Map.of("type","integer"),"toHubId",Map.of("type","integer"),"amount",Map.of("type","integer"),"reason",Map.of("type","string")));
-        return Map.of("type","function","function",Map.of("name","simulate_plan","description","Test a complete alternative on the frozen snapshot. Reroute uses affected hub -> 0, amount 0. Dispatch must leave a donor vehicle and fit observed parking. Returns actual deterministic KPIs or validation feedback. No live execution.","strict",true,
+        return Map.of("type","function","function",Map.of("name","simulate_plan","description","Test a complete alternative on the frozen snapshot. Enable rerouting separately for each affected hub using its ID as fromHubId, toHubId=0, amount=0. Dispatch starts at minute 0, must use open hubs, leave a donor vehicle and fit observed parking. Returns deterministic KPIs or validation feedback. No live execution.","strict",true,
             "parameters",Map.of("type","object","additionalProperties",false,"properties",Map.of("actions",Map.of("type","array","items",action)),"required",List.of("actions"))));
     }
 }

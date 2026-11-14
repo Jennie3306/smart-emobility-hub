@@ -71,6 +71,12 @@
 .m8-form :is(input, select, textarea):disabled { background: #f1f4f7; color: var(--muted); cursor: not-allowed; }
 .m8-form [aria-invalid=true] { border-color: #b42340!important; }
 .m8-field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; }
+.m8-affected-hubs { display: grid; gap: 12px; }
+.m8-affected-hubs h3 { font-size: 15px; margin: 0; }
+.m8-affected-hub { min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line, #dce4ec); border-radius: 8px; }
+.m8-affected-hub legend { padding: 0 5px; font-size: 13px; font-weight: 600; }
+.m8-affected-hub .m8-field-grid > p { grid-column: 1 / -1; }
+.m8-affected-hubs > button { justify-self: start; }
 .m8-field-hint { display: block; font-size: 12px; color: var(--muted); font-weight: 400; line-height: 1.65; margin: 6px 0 0; }
 .m8-field-error { display: block; color: #a01834; font-size: 12px; font-weight: 400; margin-top: 6px; line-height: 1.6; }
 .m8-demand { border: 0; min-width: 0; padding: 0; margin: 0 0 22px; }

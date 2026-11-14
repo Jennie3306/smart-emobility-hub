@@ -15,18 +15,21 @@ public class SimulationPlanTool {
         List<Vehicle> vehicles=new ArrayList<>(snapshot.vehicles());
         Map<Long,Integer> remaining=new HashMap<>();
         for(CapacityState c:snapshot.capacities()) remaining.put(c.hubId(),Math.max(0,Math.min(c.freeSlots(),c.totalSlots()-c.usedSlots())));
-        boolean reroute=scenario.reroute();Set<Long> moved=new HashSet<>();
+        var settings = new LinkedHashMap<Long, HubSettings>();
+        for (var hub : scenario.settings()) settings.put(hub.hubId(), hub);
+        Set<Long> moved=new HashSet<>();
         for(PlanAction a:actions) {
             if(a==null || a.reason()==null || a.reason().length()>500) return rejected("Each action needs a reason of at most 500 characters.");
             if("reroute".equals(a.action())) {
-                if(reroute || a.fromHubId()!=scenario.hubId() || a.toHubId()!=0 || a.amount()!=0)
+                var hub = settings.get(a.fromHubId());
+                if(hub == null || hub.reroute() || a.toHubId()!=0 || a.amount()!=0)
                     return rejected("Reroute requires fromHubId=affected hub, toHubId=0, amount=0 and must not already be enabled.");
-                reroute=true;continue;
+                settings.put(hub.hubId(), hub.withReroute());continue;
             }
             if(!"dispatch".equals(a.action())) return rejected("Only reroute and dispatch are allowed; no execution tool exists.");
             Hub target=snapshot.hubs().stream().filter(h->h.id()==a.toHubId()).findFirst().orElse(null);
             if(target==null || a.fromHubId()==a.toHubId() || a.amount()<1
-                    || (scenario.disabled() && (a.fromHubId()==scenario.hubId() || a.toHubId()==scenario.hubId())))
+                    || scenario.closedAtStart(a.fromHubId()) || scenario.closedAtStart(a.toHubId()))
                 return rejected("Dispatch needs distinct known open hubs and a positive amount.");
             long occupied=vehicles.stream().filter(v->Objects.equals(v.hubId(),a.toHubId())).count();
             if(a.amount()>remaining.getOrDefault(a.toHubId(),0) || occupied+a.amount()>target.capacity())
@@ -40,7 +43,7 @@ public class SimulationPlanTool {
             // Released donor space is not treated as authoritative parking availability.
         }
         Snapshot copy=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),snapshot.capacities());
-        Scenario fixed=new Scenario(scenario.name(),scenario.hubId(),scenario.disabled(),scenario.injectedRequests(),scenario.durationMins(),scenario.arrivalWindowMins(),scenario.tripMins(),reroute,scenario.seed());
+        Scenario fixed=scenario.withSettings(List.copyOf(settings.values()));
         return new PlanEvaluation(true,List.copyOf(actions),engine.simulate(copy,fixed).kpi(),
             "Simulation only. Demand, seed and time parameters are unchanged. Parking uses provisional M1 observations; M4/M7 must revalidate before execution.");
     }

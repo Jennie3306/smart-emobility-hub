@@ -32,4 +32,26 @@ class BookingVolumeTest {
         var service=new SimulationService(provider,new SimulationEngine(),new RunStore(new ObjectMapper().findAndRegisterModules(),dir.resolve("runs.json").toString()),mock(ScenarioAssistant.class));
         assertThrows(IllegalArgumentException.class,()->service.run(new Scenario("x",1,false,1,30,30,30,false,42),null,true));
     }
+
+    @Test void mixedDemandUsesCapturedBookingsOnlyForTheHubThatSelectedThem(@TempDir Path dir) throws Exception {
+        var snapshot = new Snapshot("frozen", Instant.EPOCH, List.of(new Hub(1,"A",10,2), new Hub(2,"B",10,2)),
+                List.of(), List.of(), "test",
+                new BookingWindow(Instant.EPOCH.minusSeconds(1800), Instant.EPOCH, 30,
+                        List.of(new HubDemand(1,3,0), new HubDemand(2,99,0))), List.of());
+        var provider = mock(SnapshotProvider.class);
+        when(provider.capture()).thenReturn(snapshot);
+        var assistant = new ScenarioAssistant(new ObjectMapper(), jakarta.validation.Validation
+                .buildDefaultValidatorFactory().getValidator(), "", "", "");
+        var service = new SimulationService(provider, new SimulationEngine(),
+                new RunStore(new ObjectMapper().findAndRegisterModules(), dir.resolve("runs.json").toString()), assistant);
+        var scenario = new Scenario("Mixed", 30, 42, List.of(
+                new HubSettings(1, false, 0, 10, 15, false, true),
+                new HubSettings(2, true, 7, 5, 20, false, false, 2, 8)));
+        var run = service.run(scenario, null);
+        assertEquals("MIXED_SCENARIO", run.snapshot().demandSource());
+        assertEquals(10, run.kpi().requests());
+        assertEquals(3, run.scenario().settings().getFirst().injectedRequests());
+        assertEquals(scenario.settings().getLast(), run.scenario().settings().getLast());
+        assertEquals(run, service.list().getFirst());
+    }
 }
