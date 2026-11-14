@@ -185,3 +185,6 @@
 @media (max-width: 950px) {
   .m8-result-jump { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); }
 }
+
+.m8-mini-network .m8-fleet-stepper { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 0; padding: 0; margin-top: 4px; }
+.m8-fleet-stepper .m8-button { min-width: 44px; padding: 6px; }

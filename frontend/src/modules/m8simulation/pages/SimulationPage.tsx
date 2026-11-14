@@ -21,6 +21,8 @@ export default function SimulationPage() {
   const [busy,setBusy]=useState(false); const [error,setError]=useState(""); const [notice,setNotice]=useState("");
   const [dispatchReview, setDispatchReview] = useState<string>();
   const [compare,setCompare]=useState<string[]>([]); const [reuse,setReuse]=useState<string>("");
+  const [startingVehicles,setStartingVehicles] = useState<Record<number,number>>({});
+  const fleetEdited = Object.keys(startingVehicles).length > 0;
   const [repeatBookings,setRepeatBookings]=useState(false);
   const inputSnapshot=runs.find(r=>r.id===reuse)?.snapshot || snapshot;
   const settings = hubSettings(scenario, repeatBookings);
@@ -29,7 +31,7 @@ export default function SimulationPage() {
   const fieldErrors=validateDraft(effective,inputSnapshot);
   const hubErrors = effectiveHubs.map(hub => validateHubSettings(hub, scenario.durationMins, inputSnapshot));
   const invalid=!!(fieldErrors.name || fieldErrors.durationMins || fieldErrors.seed || hubErrors.some(errors => Object.keys(errors).length));
-  const dirty=draftDiffers(effective,repeatBookings,reuse,active);
+  const dirty=fleetEdited || draftDiffers(effective,repeatBookings,reuse,active);
   function edit() {setError("");setNotice("");setDispatchReview(undefined);}
   function navigate(next:typeof tab) {setTab(next);edit();}
   async function refresh() {
@@ -43,7 +45,7 @@ export default function SimulationPage() {
     setScenario(current => withHubSettings(current, hubSettings(current, repeatBookings)
       .map((hub, i) => i === index ? {...hub, ...change} : hub)));
   }
-  function load(run:Run) {edit();setText("");setActive(run);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setTab("studio");setNotice("Reusing the saved snapshot for a fair comparison. You can also capture a new snapshot.");}
+  function load(run:Run) {edit();setStartingVehicles({});setText("");setActive(run);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setTab("studio");setNotice("Reusing the saved snapshot for a fair comparison. You can also capture a new snapshot.");}
   const comparisonTime = (run: Run) => new Date(run.createdAt).toLocaleString("en-GB", {
     day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit",
   });
@@ -140,23 +142,43 @@ export default function SimulationPage() {
                   }}>Add affected hub</button>;
                 })()}
               </div>
-              <details className="m8-advanced"><summary>Snapshot & Repeatability</summary><p>Use the same snapshot and seed to compare scenarios fairly.</p><label>Snapshot source<select name="snapshotSource" value={reuse} onChange={e=>{edit();setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>{numericFields.filter(([key])=>key==="seed").map(renderNumericField)}</details>
+              <details className="m8-advanced"><summary>Snapshot & Repeatability</summary><p>Use the same snapshot and seed to compare scenarios fairly.</p><label>Snapshot source<select name="snapshotSource" value={reuse} onChange={e=>{edit();setStartingVehicles({});setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>{numericFields.filter(([key])=>key==="seed").map(renderNumericField)}</details>
               <p className="m8-input-summary">{settings.length} affected {settings.length === 1 ? "hub" : "hubs"} · {number(effectiveHubs.reduce((total,hub)=>total+(hub.injectedRequests || 0),0))} rental requests · {scenario.durationMins || "—"} min</p>
               {invalid && <p id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.</p>}
-              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined);setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"Save & Run Simulation"}</button>
+              <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined,false,Object.entries(startingVehicles).map(([id,count])=>`${id}:${count}`).join(",")||undefined);setStartingVehicles({});setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"Save & Run Simulation"}</button>
               {active && <a className="m8-result-jump" href="#m8-scenario-results">View results</a>}
             </section>
             <section className="m8-results" id="m8-scenario-results" tabIndex={-1}>
               <div className="m8-panel m8-preview"><div className="m8-section-head"><div><h2>Scenario Results</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Calculated by the simulator after you confirm the inputs."}</p></div><span className="m8-chip">{active?(dirty?"Draft changed":"Saved"):"Ready"}</span></div>
                 <div className="m8-empty">
                   <h3>Starting network</h3>
-                  <p>{active ? "Vehicles available in the snapshot used for this run." : "Vehicles available before the simulation."}</p>
-                  <div className="m8-mini-network">{(active?.snapshot ?? inputSnapshot ?? snapshot).hubs.map(hub => {
-                    const available = (active?.snapshot ?? inputSnapshot ?? snapshot).vehicles.filter(
+                  <p>{active && !dirty ? "Starting vehicles for this saved run. Edit to test a new run." : "Set available vehicles for the next run. Edits affect simulation only."}</p>
+                  <div className="m8-mini-network">{(inputSnapshot ?? snapshot).hubs.map(hub => {
+                    const captured = (inputSnapshot ?? snapshot).vehicles.filter(
                       vehicle => vehicle.hubId === hub.id && vehicle.state === "AVAILABLE" && vehicle.battery >= 20,
                     ).length;
-                    return <span key={hub.id}>{hub.name}<b>{available} available {available === 1 ? "vehicle" : "vehicles"}</b></span>;
+                    const available = startingVehicles[hub.id] ?? captured;
+                    function adjust(count: number) {
+                      edit();
+                      setStartingVehicles(current => {
+                        const next = {...current};
+                        if (count === captured) delete next[hub.id];
+                        else next[hub.id] = count;
+                        return next;
+                      });
+                    }
+                    return <span key={hub.id}>{hub.name}
+                      <span className="m8-fleet-stepper">
+                        <button className="m8-button secondary" type="button" aria-label={`Remove one available vehicle from ${hub.name}`}
+                          disabled={busy || available <= 0} onClick={() => adjust(available - 1)}>−</button>
+                        <b aria-live="polite">{available} available</b>
+                        <button className="m8-button secondary" type="button" aria-label={`Add one available vehicle to ${hub.name}`}
+                          disabled={busy || available >= 1000} onClick={() => adjust(available + 1)}>+</button>
+                      </span>
+                    </span>;
                   })}</div>
+                  {fleetEdited && <button className="m8-button secondary" type="button" disabled={busy}
+                    onClick={() => {edit();setStartingVehicles({});}}>Reset vehicle edits</button>}
                 </div>
                 {active?<>{dirty&&<div className="m8-alert" role="status">Results and recommendations below are from the previous run. Your draft changes have not been simulated.</div>}<div className="m8-kpis"><Metric label="Requests served" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Unserved" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Avg. wait · served only" value={active.kpi.served?number(active.kpi.meanWaitMins):"—"} unit={active.kpi.served?"min":""}/><Metric label="Peak queue" value={number(active.kpi.peakQueue)} unit="requests"/></div>
                   <div className="m8-baseline">Same network with all hubs open: <strong>{number(active.baseline.failurePercent)}% unserved</strong><span>{baselineDelta === 0
@@ -170,6 +192,7 @@ export default function SimulationPage() {
               </div>
               {active&&<AgentPanel run={active} busy={busy} configured={!!monitor?.aiConfigured} onRetry={()=>task(async()=>{const updated=await api.retry(active.id,active.agent?.totalRounds??0);setActive(current=>acceptPlanningResult(current,updated));setRuns(await api.list());setNotice(`AI planning saved for ${updated.scenario.name}. The original snapshot and scenario are unchanged.`);})}/>}
               {active && (!active.agent || active.recommendations.length > 0) && <div className="m8-panel"><div className="m8-section-head"><div><h2>Recommended plans</h2></div>{active && <span className="m8-chip">{active.recommendationSource === "TOOL_AGENT" ? "AI tool exploration" : active.recommendationSource === "LLM" ? "AI-assisted projection" : active.recommendationSource === "LLM_AND_LOCAL_RULES" ? "AI + local rules" : "Local rules"}</span>}</div>
+                {active.snapshot.hypotheticalFleet && <p className="m8-footnote">This run uses edited vehicle counts. Run with the live fleet to create M7 tasks.</p>}
                 {active?.recommendations.length ? active.recommendations.map(r => (
                   <div className="m8-recommendation" key={r.id}>
                     <div className="m8-rec-icon"><StudioIcon kind="network"/></div>
@@ -193,7 +216,7 @@ export default function SimulationPage() {
                             setNotice("Rerouting parameters filled. Save and run to verify them on the same snapshot.");
                           }}>Try this plan</button>
                         ) : (
-                          <button className="m8-button secondary" disabled={busy || !monitor?.applyEnabled || !["PENDING", "PARTIAL"].includes(r.status)}
+                          <button className="m8-button secondary" disabled={busy || !monitor?.applyEnabled || active.snapshot.hypotheticalFleet || !["PENDING", "PARTIAL"].includes(r.status)}
                             aria-expanded={dispatchReview === `${active.id}:${r.id}`}
                             onClick={() => setDispatchReview(`${active.id}:${r.id}`)}>Review dispatch</button>
                         )}

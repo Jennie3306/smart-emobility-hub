@@ -22,6 +22,9 @@ public class DispatchApplyService {
     public Run apply(String runId, String recommendationId, String operator) throws IOException {
         synchronized (store) {
             Run run = store.get(runId);
+            if (run.snapshot().hypotheticalFleet()) {
+                throw new BusinessException("HYPOTHETICAL_FLEET", "Run with a live fleet snapshot before creating dispatch tasks.");
+            }
             Recommendation rec = run.recommendations().stream().filter(r -> r.id().equals(recommendationId))
                     .findFirst().orElseThrow();
             if (List.of("APPLIED", "APPROVED", "NEEDS_REVIEW").contains(rec.status())) return run;

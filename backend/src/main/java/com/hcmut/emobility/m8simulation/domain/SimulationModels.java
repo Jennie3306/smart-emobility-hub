@@ -19,7 +19,11 @@ public final class SimulationModels {
     }
     public record CapacityState(long hubId,int totalSlots,int usedSlots,int freeSlots,int operationalChargers,int busyChargers) {}
     public record Snapshot(String id, Instant capturedAt, List<Hub> hubs, List<Vehicle> vehicles,
-                           List<DeviceState> deviceStates, String demandSource,BookingWindow bookingWindow,List<CapacityState> capacities) {
+                           List<DeviceState> deviceStates, String demandSource,BookingWindow bookingWindow,List<CapacityState> capacities, boolean hypotheticalFleet) {
+        public Snapshot(String id, Instant capturedAt, List<Hub> hubs, List<Vehicle> vehicles, List<DeviceState> devices,
+                        String source, BookingWindow bookingWindow, List<CapacityState> capacities) {
+            this(id, capturedAt, hubs, vehicles, devices, source, bookingWindow, capacities, false);
+        }
         public Snapshot(String id,Instant capturedAt,List<Hub> hubs,List<Vehicle> vehicles,List<DeviceState> devices,String source) {
             this(id,capturedAt,hubs,vehicles,devices,source,null,List.of());
         }

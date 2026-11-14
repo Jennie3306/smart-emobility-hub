@@ -29,7 +29,11 @@ public class SimulationService {
         return run(scenario,snapshotRunId,false);
     }
     public Run run(Scenario scenario,String snapshotRunId,boolean repeatRecentBookings) throws IOException {
+        return run(scenario, snapshotRunId, repeatRecentBookings, null);
+    }
+    public Run run(Scenario scenario, String snapshotRunId, boolean repeatRecentBookings, String startingVehicles) throws IOException {
         Snapshot snapshot=snapshotRunId==null?snapshots.capture():store.get(snapshotRunId).snapshot();
+        snapshot = StartingFleet.override(snapshot, startingVehicles);
         List<HubSettings> settings = scenario.settings();
         boolean repeats = repeatRecentBookings || settings.stream().anyMatch(HubSettings::repeatBookings);
         boolean manual = !repeatRecentBookings && settings.stream().anyMatch(h -> !h.repeatBookings());
@@ -42,7 +46,7 @@ public class SimulationService {
                     .toList());
         }
         snapshot=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),snapshot.vehicles(),snapshot.deviceStates(),
-                repeats ? (manual ? "MIXED_SCENARIO" : "M2_BOOKING_VOLUME_REPEAT") : "MANUAL_SCENARIO",snapshot.bookingWindow(),snapshot.capacities());
+                repeats ? (manual ? "MIXED_SCENARIO" : "M2_BOOKING_VOLUME_REPEAT") : "MANUAL_SCENARIO",snapshot.bookingWindow(),snapshot.capacities(),snapshot.hypotheticalFleet());
         assistant.validate(scenario,snapshot);
         EngineResult result=engine.simulate(snapshot,scenario);
         Kpi baseline=engine.simulate(snapshot,scenario.withSettings(scenario.settings().stream().map(HubSettings::opened).toList())).kpi();
