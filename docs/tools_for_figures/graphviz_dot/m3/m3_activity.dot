@@ -1,0 +1,29 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>UC-M3-02 — Return a vehicle at a hub (M3)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+a [label="Student chooses the hub\nand presses Return", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d1 [label="Active trip of\nthis student?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x1 [label="SESSION_NOT_FOUND (404) /\nTRIP_OWNER_MISMATCH (403)", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d2 [label="Vehicle IN_USE?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x2 [label="INVALID_STATE (400)", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+dock [label="M4 ParkingDock.dockRentalVehicle:\nlock and take a free space\nin the shared pool (BR-M3-03)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d3 [label="Free space\nat the hub?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x3 [label="HUB_FULL (409)\nwith hubs that still have room;\nnothing changes", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+upd [label="Record battery level,\nset current hub", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d4 [label="Battery below\nthreshold (20 %)?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+low [label="State LOW_BATTERY", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+av [label="State AVAILABLE", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+m [shape=diamond, label="", width=0.3, height=0.3, style=filled, fillcolor="#ffffff"];
+done [label="Complete the RentalSession", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ev [label="Publish VehicleReturnedEvent\n(M2 completes the reservation,\nM1 recounts, M5 may queue charging)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ev2 [label="Also publish\nVehicleLowBatteryEvent", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ok [label="Commit; trip summary\nshown to the student", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18]; e2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> a -> d1; d1 -> x1 [label="no"]; d1 -> d2 [label="yes"];
+d2 -> x2 [label="no"]; d2 -> dock [label="yes"]; dock -> d3;
+d3 -> x3 [label="no"]; d3 -> upd [label="yes"]; upd -> d4;
+d4 -> low [label="yes"]; d4 -> av [label="no"]; low -> m; av -> m; m -> done -> ev;
+ev -> ev2 [label="[low battery]"]; ev -> ok [label="[otherwise]"]; ev2 -> ok; ok -> e;
+x1 -> e2; x2 -> e2; x3 -> e2;
+{rank=same; low; av}
+}

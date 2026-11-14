@@ -1,0 +1,25 @@
+digraph N { graph [rankdir=LR, fontname="DejaVu Sans", nodesep=0.22, ranksep=0.7]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9, color="#666666"];
+login [label=<<b>Sign in</b><br/><font point-size="9">/login</font>>, shape=box, style="rounded,filled", fillcolor="#1f4e79", fontcolor="#ffffff", color="#1f4e79"];
+dash [label=<<b>Top navigation bar</b><br/><font point-size="9">on every page; the server<br/>enforces the role</font>>, shape=box, style="rounded,filled", fillcolor="#e8e8e8", color="#777777"];
+subgraph cluster_s { label="Student"; style="rounded"; color="#4a6fa5"; fontcolor="#1f4e79";
+hubs [label=<<b>Hubs</b><br/><font point-size="9">list, filter, hub detail</font>>, shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.5];
+find [label=<<b>Find a vehicle (M2)</b><br/><font point-size="9">search, reserve</font>>, shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.5];
+mine [label=<<b>My reservation</b><br/><font point-size="9">hold timer, pick up, return,<br/>Current trip card (M3)</font>>, shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.5];
+park [label=<<b>Parking (M4)</b><br/><font point-size="9">student view: book a space,<br/>charging on arrival</font>>, shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.5];
+chg [label=<<b>Smart charging (M5)</b><br/><font point-size="9">request, my sessions, start, cancel</font>>, shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.5];
+}
+subgraph cluster_o { label="Operator"; style="rounded"; color="#b4690e"; fontcolor="#b4690e";
+odash [label=<<b>Dashboard (M1)</b><br/><font point-size="9">live figures, open alerts</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+alerts [label=<<b>Alerts</b><br/><font point-size="9">history</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+veh [label=<<b>Rental vehicles (M3)</b><br/><font point-size="9">fleet list</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+opark [label=<<b>Parking (M4)</b><br/><font point-size="9">operator view: block, unblock,<br/>bookings, spaces</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+ochg [label=<<b>Smart charging (M5)</b><br/><font point-size="9">queue, schedule, priority, audit</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+inc [label=<<b>Incidents and IoT (M6)</b><br/><font point-size="9">incidents, simulator</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+red [label=<<b>Redistribution (M7)</b><br/><font point-size="9">recommendations, tasks</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+wif [label=<<b>What-if Studio (M8)</b><br/><font point-size="9">simulation, history, network</font>>, shape=box, style="rounded,filled", fillcolor="#fdecd8", color="#b4690e", penwidth=1.5];
+}
+login -> dash; dash -> hubs [label="Student"]; dash -> find; dash -> mine; dash -> park; dash -> chg;
+dash -> odash [label="Operator"]; dash -> alerts; dash -> veh; dash -> opark; dash -> ochg; dash -> inc; dash -> red; dash -> wif;
+find -> mine [label="Reserve", style=dashed, constraint=false]; hubs -> find [label="hub chosen", style=dashed, constraint=false];
+odash -> red [label="alert → proposal", style=dashed, constraint=false];
+}

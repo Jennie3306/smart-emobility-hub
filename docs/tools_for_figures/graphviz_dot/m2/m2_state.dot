@@ -1,0 +1,29 @@
+digraph G {
+rankdir=TB; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+label=<<b>Reservation lifecycle — Module M2</b>>; labelloc=t; fontsize=18; ranksep=1.1; nodesep=1.2;
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> "PENDING";
+"PENDING" [];
+"CONFIRMED" [];
+"CHECKED_IN" [];
+"COMPLETED" [fillcolor="#e1f3e8", color="#3a7d44"];
+"EXPIRED" [fillcolor="#e8e8e8", color="#999999"];
+"CANCELLED" [fillcolor="#e8e8e8", color="#999999"];
+__fin0 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"COMPLETED" -> __fin0;
+__fin1 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"EXPIRED" -> __fin1;
+__fin2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"CANCELLED" -> __fin2;
+"PENDING" -> "CONFIRMED" [label="checks pass [vehicle AVAILABLE ∧\nno active reservation]\n/ expiresAt = now + 15 min\n(or the M4 check-in deadline),\npublish ReservationConfirmedEvent" ];
+"PENDING" -> "CANCELLED" [label="checks fail or UNIQUE violated\n/ 409, transaction rolled back\n(never stored)" style=dashed];
+"CONFIRMED" -> "CHECKED_IN" [label="checkIn() or pick-up via M3\n[owner ∧ now < expiresAt]\n/ checkedInAt = now" ];
+"CONFIRMED" -> "CONFIRMED" [label="VehicleFailedEvent [replacement of the\nsame type at the same hub]\n/ move to the new vehicle, keep expiresAt" ];
+"CONFIRMED" -> "EXPIRED" [label="Timer (30 s) [now ≥ expiresAt]\n/ release keys,\npublish ReservationExpiredEvent" ];
+"CONFIRMED" -> "CANCELLED" [label="cancel() [owner] / USER_REQUEST;\nVehicleFailedEvent [no replacement] / VEHICLE_FAILED;\nM4 space blocked / RESOURCE_BLOCKED\n— publish ReservationCancelledEvent" ];
+"CHECKED_IN" -> "COMPLETED" [label="VehicleReturnedEvent (M3) or\nM4 check-out / completeByResource()" ];
+note [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=11, label="Release keys = activeResourceKey and activeUserKey set to NULL, closedAt = now.\nPENDING, CONFIRMED and CHECKED_IN hold the keys (UNIQUE, BR-M2-01 / BR-M2-03).\nCOMPLETED, CANCELLED and EXPIRED are final: canMoveTo() returns false."];
+note -> CONFIRMED [style=dashed, arrowhead=none, color="#c9a227"];
+}

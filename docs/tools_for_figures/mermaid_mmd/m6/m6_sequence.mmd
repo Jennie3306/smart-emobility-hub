@@ -1,0 +1,32 @@
+sequenceDiagram
+autonumber
+actor OP as Operator / Scheduler
+participant DS as DeviceSimulatorService
+participant F as SyntheticReadingFactory
+participant DE as DeviceEventService
+participant IS as IncidentService
+participant EP as EventPublisher
+participant OW as Owner modules (M3, M4, M5)
+OP->>DS: runScenario(CHARGER_FAILURE, seed)
+DS->>DS: running.compareAndSet(false, true) or 409
+DS->>F: createReadings(scenario, seed, runId)
+F-->>DS: readings (fresh eventIds)
+loop each reading
+  DS->>DE: processReading(reading, runId)
+  DE->>DE: duplicate eventId? catalog, hub, battery, reason valid?
+  alt failure reading
+    DE->>IS: openForDeviceFailure(reading)
+    alt an incident is already active
+      IS-->>DE: false
+      DE-->>DS: PROCESSED, no event (ACTIVE_INCIDENT_EXISTS)
+    else none active
+      IS->>IS: save Incident REPORTED, severity by type and reason
+      DE->>EP: ChargerFailedEvent / VehicleFailedEvent
+      EP->>OW: owners lock the resource and handle bookings
+    end
+  else normal reading
+    DE->>EP: DeviceReadingReportedEvent
+    EP->>OW: owners decide the business state
+  end
+end
+DS-->>OP: run summary (processed, duplicates, rejected, events)

@@ -1,0 +1,35 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>Reporting an incident — operator report or device failure (M6)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+A [label="Operator submits a report", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+B [label="Device reading with a failure", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+V [label="Operator role, payload,\nreason and resource valid?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+D [label="eventId already\nprocessed?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+D1 [label="Return DUPLICATE,\nnothing changes", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+V2 [label="Catalog, hub and\nreason code valid?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+R1 [label="REJECTED, no event", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+R2 [label="400 / 404, nothing stored", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+ACT1 [label="Active incident\nfor this resource?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+ACT2 [label="Active incident\nfor this resource?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+C1 [label="409 ACTIVE_INCIDENT_EXISTS\nwith the existing id and status", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+C2 [label="Mark reading processed,\nannounce nothing", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+S1 [label="Save Incident REPORTED,\nseverity chosen by the operator", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+S2 [label="Save Incident REPORTED,\nseverity by type and reason", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+T [label="Commit\nsucceeded?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+R3 [label="Rollback, no event", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+P [label="Publish VehicleFailed /\nChargerFailed", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+OW [label="M3 / M5 / M4 lock the resource and\nhandle reservations and sessions", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+L [label="Operator: ASSIGN, START, RESOLVE,\nREOPEN or CLOSE with expectedVersion", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+s2 [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18]; e2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> A; s2 -> B;
+A -> V; B -> D; D -> D1 [label="yes"]; D -> V2 [label="no"];
+V2 -> R1 [label="no"]; V -> R2 [label="no"];
+V -> ACT1 [label="yes"]; V2 -> ACT2 [label="yes"];
+ACT1 -> C1 [label="yes"]; ACT2 -> C2 [label="yes"];
+ACT1 -> S1 [label="no"]; ACT2 -> S2 [label="no"];
+S1 -> T; T -> R3 [label="no"]; T -> P [label="yes"]; S2 -> P;
+P -> OW -> L -> e;
+D1 -> e2; R1 -> e2; R2 -> e2; C1 -> e2; C2 -> e2; R3 -> e2;
+{rank=same; s; s2}
+}

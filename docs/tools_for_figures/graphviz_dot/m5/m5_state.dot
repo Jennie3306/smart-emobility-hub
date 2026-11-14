@@ -1,0 +1,26 @@
+digraph M5StateMachine {
+  graph [rankdir=LR, bgcolor="white", pad="0.25", nodesep="0.5", ranksep="0.65", splines=true, label="M5 · ChargingSession state machine", labelloc=t, fontsize=22, fontname="Arial"];
+  node [shape=box, style="rounded,filled", fillcolor="#f4f7fb", color="#315b7d", penwidth=1.5, fontname="Arial", fontsize=12, margin="0.18,0.12"];
+  edge [color="#38556e", penwidth=1.25, arrowsize=0.8, fontname="Arial", fontsize=10];
+  init [shape=circle, label="", width=0.18, height=0.18, fillcolor="#263746", color="#263746"];
+  Requested [label="REQUESTED"];
+  Queued [label="QUEUED", fillcolor="#e8f1fb"];
+  Scheduled [label="SCHEDULED\nport assigned · hold ≤ 10 min", fillcolor="#e8f1fb"];
+  Charging [label="CHARGING", fillcolor="#e1f3ee", color="#23845b"];
+  Interrupted [label="INTERRUPTED\nSoC persisted", fillcolor="#fff2d8", color="#b7791f"];
+  Completed [label="COMPLETED", shape=doublecircle, fillcolor="#dcf3e6", color="#23845b"];
+  Cancelled [label="CANCELLED", shape=doublecircle, fillcolor="#f2f3f5", color="#78838e"];
+  init -> Requested [label="create session"];
+  Requested -> Queued [label="enqueue"];
+  Queued -> Scheduled [label="assign available port"];
+  Scheduled -> Charging [label="start [within hold / window]"];
+  Charging -> Completed [label="Timer [SoC ≥ 90% or 90 min or slot ends]"];
+  Charging -> Interrupted [label="ChargerFailed / save SoC"];
+  Scheduled -> Interrupted [label="ChargerFailed / release assignment"];
+  Interrupted -> Queued [label="requeue / preserve waitingSince;\n+20 only if no replacement port"];
+  Requested -> Cancelled [label="cancel"];
+  Queued -> Cancelled [label="cancel"];
+  Scheduled -> Cancelled [label="cancel or hold expires"];
+  Interrupted -> Cancelled [label="cancel"];
+  {rank=same; Completed; Cancelled;}
+}

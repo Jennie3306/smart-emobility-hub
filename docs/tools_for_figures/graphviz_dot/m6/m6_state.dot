@@ -1,0 +1,21 @@
+digraph G {
+rankdir=TB; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+nodesep=0.8; ranksep=0.6;
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> "REPORTED";
+"REPORTED" [];
+"ASSIGNED" [];
+"IN_PROGRESS" [];
+"RESOLVED" [];
+"CLOSED" [];
+__fin0 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"CLOSED" -> __fin0;
+"REPORTED" -> "ASSIGNED" [label="ASSIGN [assignee is an Operator]" ];
+"ASSIGNED" -> "IN_PROGRESS" [label="START" ];
+"IN_PROGRESS" -> "RESOLVED" [label="RESOLVE" ];
+"RESOLVED" -> "CLOSED" [label="CLOSE" ];
+"RESOLVED" -> "IN_PROGRESS" [label="REOPEN [no other active incident]\n/ resolvedAt cleared" style=dashed];
+note [shape=note, style=filled, fillcolor="#fff8e1", color="#c9a227", fontname="DejaVu Sans", fontsize=12, label="Every action carries expectedVersion (STALE_VERSION)\nREPORTED, ASSIGNED, IN_PROGRESS are active:\nat most one active incident per resource (BR-M6-06)"];
+}

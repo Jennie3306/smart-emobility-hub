@@ -1,0 +1,36 @@
+sequenceDiagram
+  autonumber
+  actor A as Student A
+  actor B as Student B
+  participant C as ReservationController
+  participant S as ReservationService
+  participant R as ReservationRepository
+  participant DB as PostgreSQL
+  participant E as EventPublisher
+  Note over A,B: EB-001 is the last AVAILABLE vehicle at the hub, both press Reserve at almost the same time
+  par Request of Student A
+    A->>C: POST /api/m2/reservations {vehicleId: 1}
+    C->>S: reserveVehicle(userA, 1)
+    S->>R: pre-checks: user limit, vehicle conflict
+    R-->>S: none found
+    S->>R: saveAndFlush(reservation A)
+    R->>DB: INSERT (active_resource_key = 'VEHICLE:1')
+    DB-->>R: 1 row
+    S->>E: publish(ReservationConfirmedEvent)
+    Note right of E: M3 marks the vehicle RESERVED in the same transaction
+    S->>DB: COMMIT
+    C-->>A: 201 Created {state: CONFIRMED, expiresAt}
+  and Request of Student B
+    B->>C: POST /api/m2/reservations {vehicleId: 1}
+    C->>S: reserveVehicle(userB, 1)
+    S->>R: pre-checks: user limit, vehicle conflict
+    R-->>S: none found (A has not committed yet)
+    S->>R: saveAndFlush(reservation B)
+    R->>DB: INSERT (active_resource_key = 'VEHICLE:1')
+    Note right of DB: waits on A's uncommitted key, then fails after A commits
+    DB-->>R: unique_violation
+    R-->>S: DataIntegrityViolationException
+    S->>DB: ROLLBACK
+    C-->>B: 409 {code: RESOURCE_CONFLICT}
+  end
+  Note over A,E: exactly one 201 and one 409, one CONFIRMED row and one ReservationConfirmedEvent

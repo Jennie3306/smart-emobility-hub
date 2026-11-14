@@ -1,0 +1,35 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>A parking stay: from booking to release (M4)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+b [label="Booking ACTIVE,\nspace RESERVED", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+w [label="Next event?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+cn [label="M2 cancel(): reservation CANCELLED", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ci [label="Student presses Check in", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d1 [label="now ≥ start − 15 min\nand before the\ncheck-in deadline?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x1 [label="CHECK_IN_TOO_EARLY /\nCHECK_IN_EXPIRED", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+d2 [label="Space BLOCKED?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+x2 [label="SPACE_BLOCKED (409)", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+in [label="M2 checkIn(): CHECKED_IN;\nspace OCCUPIED, booking checked in", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ns [label="Timer: deadline passed,\nno check-in", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d3 [label="M2 still holds\nthe reservation?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+wait [label="Wait: M2 Timer marks it\nEXPIRED, the event releases the space", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+rel [label="Release the space,\nbooking NO_SHOW", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+w2 [label="Next event?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+co [label="Student presses Check out", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ao [label="Timer: window end + 15 min\npassed, auto check-out", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+fin [label="M2 completeByResource():\nreservation COMPLETED", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d4 [label="Space BLOCKED?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+fr [label="Space FREE,\npublish the new state to M1", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+det [label="Detach the reservation only;\nunblock if the charger is back", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+close [label="Booking closed\n(COMPLETED / CANCELLED / NO_SHOW)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18]; e2 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> b -> w;
+w -> cn [label="student cancels"]; w -> ci [label="check-in"]; w -> ns [label="deadline passes"];
+ci -> d1; d1 -> x1 [label="no"]; d1 -> d2 [label="yes"]; d2 -> x2 [label="yes"]; d2 -> in [label="no"];
+x1 -> w [style=dashed, constraint=false]; x2 -> e2;
+ns -> d3; d3 -> wait [label="yes"]; d3 -> rel [label="no (event missed)"]; wait -> rel;
+in -> w2; w2 -> co [label="student"]; w2 -> ao [label="Timer"]; co -> fin; ao -> fin;
+cn -> d4; fin -> d4; rel -> d4;
+d4 -> fr [label="no"]; d4 -> det [label="yes"]; fr -> close; det -> close; close -> e;
+{rank=same; cn; ci; ns} {rank=same; co; ao}
+}

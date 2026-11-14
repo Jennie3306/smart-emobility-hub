@@ -1,0 +1,24 @@
+digraph G {
+rankdir=LR; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+label=<<b>Alert lifecycle — Module M1</b>>; labelloc=t; fontsize=18; ranksep=1.6; nodesep=0.9;
+"OPEN" [];
+"ACKNOWLEDGED" [];
+"RESOLVED" [fillcolor="#e8e8e8", color="#999999"];
+"DISMISSED" [fillcolor="#e8e8e8", color="#999999"];
+__fin0 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"RESOLVED" -> __fin0;
+__fin1 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
+"DISMISSED" -> __fin1;
+"OPEN" -> "OPEN" [label="threshold still breached\n/ refresh figures only [BR-M1-06]" ];
+"OPEN" -> "ACKNOWLEDGED" [label="operator acknowledges\n/ record user and timestamp" ];
+"OPEN" -> "RESOLVED" [label="condition cleared [BR-M1-07]\n/ close alert, push to dashboard" ];
+"OPEN" -> "DISMISSED" [label="operator dismisses\n/ record reason" ];
+"ACKNOWLEDGED" -> "RESOLVED" [label="condition cleared [BR-M1-07]\n/ close alert" ];
+"ACKNOWLEDGED" -> "DISMISSED" [label="operator dismisses\n/ record reason" ];
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> OPEN [label="threshold breached\n[BR-M1-03 / BR-M1-04]\n/ create alert, publish\nHubNearCapacityEvent"];
+note [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=12, label="BR-M1-06: a hub holds at most one alert\nin OPEN or ACKNOWLEDGED state\nfor each alert type"];
+note -> OPEN [style=dashed, arrowhead=none, color="#c9a227"];
+}

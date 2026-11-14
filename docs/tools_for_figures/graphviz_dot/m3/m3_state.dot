@@ -1,0 +1,31 @@
+digraph G {
+rankdir=TB; nodesep=0.6; ranksep=0.9; fontname="DejaVu Sans Bold";
+node [shape=box, style="rounded,filled", fillcolor="#dae7f8", color="#4a6fa5", fontname="DejaVu Sans Bold", fontsize=15, margin="0.2,0.1"];
+edge [fontname="DejaVu Sans", fontsize=13, color="#444444"];
+ranksep=0.8; nodesep=0.9;
+__init [shape=circle, style=filled, fillcolor=black, label="", width=0.22];
+__init -> "AVAILABLE";
+"AVAILABLE" [];
+"RESERVED" [];
+"IN_USE" [];
+"LOW_BATTERY" [];
+"CHARGING" [];
+"MAINTENANCE" [];
+"IN_TRANSIT" [];
+"AVAILABLE" -> "RESERVED" [label="ReservationConfirmed (M2)" ];
+"RESERVED" -> "AVAILABLE" [label="ReservationCancelled /\nReservationExpired (M2)" ];
+"RESERVED" -> "IN_USE" [label="pickUp [owner, battery ≥ 20%]\n/ VehiclePickedUp" ];
+"IN_USE" -> "AVAILABLE" [label="returnVehicle [space docked,\nbattery ≥ 20%] / VehicleReturned" ];
+"IN_USE" -> "LOW_BATTERY" [label="returnVehicle [battery < 20%]\n/ VehicleReturned, VehicleLowBattery" ];
+"AVAILABLE" -> "LOW_BATTERY" [label="battery reading < 20% at a hub\n/ VehicleLowBattery" ];
+"LOW_BATTERY" -> "CHARGING" [label="ChargingStarted (M5)" ];
+"CHARGING" -> "AVAILABLE" [label="ChargingCompleted (M5)" ];
+"AVAILABLE" -> "IN_TRANSIT" [label="DispatchStarted (M7)" ];
+"IN_TRANSIT" -> "AVAILABLE" [label="DispatchCompleted /\nDispatchFailed (M7)" ];
+"AVAILABLE" -> "MAINTENANCE" [label="VehicleFailed (M6)" color="#c0504d", fontcolor="#c0504d"];
+"RESERVED" -> "MAINTENANCE" [label="VehicleFailed" color="#c0504d", fontcolor="#c0504d"];
+"IN_USE" -> "MAINTENANCE" [label="VehicleFailed" color="#c0504d", fontcolor="#c0504d"];
+"LOW_BATTERY" -> "MAINTENANCE" [label="VehicleFailed" color="#c0504d", fontcolor="#c0504d"];
+"CHARGING" -> "MAINTENANCE" [label="VehicleFailed" color="#c0504d", fontcolor="#c0504d"];
+"MAINTENANCE" -> "AVAILABLE" [label="repaired" style=dashed];
+}

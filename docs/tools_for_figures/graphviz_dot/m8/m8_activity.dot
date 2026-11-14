@@ -1,0 +1,27 @@
+digraph G { graph [rankdir=TB, fontname="DejaVu Sans", nodesep=0.35, ranksep=0.35, label=<<b>What-if run: from a description to a decision (M8)</b>>, labelloc=t, fontsize=14]; node [fontname="DejaVu Sans", fontsize=11]; edge [fontname="DejaVu Sans", fontsize=9.5, color="#555555"];
+s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
+
+d1 [label="Describe\nin words?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+p [label="Parse: LLM if configured,\notherwise local rules", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+f [label="Pre-filled editable form", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d2 [label="Fields valid?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+d3 [label="Snapshot\nsource?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+c [label="Capture snapshot in one\nREPEATABLE_READ read", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+r [label="Reuse the snapshot\nof a saved run", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+m [shape=diamond, label="", width=0.3, height=0.3, style=filled, fillcolor="#ffffff"];
+sim [label="Simulate scenario and baseline\nminute by minute", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+pr [label="Propose dispatch or reroute;\nkeep only proposals that\nreduce failed requests", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+sv [label="Save the run (RunStore)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+sh [label="Show KPIs, timeline, per-hub table,\nproposals and assumptions", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d4 [label="Next step?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+cmp [label="History: select two runs,\ncompare KPIs", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+dis [label="Proposal DISCARDED;\nlive state unchanged", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ap [label="Refused: DISPATCH_NOT_CONNECTED;\nnothing executed", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
+s -> d1; d1 -> p [label="yes"]; d1 -> f [label="no"]; p -> f; f -> d2; d2 -> f [label="no: field errors", constraint=false];
+d2 -> d3 [label="yes"]; d3 -> c [label="live"]; d3 -> r [label="saved run"]; c -> m; r -> m; m -> sim -> pr -> sv -> sh -> d4;
+d4 -> f [label="edit and run again", constraint=false, style=dashed];
+d4 -> cmp [label="compare"]; d4 -> dis [label="discard"]; d4 -> ap [label="apply"];
+cmp -> e; dis -> e; ap -> e;
+{rank=same; c; r} {rank=same; cmp; dis; ap}
+}

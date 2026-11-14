@@ -1,0 +1,13 @@
+{
+  "name": "emobility-screenshots",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "list": "node capture.mjs list",
+    "mockup": "node capture.mjs mockup",
+    "real": "node capture.mjs real"
+  },
+  "devDependencies": {
+    "playwright": "1.48.2"
+  }
+}

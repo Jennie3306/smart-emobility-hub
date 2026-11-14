@@ -1,0 +1,62 @@
+
+%%{init: {'theme':'base','themeVariables':{'fontFamily':'Arial','fontSize':'17px','actorBkg':'#eef2fb','actorBorder':'#4a6fa5','noteBkgColor':'#fff4c2','noteBorderColor':'#c9a227','activationBkgColor':'#dfe8f7'}}}%%
+sequenceDiagram
+    autonumber
+    actor Op as Operator
+    participant Page as DashboardPage
+    participant Broker as STOMP broker
+    participant Ctrl as MonitoringController
+    participant Alerts as AlertService
+    participant Svc as MonitoringService
+    participant Repo as Repositories
+    participant Handler as MonitoringEventHandler
+    participant Store as ProcessedEventStore
+    participant Owner as M4 / M5 (owner)
+
+    rect rgb(232, 240, 252)
+    Note over Op,Repo: A — initial load (one aggregated call)
+    Op->>Page: open dashboard
+    Page->>Ctrl: GET /api/m1/dashboard
+    Ctrl->>Alerts: findOpen()
+    Alerts-->>Ctrl: List<AlertDto>
+    Ctrl->>Svc: getDashboard(openAlerts)
+    Svc->>Repo: countByHub()<br/>countAvailableVehiclesPerHub()
+    Repo-->>Svc: per-hub counts
+    Svc->>Svc: computeUtilisation(HubCounts)<br/>BR-M1-01, 02, 08, 09
+    Svc-->>Ctrl: DashboardDto
+    Ctrl-->>Page: 200 OK + JSON
+    Page-->>Op: render three regions
+    end
+
+    rect rgb(230, 245, 230)
+    Note over Page,Broker: B — subscribe once
+    Page->>Broker: CONNECT /ws<br/>SUBSCRIBE /topic/hubs, /topic/alerts
+    Broker-->>Page: connected
+    end
+
+    rect rgb(255, 246, 220)
+    Note over Broker,Owner: C — push when an owner announces a state change
+    Owner-)Handler: ResourceStateUpdatedEvent<br/>(eventId, hubId, type, id, newState)
+    Handler->>Store: markIfNew("M1", eventId)
+    alt eventId already processed
+        Store-->>Handler: false
+        Handler->>Handler: skip duplicate
+    else new eventId
+        Store-->>Handler: true
+        Handler->>Repo: applyState(newState)<br/>m1_resource_state
+        Handler->>Svc: buildHubStatus(hubId)
+        Svc-->>Handler: HubStatusDto
+        Handler->>Broker: publishHubStatus()<br/>/topic/hubs
+        Broker-->>Page: HubStatusDto
+        Page->>Page: patch row, flash once<br/>(FR-M1-06)
+    end
+    end
+
+    rect rgb(252, 232, 232)
+    Note over Op,Ctrl: D — exceptions 6a / 7a: channel lost
+    Broker--xPage: connection closed
+    Page-->>Op: "Data may be stale —<br/>last updated HH:MM:SS"
+    loop every 15 s until reconnected
+        Page->>Ctrl: GET /api/m1/dashboard
+    end
+    end

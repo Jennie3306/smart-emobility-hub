@@ -1,0 +1,28 @@
+digraph G {
+imagepath="../../python"; rankdir=LR; splines=true; nodesep=0.35; ranksep=1.3; fontname="DejaVu Sans";
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", fontsize=11, arrowsize=0.8];
+"op" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><b>Operator</b></font></td></tr></table>>];
+"tm" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>Timer</b></font></td></tr></table>>];
+subgraph cluster_sys { label=<<b>«subsystem» M8 — What-if Simulation</b>>; fontsize=14; style="rounded"; color="#1f4e79"; penwidth=2; bgcolor="#f9fbfd";
+"UC-M8-01" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M8-01</b><br/>Prepare a scenario<br/>(describe or edit)>];
+"UC-M8-06" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M8-06</b><br/>Validate the<br/>scenario>];
+"UC-M8-02" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M8-02</b><br/>Run a simulation<br/>on a snapshot>];
+"UC-M8-03" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M8-03</b><br/>Review and compare<br/>saved runs>];
+"UC-M8-04" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M8-04</b><br/>Review recommendations<br/>(discard / apply)>];
+"UC-M8-05" [shape=ellipse, style=filled, fillcolor="#fff1c9", color="#d4b04a", penwidth=1.6, fontsize=11, label=<<b>UC-M8-05</b><br/>Check recent booking<br/>volume every 30 min>];
+}
+"ai" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>AI provider (optional)</b></font></td></tr></table>>];
+"own" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>M2, M3, M1, M6 data</b></font></td></tr></table>>];
+"op" -> "UC-M8-01" [dir=none, color="#444444"];
+"op" -> "UC-M8-02" [dir=none, color="#444444"];
+"op" -> "UC-M8-03" [dir=none, color="#444444"];
+"op" -> "UC-M8-04" [dir=none, color="#444444"];
+"tm" -> "UC-M8-05" [dir=none, color="#444444"];
+"UC-M8-01" -> "ai" [dir=none, color="#444444"];
+"UC-M8-04" -> "ai" [dir=none, color="#444444"];
+"UC-M8-02" -> "own" [dir=none, color="#444444"];
+"UC-M8-05" -> "own" [dir=none, color="#444444"];
+"UC-M8-01" -> "UC-M8-06" [style=dashed, color="#2e6fb0", fontcolor="#2e6fb0", label="«include»", constraint=false];
+"UC-M8-02" -> "UC-M8-06" [style=dashed, color="#2e6fb0", fontcolor="#2e6fb0", label="«include»", constraint=false];
+"UC-M8-04" -> "UC-M8-02" [style=dashed, color="#c0571b", fontcolor="#c0571b", label="«extend»", constraint=false];
+}

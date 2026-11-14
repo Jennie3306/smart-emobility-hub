@@ -1,0 +1,29 @@
+sequenceDiagram
+autonumber
+actor S as Student
+participant PC as ParkingController
+participant PS as ParkingService
+participant DB as parking_space / parking_booking_log
+participant RC as ReservationCore (M2)
+participant EP as EventPublisher
+participant M5 as ChargingEventHandler (M5)
+S->>PC: POST /api/m4/bookings {hub, window, vehicle, requestCharging}
+PC->>PS: book(studentId, request)
+PS->>PS: validateWindow, resolveVehicle (BR-M4-02), battery < 90%
+PS->>DB: count overlapping bookings + docked rental vehicles
+alt count ≥ capacity (BR-M4-01, BR-M4-08)
+  PS-->>PC: 409 HUB_FULL
+else room left
+  PS->>DB: pickSpace — FREE, right type, with charger (row lock)
+  PS->>RC: reserveWindow(student, PARKING_SPACE, space, hub, window, start + 15 min)
+  alt same space or second booking
+    RC-->>PS: RESOURCE_CONFLICT / RESERVATION_LIMIT_EXCEEDED (rollback)
+  else confirmed
+    RC-->>PS: Reservation CONFIRMED
+    PS->>DB: space.book(id) → RESERVED, booking log ACTIVE
+    PS->>EP: ResourceStateUpdated(PARKING_SPACE, RESERVED) → M1
+    PS->>EP: ChargingRequested(student, hub, space, PERSONAL, battery, window)
+    EP->>M5: onChargingRequested → session queued, prefers the charger of the space
+    PC-->>S: 201 booking with check-in window
+  end
+end

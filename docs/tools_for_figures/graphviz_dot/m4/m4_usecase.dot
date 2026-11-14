@@ -1,0 +1,26 @@
+digraph G {
+imagepath="../../python"; rankdir=LR; splines=true; nodesep=0.35; ranksep=1.3; fontname="DejaVu Sans";
+node [fontname="DejaVu Sans"]; edge [fontname="DejaVu Sans", fontsize=11, arrowsize=0.8];
+"stu" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><b>Student</b></font></td></tr></table>>];
+"op" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><b>Operator</b></font></td></tr></table>>];
+subgraph cluster_sys { label=<<b>«subsystem» M4 — Parking and Personal Vehicles</b>>; fontsize=14; style="rounded"; color="#1f4e79"; penwidth=2; bgcolor="#f9fbfd";
+"UC-M4-01" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M4-01</b><br/>Register a personal vehicle>];
+"UC-M4-02" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M4-02</b><br/>Book a parking space>];
+"UC-M4-06" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M4-06</b><br/>Request charging<br/>with the booking>];
+"UC-M4-03" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M4-03</b><br/>Check in / check out>];
+"UC-M4-05" [shape=ellipse, style=filled, fillcolor="#dae7f8", color="#6f8fc4", penwidth=1.6, fontsize=11, label=<<b>UC-M4-05</b><br/>Block / unblock a space>];
+"UC-M4-04" [shape=ellipse, style=filled, fillcolor="#fff1c9", color="#d4b04a", penwidth=1.6, fontsize=11, label=<<b>UC-M4-04</b><br/>Release no-show<br/>and overstay>];
+"UC-M4-07" [shape=ellipse, style=filled, fillcolor="#fff1c9", color="#d4b04a", penwidth=1.6, fontsize=11, label=<<b>UC-M4-07</b><br/>Dock a rental vehicle<br/>in the shared pool>];
+}
+"tim" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>Timer</b></font></td></tr></table>>];
+"m3" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>M3 (return / pick-up)</b></font></td></tr></table>>];
+"m6" [shape=plain, label=<<table border="0" cellspacing="0" cellpadding="1"><tr><td fixedsize="true" width="40" height="56"><img src="stick.png" scale="true"/></td></tr><tr><td><font point-size="12"><i>«system»</i><br/><b>M5 / M6 (charger state)</b></font></td></tr></table>>];
+"stu" -> "UC-M4-01" [dir=none, color="#444444"];
+"stu" -> "UC-M4-02" [dir=none, color="#444444"];
+"stu" -> "UC-M4-03" [dir=none, color="#444444"];
+"op" -> "UC-M4-05" [dir=none, color="#444444"];
+"UC-M4-04" -> "tim" [dir=none, color="#444444"];
+"UC-M4-07" -> "m3" [dir=none, color="#444444"];
+"UC-M4-05" -> "m6" [dir=none, color="#444444"];
+"UC-M4-06" -> "UC-M4-02" [style=dashed, color="#c0571b", fontcolor="#c0571b", label="«extend»", constraint=false];
+}

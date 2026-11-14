@@ -1,0 +1,27 @@
+sequenceDiagram
+autonumber
+participant M6 as DeviceEventService (M6)
+participant EP as EventPublisher
+participant H as ChargingEventHandler (M5)
+participant CS as ChargingService (M5)
+participant M4 as ParkingEventHandler (M4)
+participant M1 as MonitoringEventHandler (M1)
+M6->>M6: record Incident (one per resource)
+M6->>EP: ChargerFailedEvent(point, hub, reason)
+EP->>H: onChargerFailed (markIfNew M5, eventId)
+H->>CS: handleChargerFailed(pointId, hubId)
+CS->>CS: point.markFaulty()
+CS->>EP: ResourceStateUpdated(CHARGING_POINT, FAULTY)
+EP->>M1: mirror FAULTY on the dashboard
+loop each session on the point
+  alt booked window not started yet
+    CS->>CS: move the booking to another free point
+  else charging or held
+    CS->>CS: save battery, interrupt(), requeueAfterFailure()
+  end
+end
+CS->>CS: recalculateHub — rank by P, assign free points
+alt still waiting
+  CS->>CS: applyFailureBonus (+20), recalculate again
+end
+EP->>M4: ChargerFailedEvent → block the space of the charger
