@@ -10,14 +10,13 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
   const best = state?.best;
   const hub = (id: number) => run.snapshot.hubs.find(h => h.id === id)?.name ?? `Hub ${id}`;
   const action = (a: PlanAction) => a.action === "reroute"
-    ? "Serve rental requests at other open hubs"
+    ? `Serve requests from ${hub(a.fromHubId)} at other open hubs`
     : `Move ${count.format(a.amount)} vehicles from ${hub(a.fromHubId)} to ${hub(a.toHubId)}`;
   const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
   const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW"].includes(item.status));
 
   return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={busy}>
     <div className="m8-section-head">
-      <span className="m8-step" aria-hidden="true">3</span>
       <div><h2>AI Plan Exploration</h2><p>AI proposes a plan. The simulator tests it and sends the results back.</p></div>
       <span className="m8-chip">{state ? `${state.totalRounds} total rounds` : "Not started"}</span>
     </div>
