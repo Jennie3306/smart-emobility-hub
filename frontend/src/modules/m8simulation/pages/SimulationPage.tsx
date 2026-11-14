@@ -154,10 +154,10 @@ export default function SimulationPage() {
             </section>
             <section className="m8-results" id="m8-scenario-results" tabIndex={-1}>
               <div className="m8-panel m8-preview"><div className="m8-section-head"><div><h2>Scenario Results</h2><p>{active?`${active.scenario.name} · ${time(active.createdAt)}`:"Calculated by the simulator after you confirm the inputs."}</p></div><span className="m8-chip">{active?(dirty?"Draft changed":"Saved"):"Ready"}</span></div>
-                <div className="m8-empty">
+                <div className="m8-starting-network">
                   <h3>Starting network</h3>
-                  <p>{active && !dirty ? "Starting vehicles for this saved run. Edit to test a new run." : "Set available vehicles for the next run. Edits affect simulation only."}</p>
-                  <p className="m8-field-hint">Available vehicles have at least 20% battery.{inputSnapshot?.hypotheticalFleet && " This snapshot includes simulated fleet edits."}</p>
+                  <p className="m8-footnote">{active && !dirty ? "Saved starting counts." : "Starting counts for the next run."} Vehicle edits are simulation only.</p>
+                  <p className="m8-footnote">Availability requires at least 20% battery.{inputSnapshot?.hypotheticalFleet && " This snapshot includes simulated fleet edits."}</p>
                   <div className="m8-mini-network">{(inputSnapshot ?? snapshot).hubs.map(hub => {
                     const source = inputSnapshot ?? snapshot;
                     const assigned = source.vehicles.filter(vehicle => vehicle.hubId === hub.id);
@@ -175,14 +175,14 @@ export default function SimulationPage() {
                       });
                     }
                     const delta = available - captured;
-                    return <span key={hub.id}>{hub.name}
+                    return <span key={hub.id}><strong>{hub.name}</strong>
                       <small className="m8-parking-count">{parking
                         ? `${Math.max(0, parking.usedSlots + delta)} / ${parking.totalSlots} slots used · ${Math.min(parking.freeSlots + parking.usedSlots, Math.max(0, parking.freeSlots - delta))} free${delta !== 0 ? " · Simulated" : ""}`
                         : "Parking data unavailable"}</small>
                       <span className="m8-fleet-stepper">
                         <button className="m8-button secondary" type="button" aria-label={`Remove one available vehicle from ${hub.name}`}
                           disabled={busy || available <= 0} onClick={() => adjust(available - 1)}>−</button>
-                        <b aria-live="polite">{available} available{parking && ` · max ${max}`}</b>
+                        <b aria-live="polite">{available} available<small>{parking && `Max ${max}`}</small></b>
                         <button className="m8-button secondary" type="button" aria-label={`Add one available vehicle to ${hub.name}`}
                           disabled={busy || available >= max} onClick={() => adjust(available + 1)}>+</button>
                       </span>

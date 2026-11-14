@@ -95,12 +95,6 @@
 .m8-app th { color: var(--muted); font-weight: 600; text-align: left; padding: 12px; background: #f7f9fb; white-space: nowrap; }
 .m8-app td { padding: 14px 12px; border-bottom: 1px solid #e7edf2; overflow-wrap: anywhere; }
 .m8-app td small { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; }
-.m8-empty { padding: 14px 0 0; }
-.m8-empty h3 { font-size: 18px; font-weight: 600; margin-bottom: 9px; }
-.m8-empty > p { color: var(--muted); font-size: 14px; max-width: 65ch; line-height: 1.75; margin: 0; }
-.m8-mini-network { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; margin-top: 22px; }
-.m8-mini-network > span { border-top: 1px solid var(--line); padding: 12px 0; font-size: 12px; }
-.m8-mini-network b { display: block; color: var(--brand); font-size: 13px; font-weight: 600; margin-top: 4px; }
 .m8-muted { font-size: 13px; color: var(--muted); line-height: 1.75; }
 .m8-recommendation { display: flex; gap: 12px; padding: 18px 0; border-top: 1px solid var(--line); }
 .m8-recommendation > div:last-child { min-width: 0; overflow-wrap: anywhere; }
@@ -147,7 +141,6 @@
 .m8-retry-bar strong { font-size: 13px; font-weight: 600; }
 .m8-retry-bar p { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
 .m8-retry-bar > button { flex-shrink: 0; }
-.m8-run-context { margin-bottom: 18px; }
 .m8-planning-history, .m8-agent-limits { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 14px; }
 .m8-planning-history > summary > span { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 8px; }
 .m8-agent-rounds { list-style: none; padding: 0; margin: 10px 0 0; }
@@ -186,7 +179,19 @@
   .m8-result-jump { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); }
 }
 
-.m8-mini-network .m8-fleet-stepper { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; border: 0; padding: 0; margin-top: 4px; }
-.m8-fleet-stepper .m8-button { min-width: 44px; padding: 6px; }
 
 .m8-parking-count { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
+
+.m8-starting-network { margin-bottom: 20px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.m8-starting-network h3, .m8-tested-title { font-size: 16px; margin: 0 0 6px; }
+.m8-starting-network > p { margin: 0 0 4px; }
+.m8-mini-network { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; margin-top: 12px; }
+.m8-mini-network > span { min-width: 0; padding: 10px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.m8-mini-network > span > strong { font-size: 13px; }
+.m8-mini-network .m8-fleet-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 6px; margin-top: 8px; }
+.m8-fleet-stepper .m8-button { width: 44px; padding: 6px; }
+.m8-fleet-stepper b { color: var(--brand); text-align: center; font-size: 13px; font-variant-numeric: tabular-nums; }
+.m8-fleet-stepper b small { display: block; color: var(--muted); font-weight: 400; }
+@media (max-width: 560px), (min-width: 951px) and (max-width: 1200px) {
+  .m8-mini-network { grid-template-columns: 1fr; }
+}
