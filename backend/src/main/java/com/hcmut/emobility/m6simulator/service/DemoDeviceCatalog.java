@@ -8,8 +8,10 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Synthetic IDs for local scenarios. Vehicle 1 matches the existing M3 demo
- * seed; parking and charging-point IDs are M6-only fixtures, not database rows.
+ * The resources the simulator reports on, with their Hub: vehicle 1 (EB-001), parking space 1 (P-01) and
+ * charging point 1, all at Hub 1. They are rows of the demo seed; under contract v2 their owners decide what a
+ * reading changes (M3 the vehicle, M5 the charging point; M4 takes space occupancy from bookings, not sensors).
+ * A reading for any other resource is rejected (TC-M6-07).
  */
 @Component
 public class DemoDeviceCatalog {

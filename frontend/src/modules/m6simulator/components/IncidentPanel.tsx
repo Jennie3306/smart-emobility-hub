@@ -3,9 +3,10 @@ import {
   incidentApi, incidentError, incidentSeverities, incidentStatuses, reasonsFor,
   type Incident, type IncidentAction, type IncidentResource, type IncidentSeverity,
 } from "../api/incidentApi";
+import { StatusBadge } from "@/shared/ui";
 
-const actionNames: Record<IncidentAction, string> = { ASSIGN: "Phân công", START: "Bắt đầu xử lý", RESOLVE: "Đã sửa xong", REOPEN: "Mở lại", CLOSE: "Đóng" };
-const resources: Record<IncidentResource, string> = { VEHICLE: "Xe", CHARGING_POINT: "Cổng sạc" };
+const actionNames: Record<IncidentAction, string> = { ASSIGN: "Assign", START: "Start work", RESOLVE: "Mark resolved", REOPEN: "Reopen", CLOSE: "Close" };
+const resources: Record<IncidentResource, string> = { VEHICLE: "Vehicle", CHARGING_POINT: "Charging point" };
 const time = (value: string | null) => value ? new Date(value).toLocaleString() : "—";
 
 function ReportForm({ onDone }: { onDone: (message: string) => void }) {
@@ -24,7 +25,7 @@ function ReportForm({ onDone }: { onDone: (message: string) => void }) {
         reason, severity: String(f.get("severity")) as IncidentSeverity,
         description: String(f.get("description") ?? "").trim() || undefined,
       });
-      onDone(`Đã ghi nhận sự cố #${created.id}. Module sở hữu đã nhận thông báo hỏng và khóa tài nguyên.`);
+      onDone(`Incident #${created.id} recorded. The owning module was notified of the failure and took the resource out of service.`);
     } catch (e) {
       setError(incidentError(e));
     } finally {
@@ -33,28 +34,28 @@ function ReportForm({ onDone }: { onDone: (message: string) => void }) {
   }
 
   return <section className="m6-panel" aria-labelledby="report-title">
-    <h2 id="report-title">Báo cáo sự cố</h2>
+    <h2 id="report-title">Report an incident</h2>
     <form className="m6-form" onSubmit={submit}>
-      <label htmlFor="inc-hub">Mã Hub</label><input id="inc-hub" name="hubId" type="number" min={1} required defaultValue={1} />
-      <label htmlFor="inc-type">Loại tài nguyên</label>
+      <label htmlFor="inc-hub">Hub ID</label><input id="inc-hub" name="hubId" type="number" min={1} required defaultValue={1} />
+      <label htmlFor="inc-type">Resource type</label>
       <select id="inc-type" value={type} onChange={e => { const t = e.target.value as IncidentResource; setType(t); setReason(reasonsFor[t][0]); }}>
-        <option value="VEHICLE">Xe</option><option value="CHARGING_POINT">Cổng sạc</option>
+        <option value="VEHICLE">Vehicle</option><option value="CHARGING_POINT">Charging point</option>
       </select>
-      <label htmlFor="inc-resource">Mã tài nguyên</label><input id="inc-resource" name="resourceId" type="number" min={1} required />
-      <label htmlFor="inc-reason">Lý do</label>
+      <label htmlFor="inc-resource">Resource ID</label><input id="inc-resource" name="resourceId" type="number" min={1} required />
+      <label htmlFor="inc-reason">Reason</label>
       <select id="inc-reason" value={reason} onChange={e => setReason(e.target.value)}>
         {reasonsFor[type].map(r => <option key={r}>{r}</option>)}
       </select>
-      <label htmlFor="inc-description">Mô tả{reason === "MANUAL_REPORT" ? " (bắt buộc)" : ""}</label>
+      <label htmlFor="inc-description">Description{reason === "MANUAL_REPORT" ? " (required)" : ""}</label>
       <textarea id="inc-description" name="description" rows={3} required={reason === "MANUAL_REPORT"} />
-      <label htmlFor="inc-severity">Mức độ sự cố</label>
+      <label htmlFor="inc-severity">Incident severity</label>
       <select id="inc-severity" name="severity" required defaultValue="">
-        <option value="" disabled>Chọn mức độ</option>
+        <option value="" disabled>Choose a severity</option>
         {incidentSeverities.map(value => <option key={value}>{value}</option>)}
       </select>
-      <p className="m6-muted">Bắt buộc chọn, không có mức mặc định (BR-M6-10).</p>
+      <p className="m6-muted">Required; there is no default severity (BR-M6-10).</p>
       {error && <p className="m6-error" role="alert">{error}</p>}
-      <button className="m6-primary" type="submit" disabled={sending}>{sending ? "Đang gửi…" : "Gửi báo cáo"}</button>
+      <button className="m6-primary" type="submit" disabled={sending}>{sending ? "Sending…" : "Submit report"}</button>
     </form>
   </section>;
 }
@@ -92,7 +93,7 @@ export function IncidentPanel() {
     setBusy(true); setMessage("");
     try {
       const updated = await incidentApi.transition(selected, action, action === "ASSIGN" ? assignee.trim() : undefined, note.trim() || undefined);
-      setMessage(`Sự cố #${updated.id}: ${actionNames[action]} → ${updated.status}`);
+      setMessage(`Incident #${updated.id}: ${actionNames[action]} → ${updated.status}`);
       setAssignee(""); setNote(""); setError(null);
     } catch (e) {
       setError(incidentError(e));
@@ -104,54 +105,54 @@ export function IncidentPanel() {
 
   return <section aria-labelledby="incident-title">
     <div className="m6-toolbar">
-      <h2 id="incident-title">Sự cố thiết bị</h2>
-      <button className="m6-secondary" type="button" aria-expanded={reporting} onClick={() => setReporting(!reporting)}>{reporting ? "Ẩn form báo cáo" : "Báo cáo sự cố"}</button>
-      <button className="m6-secondary" type="button" onClick={load}>Tải lại</button>
+      <h2 id="incident-title">Device incidents</h2>
+      <button className="m6-secondary" type="button" aria-expanded={reporting} onClick={() => setReporting(!reporting)}>{reporting ? "Hide report form" : "Report an incident"}</button>
+      <button className="m6-secondary" type="button" onClick={load}>Reload</button>
     </div>
     {reporting && <ReportForm onDone={text => { setMessage(text); setReporting(false); load(); }} />}
     {error && <p className="m6-error" role="alert">{error}</p>}
     <p role="status" aria-live="polite">{message}</p>
     <div className="m6-panel">
-      <div className="m6-panel-title"><h2>Danh sách</h2><span>{incidents.length} sự cố</span></div>
+      <div className="m6-panel-title"><h2>Incident register</h2><span>{incidents.length} incident{incidents.length === 1 ? "" : "s"}</span></div>
       <div className="m6-filters">
-        <label>Trạng thái<select value={status} onChange={e => setStatus(e.target.value)}><option value="">Tất cả trạng thái</option>{incidentStatuses.map(v => <option key={v}>{v}</option>)}</select></label>
-        <label>Tài nguyên<select value={resource} onChange={e => setResource(e.target.value)}><option value="">Tất cả tài nguyên</option>{Object.entries(resources).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
-        <label>Mức độ<select value={severity} onChange={e => setSeverity(e.target.value)}><option value="">Tất cả mức độ</option>{incidentSeverities.map(v => <option key={v}>{v}</option>)}</select></label>
+        <label>Status<select value={status} onChange={e => setStatus(e.target.value)}><option value="">All statuses</option>{incidentStatuses.map(v => <option key={v}>{v}</option>)}</select></label>
+        <label>Resource<select value={resource} onChange={e => setResource(e.target.value)}><option value="">All resources</option>{Object.entries(resources).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <label>Severity<select value={severity} onChange={e => setSeverity(e.target.value)}><option value="">All severities</option>{incidentSeverities.map(v => <option key={v}>{v}</option>)}</select></label>
       </div>
-      {loading ? <p className="m6-empty">Đang tải…</p> : incidents.length === 0
-        ? <p className="m6-empty" role="status">Không có sự cố phù hợp với bộ lọc.</p>
+      {loading ? <p className="m6-empty">Loading…</p> : incidents.length === 0
+        ? <p className="m6-empty" role="status">No incident matches the filters.</p>
         : <div className="m6-table-wrap"><table>
-          <thead><tr><th>Sự cố</th><th>Tài nguyên / Hub</th><th>Lý do</th><th>Mức độ</th><th>Người xử lý</th><th>Trạng thái</th></tr></thead>
+          <thead><tr><th>Incident</th><th>Resource / hub</th><th>Reason</th><th>Severity</th><th>Assignee</th><th>Status</th></tr></thead>
           <tbody>{incidents.map(i => <tr key={i.id} className={i.id === selectedId ? "m6-selected" : ""}>
-            <td><button type="button" className="m6-link" aria-label={`Xem sự cố ${i.id}`} onClick={() => { setSelectedId(i.id); setAssignee(""); setNote(""); setMessage(""); }}>#{i.id}</button>
-              <small>{i.source === "DEVICE" ? "Từ thiết bị" : `Báo bởi ${i.reportedBy}`}</small></td>
+            <td><button type="button" className="m6-link" aria-label={`Open incident ${i.id}`} onClick={() => { setSelectedId(i.id); setAssignee(""); setNote(""); setMessage(""); }}>#{i.id}</button>
+              <small>{i.source === "DEVICE" ? "From a device" : `Reported by ${i.reportedBy}`}</small></td>
             <td>{resources[i.resourceType]} #{i.resourceId}<small>Hub #{i.hubId}</small></td>
-            <td>{i.reason}</td><td>{i.severity}</td><td>{i.assignee || "Chưa gán"}</td>
-            <td><span className="m6-tag">{i.status}</span></td>
+            <td>{i.reason}</td><td><StatusBadge status={i.severity} /></td><td>{i.assignee || "Unassigned"}</td>
+            <td><StatusBadge status={i.status} /></td>
           </tr>)}</tbody>
         </table></div>}
     </div>
     {selected && <section className="m6-panel m6-detail" aria-labelledby="incident-detail-title">
-      <div className="m6-panel-title"><h2 id="incident-detail-title">Chi tiết sự cố #{selected.id}</h2><span className="m6-tag">{selected.status}</span></div>
+      <div className="m6-panel-title"><h2 id="incident-detail-title">Incident #{selected.id}</h2><StatusBadge status={selected.status} /></div>
       {selected.description && <p>{selected.description}</p>}
       <dl className="m6-facts">
-        <div><dt>Tài nguyên</dt><dd>{resources[selected.resourceType]} #{selected.resourceId} · Hub #{selected.hubId}</dd></div>
-        <div><dt>Lý do / mức độ</dt><dd>{selected.reason} · {selected.severity}</dd></div>
-        <div><dt>Báo cáo</dt><dd>{time(selected.reportedAt)} · {selected.reportedBy}</dd></div>
-        <div><dt>Phân công / bắt đầu</dt><dd>{time(selected.assignedAt)} · {time(selected.startedAt)}</dd></div>
-        <div><dt>Sửa xong / đóng</dt><dd>{time(selected.resolvedAt)} · {time(selected.closedAt)}</dd></div>
-        <div><dt>Phiên bản</dt><dd>{selected.version}</dd></div>
-        {selected.note && <div><dt>Ghi chú gần nhất</dt><dd>{selected.note}</dd></div>}
+        <div><dt>Resource</dt><dd>{resources[selected.resourceType]} #{selected.resourceId} · Hub #{selected.hubId}</dd></div>
+        <div><dt>Reason / severity</dt><dd>{selected.reason} · {selected.severity}</dd></div>
+        <div><dt>Reported</dt><dd>{time(selected.reportedAt)} · {selected.reportedBy}</dd></div>
+        <div><dt>Assigned / started</dt><dd>{time(selected.assignedAt)} · {time(selected.startedAt)}</dd></div>
+        <div><dt>Resolved / closed</dt><dd>{time(selected.resolvedAt)} · {time(selected.closedAt)}</dd></div>
+        <div><dt>Version</dt><dd>{selected.version}</dd></div>
+        {selected.note && <div><dt>Latest note</dt><dd>{selected.note}</dd></div>}
       </dl>
-      {selected.allowedActions.includes("ASSIGN") && <label className="m6-assignee">Tên đăng nhập Operator xử lý
-        <input value={assignee} onChange={e => setAssignee(e.target.value)} placeholder="vd. operator1" /></label>}
-      {selected.allowedActions.length > 0 && <label className="m6-assignee">Ghi chú (tùy chọn)
+      {selected.allowedActions.includes("ASSIGN") && <label className="m6-assignee">Assignee (operator username)
+        <input value={assignee} onChange={e => setAssignee(e.target.value)} placeholder="e.g. operator1" /></label>}
+      {selected.allowedActions.length > 0 && <label className="m6-assignee">Note (optional)
         <input value={note} onChange={e => setNote(e.target.value)} /></label>}
       <div className="m6-toolbar">{selected.allowedActions.map(action => <button className="m6-secondary" type="button" key={action}
         disabled={busy || (action === "ASSIGN" && !assignee.trim())} onClick={() => transition(action)}>{actionNames[action]}</button>)}
-        {selected.status === "CLOSED" && <p>Sự cố đã đóng; không còn thao tác nào (BR-M6-04).</p>}
+        {selected.status === "CLOSED" && <p>The incident is closed; no further action is possible (BR-M6-04).</p>}
       </div>
-      <p className="m6-muted">Sửa xong sự cố không tự đưa thiết bị về hoạt động: thiết bị hoạt động lại khi có số đọc mới (vd. chạy NORMAL_TICK), và module sở hữu quyết định trạng thái.</p>
+      <p className="m6-muted">Resolving an incident does not bring the device back by itself: the device returns to service with its next healthy reading (for example a NORMAL_TICK run), and the owning module decides its state.</p>
     </section>}
   </section>;
 }

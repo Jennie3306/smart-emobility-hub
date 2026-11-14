@@ -3,6 +3,7 @@ import {
   chargingApi, chargingErrorMessage, currentRole,
   type ChargingHub, type ChargingSession, type PriorityLevel,
 } from "../api/chargingApi";
+import { BatteryMeter, Notice, PageHeader, PageSkeleton, StatCard, StatusBadge } from "@/shared/ui";
 
 const statusTone: Record<string, string> = {
   REQUESTED: "bg-slate-100 text-slate-700",
@@ -15,15 +16,11 @@ const statusTone: Record<string, string> = {
 };
 
 function Battery({ value }: { value: number }) {
-  const color = value < 20 ? "bg-state-fault" : value < 50 ? "bg-state-busy" : "bg-state-available";
-  return <div className="flex items-center gap-2 min-w-24">
-    <div className="h-2 flex-1 rounded bg-slate-200 overflow-hidden"><div className={`h-full ${color}`} style={{ width: `${value}%` }} /></div>
-    <span className="text-xs tabular-nums">{value}%</span>
-  </div>;
+  return <BatteryMeter level={value} width="w-20" />;
 }
 
 function SessionStatus({ status }: { status: string }) {
-  return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${statusTone[status] ?? "bg-slate-100 text-slate-700"}`}>{status}</span>;
+  return <StatusBadge status={status} />;
 }
 
 function formatDate(value: string | null) {
@@ -36,27 +33,27 @@ function SessionList({ sessions, onStart, onCancel, busyId }: {
   onCancel?: (id: number) => void;
   busyId: number | null;
 }) {
-  if (!sessions.length) return <div className="rounded-lg border border-dashed bg-white p-8 text-center text-sm text-slate-500">
+  if (!sessions.length) return <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
     No charging sessions yet. A request will appear here after it is submitted.
   </div>;
 
-  return <div className="overflow-x-auto rounded-lg border bg-white">
-    <table className="w-full text-sm">
-      <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
-        <tr><th className="p-3">Session</th><th className="p-3">Vehicle</th><th className="p-3">Battery</th><th className="p-3">Priority</th><th className="p-3">Status</th><th className="p-3">Port / Queue</th><th className="p-3">Schedule</th><th className="p-3">Actions</th></tr>
+  return <div className="card overflow-x-auto">
+    <table className="table-ui">
+      <thead>
+        <tr><th>Session</th><th>Vehicle</th><th>Battery</th><th>Priority</th><th>Status</th><th>Port / Queue</th><th>Schedule</th><th>Actions</th></tr>
       </thead>
       <tbody>
-        {sessions.map(session => <tr key={session.id} className="border-t align-middle">
-          <td className="p-3 font-mono">CS-{session.id}</td>
-          <td className="p-3"><div className="font-medium">{session.vehicleKind} #{session.vehicleId}</div><div className="text-xs text-slate-500">Hub #{session.hubId}</div></td>
-          <td className="p-3"><Battery value={session.batteryLevel} /></td>
-          <td className="p-3"><span className={`text-xs font-semibold ${session.priorityLevel === "URGENT" ? "text-red-700" : session.priorityLevel === "HIGH" ? "text-amber-700" : "text-slate-600"}`}>{session.priorityLevel}</span><div className="text-xs text-slate-500">P {session.priorityScore.toFixed(1)}</div></td>
-          <td className="p-3"><SessionStatus status={session.status} /></td>
-          <td className="p-3 text-xs">{session.chargingPointId ? `CP-${session.chargingPointId}` : session.queuePosition ? `Queue #${session.queuePosition}` : "—"}</td>
-          <td className="p-3 text-xs">{session.scheduledStartAt ? <>{formatDate(session.scheduledStartAt)}<div className="text-slate-500">to {formatDate(session.scheduledEndAt)}</div></> : <>{session.waitingMinutes} min waiting{session.estimatedWaitMinutes != null && <> · ~{session.estimatedWaitMinutes} min ETA</>}</>}</td>
-          <td className="p-3"><div className="flex gap-2">
-            {onStart && session.status === "SCHEDULED" && <button disabled={busyId === session.id} className="rounded bg-brand px-2 py-1 text-xs text-white disabled:opacity-50" onClick={() => onStart(session.id)}>Start</button>}
-            {onCancel && ["REQUESTED", "QUEUED", "SCHEDULED", "INTERRUPTED"].includes(session.status) && <button disabled={busyId === session.id} className="rounded border border-red-200 px-2 py-1 text-xs text-red-700 disabled:opacity-50" onClick={() => onCancel(session.id)}>Cancel</button>}
+        {sessions.map(session => <tr key={session.id}>
+          <td className="font-mono">CS-{session.id}</td>
+          <td><div className="font-medium">{session.vehicleKind} #{session.vehicleId}</div><div className="text-xs text-slate-500">Hub #{session.hubId}</div></td>
+          <td><Battery value={session.batteryLevel} /></td>
+          <td><StatusBadge status={session.priorityLevel} /><div className="text-xs text-slate-500">P {session.priorityScore.toFixed(1)}</div></td>
+          <td><SessionStatus status={session.status} /></td>
+          <td className="text-xs">{session.chargingPointId ? `CP-${session.chargingPointId}` : session.queuePosition ? `Queue #${session.queuePosition}` : "—"}</td>
+          <td className="text-xs">{session.scheduledStartAt ? <>{formatDate(session.scheduledStartAt)}<div className="text-slate-500">to {formatDate(session.scheduledEndAt)}</div></> : <>{session.waitingMinutes} min waiting{session.estimatedWaitMinutes != null && <> · ~{session.estimatedWaitMinutes} min ETA</>}</>}</td>
+          <td><div className="flex gap-2">
+            {onStart && session.status === "SCHEDULED" && <button disabled={busyId === session.id} className="btn btn-primary btn-sm" onClick={() => onStart(session.id)}>Start</button>}
+            {onCancel && ["REQUESTED", "QUEUED", "SCHEDULED", "INTERRUPTED"].includes(session.status) && <button disabled={busyId === session.id} className="btn btn-danger btn-sm" onClick={() => onCancel(session.id)}>Cancel</button>}
           </div></td>
         </tr>)}
       </tbody>
@@ -210,62 +207,57 @@ export default function ChargingPage() {
     finally { setBusyId(null); }
   }
 
-  if (loading) return <div className="space-y-3"><div className="h-8 w-64 animate-pulse rounded bg-slate-200" /><div className="h-40 animate-pulse rounded bg-slate-200" /></div>;
-  if (!role) return <p className="rounded border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error ?? "Unable to identify the signed-in role."}</p>;
+  if (loading) return <PageSkeleton />;
+  if (!role) return <Notice kind="error">{error ?? "Unable to identify the signed-in role."}</Notice>;
 
-  return <div className="space-y-5">
-    <header className="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p className="text-xs font-semibold uppercase tracking-widest text-brand">M5 · Smart charging</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">{role === "OPERATOR" ? "Charging queue & operations" : "My charging"}</h1>
-        <p className="mt-1 max-w-3xl text-sm text-slate-600">Priority-based allocation considers battery need, expected vehicle use and waiting time. A session already charging is never pre-empted.</p>
-      </div>
-      <div className="flex items-center gap-3">
-        {role === "OPERATOR" && <label className="text-sm">Hub <select className="ml-2 rounded border px-3 py-2" value={hubId ?? ""} onChange={e => setHubId(Number(e.target.value))}>{hubs.map(h => <option key={h.hubId} value={h.hubId}>{h.hubName}</option>)}</select></label>}
-        <button className="rounded border bg-white px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-50" onClick={refreshNow} disabled={busy}>Refresh</button>
-      </div>
-    </header>
+  return <div className="space-y-6">
+    <PageHeader module="M5" eyebrow="Charging queue & smart scheduling" title={role === "OPERATOR" ? "Smart charging operations" : "My charging"}
+      description="Priority-based allocation considers battery need, expected vehicle use and waiting time. A session already charging is never pre-empted."
+      actions={<>
+        {role === "OPERATOR" && <label className="flex items-center gap-2 text-sm font-medium text-slate-600">Hub <select className="input mt-0 w-auto" value={hubId ?? ""} onChange={e => setHubId(Number(e.target.value))}>{hubs.map(h => <option key={h.hubId} value={h.hubId}>{h.hubName}</option>)}</select></label>}
+        <button className="btn btn-secondary" onClick={refreshNow} disabled={busy}>↻ Refresh</button>
+      </>} />
 
-    {error && <div role="alert" className="rounded border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>}
-    {notice && <div role="status" className="rounded border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">{notice}</div>}
+    {error && <Notice kind="error" onClose={() => setError(null)}>{error}</Notice>}
+    {notice && <Notice kind="success" onClose={() => setNotice(null)}>{notice}</Notice>}
 
     {role === "STUDENT" ? <>
       <div className="grid gap-4 xl:grid-cols-2">
-        <form onSubmit={submitRequest} className="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
-          <div><h2 className="font-semibold text-slate-900">Request charging</h2><p className="mt-1 text-xs text-slate-500">For a rental vehicle or a registered personal EV.</p></div>
-          <label className="block text-sm">Hub<select required className="mt-1 w-full rounded border p-2" value={hubId ?? ""} onChange={e => setHubId(Number(e.target.value))}>{hubs.map(h => <option key={h.hubId} value={h.hubId}>{h.hubName}</option>)}</select></label>
+        <form onSubmit={submitRequest} className="space-y-4 card p-5">
+          <div><h2 className="text-[15px] font-semibold text-slate-900">Request charging</h2><p className="hint mt-1">For a rental vehicle or a registered personal EV.</p></div>
+          <label className="label">Hub<select required className="input" value={hubId ?? ""} onChange={e => setHubId(Number(e.target.value))}>{hubs.map(h => <option key={h.hubId} value={h.hubId}>{h.hubName}</option>)}</select></label>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm">Vehicle kind<select className="mt-1 w-full rounded border p-2" value={vehicleKind} onChange={e => setVehicleKind(e.target.value as "RENTAL" | "PERSONAL")}><option value="RENTAL">Rental</option><option value="PERSONAL">Personal</option></select></label>
-            <label className="block text-sm">Vehicle ID<input required min="1" type="number" className="mt-1 w-full rounded border p-2" value={vehicleId} onChange={e => setVehicleId(e.target.value)} /></label>
+            <label className="label">Vehicle kind<select className="input" value={vehicleKind} onChange={e => setVehicleKind(e.target.value as "RENTAL" | "PERSONAL")}><option value="RENTAL">Rental</option><option value="PERSONAL">Personal</option></select></label>
+            <label className="label">Vehicle ID<input required min="1" type="number" className="input" value={vehicleId} onChange={e => setVehicleId(e.target.value)} /></label>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block text-sm">Battery level (%)<input required min="0" max="100" type="number" className="mt-1 w-full rounded border p-2" value={batteryLevel} onChange={e => setBatteryLevel(e.target.value)} /></label>
-            <label className="block text-sm">Expected next use (optional)<input type="datetime-local" className="mt-1 w-full rounded border p-2" value={expectedUseAt} onChange={e => setExpectedUseAt(e.target.value)} /></label>
+            <label className="label">Battery level (%)<input required min="0" max="100" type="number" className="input" value={batteryLevel} onChange={e => setBatteryLevel(e.target.value)} /></label>
+            <label className="label">Expected next use (optional)<input type="datetime-local" className="input" value={expectedUseAt} onChange={e => setExpectedUseAt(e.target.value)} /></label>
           </div>
-          <label className="block text-sm">Parking space ID (optional)<input min="1" type="number" className="mt-1 w-full rounded border p-2" value={parkingSpaceId} onChange={e => setParkingSpaceId(e.target.value)} /></label>
+          <label className="label">Parking space ID (optional)<input min="1" type="number" className="input" value={parkingSpaceId} onChange={e => setParkingSpaceId(e.target.value)} /></label>
           <p className="text-xs text-slate-500">Requests are rejected at 90% battery or higher. Each vehicle may have only one unfinished session.</p>
-          <button disabled={busy || !hubId} className="rounded bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Submitting…" : "Submit charging request"}</button>
+          <button disabled={busy || !hubId} className="btn btn-primary">{busy ? "Submitting…" : "Submit charging request"}</button>
         </form>
 
-        <form onSubmit={submitSchedule} className="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
-          <div><h2 className="font-semibold text-slate-900">Book a charging schedule</h2><p className="mt-1 text-xs text-slate-500">Personal EV only. The parking reservation must cover the complete charging slot at the same Hub.</p></div>
-          <label className="block text-sm">Personal vehicle ID<input required min="1" type="number" className="mt-1 w-full rounded border p-2" value={vehicleId} onChange={e => setVehicleId(e.target.value)} /></label>
-          <label className="block text-sm">Parking reservation · space ID<input required min="1" type="number" className="mt-1 w-full rounded border p-2" value={parkingSpaceId} onChange={e => setParkingSpaceId(e.target.value)} /></label>
-          <label className="block text-sm">Start time<input required type="datetime-local" className="mt-1 w-full rounded border p-2" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)} /></label>
-          <label className="block text-sm">Duration<select className="mt-1 w-full rounded border p-2" value={duration} onChange={e => setDuration(e.target.value)}><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>
+        <form onSubmit={submitSchedule} className="space-y-4 card p-5">
+          <div><h2 className="text-[15px] font-semibold text-slate-900">Book a charging schedule</h2><p className="hint mt-1">Personal EV only. The parking reservation must cover the complete charging slot at the same Hub.</p></div>
+          <label className="label">Personal vehicle ID<input required min="1" type="number" className="input" value={vehicleId} onChange={e => setVehicleId(e.target.value)} /></label>
+          <label className="label">Parking reservation · space ID<input required min="1" type="number" className="input" value={parkingSpaceId} onChange={e => setParkingSpaceId(e.target.value)} /></label>
+          <label className="label">Start time<input required type="datetime-local" className="input" value={scheduleStart} onChange={e => setScheduleStart(e.target.value)} /></label>
+          <label className="label">Duration<select className="input" value={duration} onChange={e => setDuration(e.target.value)}><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>
           <p className="text-xs text-slate-500">Within 24 hours · 30-minute start slots · maximum two active schedules per student.</p>
-          <button disabled={busy || !hubId} className="rounded bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Booking…" : "Confirm schedule"}</button>
+          <button disabled={busy || !hubId} className="btn btn-primary">{busy ? "Booking…" : "Confirm schedule"}</button>
         </form>
       </div>
-      <section className="space-y-3"><div><h2 className="font-semibold text-slate-900">Your charging sessions</h2><p className="text-xs text-slate-500">Queue status refreshes automatically every 15 seconds.</p></div><SessionList sessions={sessions} onStart={id => actOnSession(id, "start")} onCancel={id => actOnSession(id, "cancel")} busyId={busyId} /></section>
+      <section className="space-y-3"><div><h2 className="text-[15px] font-semibold text-slate-900">Your charging sessions</h2><p className="text-xs text-slate-500">Queue status refreshes automatically every 15 seconds.</p></div><SessionList sessions={sessions} onStart={id => actOnSession(id, "start")} onCancel={id => actOnSession(id, "cancel")} busyId={busyId} /></section>
     </> : <>
       {selectedHub && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Charging points" value={`${selectedHub.chargingPoints} / ${selectedHub.totalPoints}`} detail="Currently in use" />
-        <Metric label="Available points" value={selectedHub.availablePoints} detail="Ready for allocation" />
-        <Metric label="Queued sessions" value={selectedHub.queuedSessions} detail="Waiting for a port" />
-        <Metric label="Faulty points" value={selectedHub.faultyPoints} detail="Excluded from allocation" />
+        <Metric label="Points in use" value={`${selectedHub.chargingPoints} / ${selectedHub.totalPoints}`} detail="Currently charging" icon="⚡" />
+        <Metric label="Available points" value={selectedHub.availablePoints} detail="Ready for allocation" icon="✓" tone="green" />
+        <Metric label="Queued sessions" value={selectedHub.queuedSessions} detail="Waiting for a port" icon="◷" tone="amber" />
+        <Metric label="Faulty points" value={selectedHub.faultyPoints} detail="Excluded from allocation" icon="!" tone="red" />
       </div>}
-      <section className="space-y-3"><div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="font-semibold text-slate-900">Hub charging queue</h2><p className="text-xs text-slate-500">Sorted by URGENT, then priority score P, then FIFO.</p></div><span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800">Auto-recalculate · 60s</span></div>
+      <section className="space-y-3"><div className="flex flex-wrap items-end justify-between gap-2"><div><h2 className="text-[15px] font-semibold text-slate-900">Hub charging queue</h2><p className="text-xs text-slate-500">Sorted by URGENT, then priority score P, then FIFO.</p></div><span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">● Auto-recalculate · 60s</span></div>
         <OperatorQueue sessions={sessions} busyId={busyId} onStart={id => actOnSession(id, "start")} onAdjust={session => {
           setPrioritySession(session); setNewPriority(session.priorityLevel); setReason("");
           setMoveStart(session.scheduledStartAt ? toDateTimeLocal(session.scheduledStartAt) : "");
@@ -273,29 +265,29 @@ export default function ChargingPage() {
             ? String(Math.max(30, Math.min(90, Math.round((new Date(session.scheduledEndAt).getTime() - new Date(session.scheduledStartAt).getTime()) / 60000)))) : "60");
         }} />
       </section>
-      {prioritySession && <form onSubmit={savePriority} className="max-w-xl space-y-3 rounded-lg border bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between"><h2 className="font-semibold">Adjust CS-{prioritySession.id}</h2><button type="button" className="text-sm text-slate-500" onClick={() => setPrioritySession(null)}>Close</button></div>
-        <label className="block text-sm">New priority<select className="mt-1 w-full rounded border p-2" value={newPriority} onChange={e => setNewPriority(e.target.value as PriorityLevel)}><option>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
+      {prioritySession && <form onSubmit={savePriority} className="max-w-xl space-y-3 card p-5">
+        <div className="flex items-center justify-between"><h2 className="text-[15px] font-semibold text-slate-900">Adjust CS-{prioritySession.id}</h2><button type="button" className="text-sm text-slate-500" onClick={() => setPrioritySession(null)}>Close</button></div>
+        <label className="label">New priority<select className="input" value={newPriority} onChange={e => setNewPriority(e.target.value as PriorityLevel)}><option>NORMAL</option><option>HIGH</option><option>URGENT</option></select></label>
         {prioritySession.status === "SCHEDULED" && <div className="grid gap-3 sm:grid-cols-2">
-          <label className="block text-sm">Move schedule to<input type="datetime-local" className="mt-1 w-full rounded border p-2" value={moveStart} onChange={e => setMoveStart(e.target.value)} /></label>
-          <label className="block text-sm">Duration<select className="mt-1 w-full rounded border p-2" value={moveDuration} onChange={e => setMoveDuration(e.target.value)}><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>
+          <label className="label">Move schedule to<input type="datetime-local" className="input" value={moveStart} onChange={e => setMoveStart(e.target.value)} /></label>
+          <label className="label">Duration<select className="input" value={moveDuration} onChange={e => setMoveDuration(e.target.value)}><option value="30">30 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option></select></label>
         </div>}
-        <label className="block text-sm">Reason (required)<textarea required minLength={3} maxLength={500} className="mt-1 w-full rounded border p-2" rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="Operational reason for this priority override" /></label>
+        <label className="label">Reason (required)<textarea required minLength={3} maxLength={500} className="input" rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="Operational reason for this priority override" /></label>
         <p className="text-xs text-slate-500">A session already in CHARGING cannot be pre-empted. HIGH adds 30 points; URGENT is ranked first. A moved personal schedule must still fit its M4 parking reservation. The operator, time and reason are recorded.</p>
-        <button disabled={busyId === prioritySession.id} className="rounded bg-brand px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">Save priority</button>
+        <button disabled={busyId === prioritySession.id} className="btn btn-primary">Save priority</button>
       </form>}
     </>}
 
-    <section className="rounded-lg border bg-white p-4 text-sm text-slate-600">
-      <h2 className="font-semibold text-slate-800">Priority policy</h2>
+    <section className="card p-5 text-sm text-slate-600">
+      <h2 className="text-[15px] font-semibold text-slate-900">Priority policy</h2>
       <p className="mt-2 font-mono text-brand">P = 0.5 × B + 0.3 × U + 0.2 × W</p>
       <p className="mt-1 text-xs">B = 100 − battery (%); U = 100 / 70 / 40 / 0 for next use within 30 / 60 / 120 minutes / later or not given (100 if the expected use time has already passed); W = min(100, 2 × waiting minutes). HIGH adds 30 points; URGENT always ranks first. An interrupted session receives +20 only if no replacement port is available and it remains queued.</p>
     </section>
   </div>;
 }
 
-function Metric({ label, value, detail }: { label: string; value: string | number; detail: string }) {
-  return <div className="rounded-lg border bg-white p-4 shadow-sm"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-2xl font-bold text-brand">{value}</p><p className="mt-1 text-xs text-slate-500">{detail}</p></div>;
+function Metric({ label, value, detail, icon, tone }: { label: string; value: string | number; detail: string; icon?: string; tone?: "brand" | "green" | "amber" | "red" | "slate" }) {
+  return <StatCard label={label} value={value} detail={detail} icon={icon} tone={tone} />;
 }
 
 function OperatorQueue({ sessions, busyId, onStart, onAdjust }: {
@@ -311,10 +303,10 @@ function OperatorQueue({ sessions, busyId, onStart, onAdjust }: {
       || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   const active = sessions.filter(s => s.status === "CHARGING" || s.status === "SCHEDULED");
   return <div className="space-y-4">
-    <div className="overflow-x-auto rounded-lg border bg-white"><table className="w-full text-sm"><thead className="bg-slate-50 text-left text-xs uppercase text-slate-500"><tr><th className="p-3">Position</th><th className="p-3">Vehicle</th><th className="p-3">Battery</th><th className="p-3">Score</th><th className="p-3">Priority</th><th className="p-3">Waiting</th><th className="p-3">Action</th></tr></thead><tbody>
+    <div className="card overflow-x-auto"><table className="table-ui"><thead><tr><th>Position</th><th>Vehicle</th><th>Battery</th><th>Score</th><th>Priority</th><th>Waiting</th><th>Action</th></tr></thead><tbody>
       {!queue.length && <tr><td className="p-6 text-center text-slate-500" colSpan={7}>No sessions are waiting at this Hub.</td></tr>}
-      {queue.map((s, i) => <tr className="border-t" key={s.id}><td className="p-3 font-mono">#{s.queuePosition ?? i + 1}{s.scheduledStartAt && new Date(s.scheduledStartAt).getTime() > Date.now() && <div className="text-xs font-sans text-slate-500">arrives {new Date(s.scheduledStartAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}</td><td className="p-3">{s.vehicleKind} #{s.vehicleId}<div className="text-xs text-slate-500">CS-{s.id}</div></td><td className="p-3"><Battery value={s.batteryLevel} /></td><td className="p-3 font-semibold tabular-nums">{s.priorityScore.toFixed(1)}</td><td className="p-3">{s.priorityLevel}</td><td className="p-3">{s.waitingMinutes} min</td><td className="p-3"><button disabled={busyId === s.id} className="rounded border px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50" onClick={() => onAdjust(s)}>Adjust</button></td></tr>)}
+      {queue.map((s, i) => <tr key={s.id}><td className="font-mono font-bold text-brand">#{s.queuePosition ?? i + 1}{s.scheduledStartAt && new Date(s.scheduledStartAt).getTime() > Date.now() && <div className="text-xs font-sans text-slate-500">arrives {new Date(s.scheduledStartAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}</td><td>{s.vehicleKind} #{s.vehicleId}<div className="text-xs text-slate-500">CS-{s.id}</div></td><td><Battery value={s.batteryLevel} /></td><td className="font-semibold tabular-nums">{s.priorityScore.toFixed(1)}</td><td><StatusBadge status={s.priorityLevel} /></td><td>{s.waitingMinutes} min</td><td><button disabled={busyId === s.id} className="btn btn-secondary btn-sm" onClick={() => onAdjust(s)}>Adjust</button></td></tr>)}
     </tbody></table></div>
-    <div className="grid gap-3 md:grid-cols-2">{active.map(s => <div key={s.id} className="flex items-center justify-between rounded-lg border bg-white p-4"><div><div className="font-semibold">{s.vehicleKind} #{s.vehicleId} · CS-{s.id}</div><div className="mt-1 text-xs text-slate-500">{s.chargingPointId ? `Charging point CP-${s.chargingPointId}` : "Port pending"} · {s.batteryLevel}% battery{s.userId == null && " · automatic request"}</div></div><div className="flex items-center gap-2"><SessionStatus status={s.status} />{s.status === "SCHEDULED" && s.userId == null && <button disabled={busyId === s.id} className="rounded bg-brand px-2 py-1 text-xs text-white disabled:opacity-50" onClick={() => onStart(s.id)}>Start</button>}</div></div>)}</div>
+    <div className="grid gap-3 md:grid-cols-2">{active.map(s => <div key={s.id} className="card flex items-center justify-between p-4"><div><div className="font-semibold">{s.vehicleKind} #{s.vehicleId} · CS-{s.id}</div><div className="hint mt-1">{s.chargingPointId ? `Charging point CP-${s.chargingPointId}` : "Port pending"} · {s.batteryLevel}% battery{s.userId == null && " · automatic request"}</div></div><div className="flex items-center gap-2"><SessionStatus status={s.status} />{s.status === "SCHEDULED" && s.userId == null && <button disabled={busyId === s.id} className="btn btn-primary btn-sm" onClick={() => onStart(s.id)}>Start</button>}</div></div>)}</div>
   </div>;
 }

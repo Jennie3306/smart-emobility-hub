@@ -21,15 +21,15 @@ it("lists incidents and assigns one with the version that was read", async () =>
   render(<IncidentPanel />);
   const user = userEvent.setup();
 
-  await user.click(await screen.findByRole("button", { name: "Xem sự cố 7" }));
-  const assign = screen.getByRole("button", { name: "Phân công" }) as HTMLButtonElement;
+  await user.click(await screen.findByRole("button", { name: "Open incident 7" }));
+  const assign = screen.getByRole("button", { name: "Assign" }) as HTMLButtonElement;
   expect(assign.disabled).toBe(true);
-  await user.type(screen.getByPlaceholderText("vd. operator1"), "operator1");
+  await user.type(screen.getByPlaceholderText("e.g. operator1"), "operator1");
   await user.click(assign);
 
   expect(patch).toHaveBeenCalledWith("/m6/incidents/7",
     { action: "ASSIGN", expectedVersion: 0, assigneeUserId: "operator1", note: undefined });
-  expect(await screen.findByText("Sự cố #7: Phân công → ASSIGNED")).toBeTruthy();
+  expect(await screen.findByText("Incident #7: Assign → ASSIGNED")).toBeTruthy();
 });
 
 it("shows the existing incident when a duplicate report is refused", async () => {
@@ -41,10 +41,10 @@ it("shows the existing incident when a duplicate report is refused", async () =>
   render(<IncidentPanel />);
   const user = userEvent.setup();
 
-  await user.click(screen.getByRole("button", { name: "Báo cáo sự cố" }));
-  await user.type(screen.getByLabelText("Mã tài nguyên"), "1");
-  await user.selectOptions(screen.getByLabelText("Mức độ sự cố"), "HIGH");
-  await user.click(screen.getByRole("button", { name: "Gửi báo cáo" }));
+  await user.click(screen.getByRole("button", { name: "Report an incident" }));
+  await user.type(screen.getByLabelText("Resource ID"), "1");
+  await user.selectOptions(screen.getByLabelText("Incident severity"), "HIGH");
+  await user.click(screen.getByRole("button", { name: "Submit report" }));
 
-  expect(await screen.findByText(/đang có sự cố #7 \(REPORTED\)/)).toBeTruthy();
+  expect(await screen.findByText(/already has incident #7 \(REPORTED\)/)).toBeTruthy();
 });
