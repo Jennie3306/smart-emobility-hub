@@ -86,11 +86,11 @@ const REAL = [
   { m: "m7", name: "m7_task_done", role: "operator", path: "/m7/redistribution",
     todo: "Bấm Start rồi Mark done ở một task. Chụp khi task chuyển sang DONE." },
   { m: "m8", name: "m8_extracted", role: "operator", path: "/m8/simulation",
-    todo: "Ô 'Fill parameters from a description' gõ đúng: Close Metro Hub for 120 minutes, 40 students need a ride → bấm ✧ Extract parameters. Chụp khi hiện 'Local rules filled the form…', Affected hub = Metro Hub, ô Close the hub đã tick." },
+    todo: "Ô 'Fill parameters from a description' gõ đúng: Close Dormitory A Hub for 120 minutes, 40 students need a ride → bấm ✧ Extract parameters. Chụp khi hiện 'Local rules filled the form…', Affected hub = Dormitory A Hub, ô Close the hub đã tick." },
   { m: "m8", name: "m8_run_result", role: "operator", path: "/m8/simulation",
-    todo: "Trang được mở lại: gõ lại mô tả trên, Extract, đổi Scenario name thành 'Close Metro Hub - peak hour', bấm ▶ Save & run simulation. Chụp khi hiện 4 ô KPI, biểu đồ và Recommended plans (gõ f để chụp cả trang)." },
+    todo: "Trang được mở lại: gõ lại mô tả trên, Extract, đổi Scenario name thành 'Close Dormitory A Hub - peak hour', bấm ▶ Save & run simulation. Chụp khi hiện 4 ô KPI, biểu đồ và Recommended plans (gõ f để chụp cả trang)." },
   { m: "m8", name: "m8_compare", role: "operator", path: "/m8/simulation",
-    todo: "Mở History & comparison → View & edit ở run vừa chạy. Ở form: đổi tên 'Close Metro Hub - reroute', tick Allow requests to use other hubs, giữ Snapshot source là run cũ → Save & run. Mở lại History & comparison, tick ô Select của hai run này. Chụp khi hiện KPI comparison." },
+    todo: "Mở History & comparison → View & edit ở run vừa chạy. Ở form: đổi tên 'Close Dormitory A Hub - reroute', tick Allow requests to use other hubs, giữ Snapshot source là run cũ → Save & run. Mở lại History & comparison, tick ô Select của hai run này. Chụp khi hiện KPI comparison." },
 ];
 
 // ---------------------------------------------------------------- helpers

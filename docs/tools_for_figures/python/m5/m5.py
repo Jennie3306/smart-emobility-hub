@@ -59,34 +59,30 @@ EP->>M4: ChargerFailedEvent → block the space of the charger
 ''', width=1500)
 
 
-# ---------------------------------------------------------------- state and activity: TV5's Graphviz sources, unchanged
-# (originally docs/figures/m5_state_machine.dot and m5_activity_allocation.dot)
-run_dot(r'''digraph M5StateMachine {
-  graph [rankdir=LR, bgcolor="white", pad="0.25", nodesep="0.5", ranksep="0.65", splines=true, label="M5 · ChargingSession state machine", labelloc=t, fontsize=22, fontname="Arial"];
-  node [shape=box, style="rounded,filled", fillcolor="#f4f7fb", color="#315b7d", penwidth=1.5, fontname="Arial", fontsize=12, margin="0.18,0.12"];
-  edge [color="#38556e", penwidth=1.25, arrowsize=0.8, fontname="Arial", fontsize=10];
-  init [shape=circle, label="", width=0.18, height=0.18, fillcolor="#263746", color="#263746"];
-  Requested [label="REQUESTED"];
-  Queued [label="QUEUED", fillcolor="#e8f1fb"];
-  Scheduled [label="SCHEDULED\nport assigned · hold ≤ 10 min", fillcolor="#e8f1fb"];
-  Charging [label="CHARGING", fillcolor="#e1f3ee", color="#23845b"];
-  Interrupted [label="INTERRUPTED\nSoC persisted", fillcolor="#fff2d8", color="#b7791f"];
-  Completed [label="COMPLETED", shape=doublecircle, fillcolor="#dcf3e6", color="#23845b"];
-  Cancelled [label="CANCELLED", shape=doublecircle, fillcolor="#f2f3f5", color="#78838e"];
-  init -> Requested [label="create session"];
-  Requested -> Queued [label="enqueue"];
-  Queued -> Scheduled [label="assign available port"];
-  Scheduled -> Charging [label="start [within hold / window]"];
-  Charging -> Completed [label="Timer [SoC ≥ 90% or 90 min or slot ends]"];
-  Charging -> Interrupted [label="ChargerFailed / save SoC"];
-  Scheduled -> Interrupted [label="ChargerFailed / release assignment"];
-  Interrupted -> Queued [label="requeue / preserve waitingSince;\n+20 only if no replacement port"];
-  Requested -> Cancelled [label="cancel"];
-  Queued -> Cancelled [label="cancel"];
-  Scheduled -> Cancelled [label="cancel or hold expires"];
-  Interrupted -> Cancelled [label="cancel"];
-  {rank=same; Completed; Cancelled;}
-}''', O+'m5_state.png', dpi=150)
+# ---------------------------------------------------------------- state
+# State: ChargingSession, following ChargingSession.java (assign / enqueue / start / interrupt / returnToQueue / cancel).
+statemachine(O+'m5_state.png',
+ ['REQUESTED','QUEUED','SCHEDULED',('CHARGING','fillcolor="#e1f3e8", color="#3a7d44"'),('INTERRUPTED','fillcolor="#fff1c9", color="#c9a227"'),
+  ('COMPLETED','fillcolor="#e8e8e8", color="#999999"'),('CANCELLED','fillcolor="#e8e8e8", color="#999999"')],
+ [('REQUESTED','QUEUED','enqueue [no free point]'),
+  ('REQUESTED','SCHEDULED','assign [point free] or\\nbooked window inside a parking booking'),
+  ('QUEUED','SCHEDULED','allocation [highest P,\\nURGENT first] / hold 10 min'),
+  ('SCHEDULED','CHARGING','start [within the hold\\nor the booked window]'),
+  ('SCHEDULED','QUEUED','hold expires\\n[automatic low-battery session]','style=dashed'),
+  ('CHARGING','COMPLETED','Timer [SoC ≥ 90% or 90 min\\nor the window ends]'),
+  ('SCHEDULED','INTERRUPTED','ChargerFailed\\n/ release the point'),
+  ('CHARGING','INTERRUPTED','ChargerFailed\\n/ save SoC'),
+  ('INTERRUPTED','SCHEDULED','another point free\\nin the same hub'),
+  ('INTERRUPTED','QUEUED','no replacement / keep waitingSince,\\n+20 priority'),
+  ('REQUESTED','CANCELLED','cancel'),('QUEUED','CANCELLED','cancel'),
+  ('SCHEDULED','CANCELLED','cancel, or hold expires\\n[student session]'),('INTERRUPTED','CANCELLED','cancel')],
+ initial='REQUESTED', final=('COMPLETED','CANCELLED'), rankdir='TB',
+ extra='label=<<b>ChargingSession lifecycle — Module M5</b>>; labelloc=t; fontsize=18; ranksep=0.9; nodesep=1.0;',
+ notes=['note [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=11, '
+        'label="CHARGING cannot be cancelled: the Timer ends it.\\nQUEUED never jumps to CHARGING: a vehicle charges\\nonly on the point assigned to it."];',
+        'note -> CHARGING [style=dashed, arrowhead=none, color="#c9a227"];'])
+# ---------------------------------------------------------------- activity: TV5's Graphviz source, unchanged
+# (originally docs/figures/m5_activity_allocation.dot)
 run_dot(r'''digraph M5Activity {
   graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.3", ranksep="0.42", splines=ortho, label="M5 · Priority queue dispatch and charger-failure handling", labelloc=t, fontsize=20, fontname="Arial"];
   node [shape=box, style="rounded,filled", fillcolor="#f4f7fb", color="#315b7d", penwidth=1.3, fontname="Arial", fontsize=11, margin="0.14,0.10"];
