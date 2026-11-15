@@ -192,7 +192,7 @@ public class ScenarioAssistant {
     public Proposals recommend(Snapshot snapshot,Scenario scenario,Kpi kpi,SimulationEngine engine) {
         List<String> warnings=new ArrayList<>(); List<Recommendation> candidates=new ArrayList<>(); String source="LOCAL_RULES";
         if(configured()) try {
-            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Keep the operator's rerouting settings unchanged. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination rental-bike parking after incoming tasks (exclude car spaces), and not use a closed source or target. Available vehicles must have state AVAILABLE and battery >=20. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
+            JsonNode result=ask("Suggest proposals to reduce failed requests. Return {\"actions\":[{\"action\":\"dispatch\",\"fromHubId\":1,\"toHubId\":2,\"amount\":1,\"reason\":\"...\"}]}. Maximum three actions. Keep the operator's rerouting settings unchanged. Do not suggest execution. Dispatch must leave at least one AVAILABLE vehicle at source, fit destination rental-bike parking after incoming tasks (exclude car spaces), and not use a closed source or target. Dispatch candidates must have state AVAILABLE. Prioritize higher battery levels. Return an empty actions list if there is no useful proposal.",Map.of("scenario",scenario,"snapshot",snapshot,"kpi",kpi));
             if(!result.path("actions").isArray()) throw new IllegalArgumentException();
             for(JsonNode a:result.path("actions")) {
                 if(candidates.size()==3) break;
@@ -221,7 +221,7 @@ public class ScenarioAssistant {
                 if (target != 0) for (var donor : snapshot.hubs()) {
                     if (donor.id() == target || scenario.closedAtStart(donor.id())) continue;
                     int spare = (int) snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(), donor.id())
-                            && "AVAILABLE".equals(v.state()) && v.battery() >= 20).count() - 1;
+                            && "AVAILABLE".equals(v.state())).count() - 1;
                     int amount = Math.min(Math.min(spare, failed), parkingRoom(snapshot, target));
                     if (amount <= 0) continue;
                     var checked = verifyProposal(tool, snapshot, scenario, kpi, proposal("dispatch", donor.id(), target, amount,

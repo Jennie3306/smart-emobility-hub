@@ -28,7 +28,8 @@ public class SimulationPlanTool {
             if(a.amount()>remaining.getOrDefault(a.toHubId(),0) || occupied+a.amount()>target.capacity())
                 return rejected(target.name() + ": only " + Math.max(0, Math.min(remaining.getOrDefault(a.toHubId(),0), target.capacity()-occupied))
                         + " rental-bike slots remain for dispatch (parking limit). Car slots are excluded.");
-            var donor=vehicles.stream().filter(v->Objects.equals(v.hubId(),a.fromHubId()) && "AVAILABLE".equals(v.state()) && v.battery()>=20).toList();
+            var donor=vehicles.stream().filter(v->Objects.equals(v.hubId(),a.fromHubId()) && "AVAILABLE".equals(v.state()))
+                    .sorted(Comparator.comparingInt(Vehicle::battery).reversed().thenComparingLong(Vehicle::id)).toList();
             var eligible=donor.stream().filter(v->!moved.contains(v.id())).toList();
             if(a.amount()>donor.size()-1 || a.amount()>eligible.size()) return rejected("Leave one eligible vehicle at the donor; do not move a vehicle twice.");
             Set<Long> ids=new HashSet<>();eligible.stream().limit(a.amount()).forEach(v->ids.add(v.id()));moved.addAll(ids);

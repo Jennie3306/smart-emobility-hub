@@ -33,7 +33,7 @@ function donorSupply(run: Run, actions: PlanAction[], targetId: number) {
   for (const hub of run.snapshot.hubs) {
     if (hub.id === targetId) continue;
     if (settings.some(item => item.hubId === hub.id && item.disabled && item.closeFromMins === 0)) continue;
-    const available = run.snapshot.vehicles.filter(v => v.hubId === hub.id && v.state === "AVAILABLE" && v.battery >= 20).length;
+    const available = run.snapshot.vehicles.filter(v => v.hubId === hub.id && v.state === "AVAILABLE").length;
     const spare = Math.max(0, available - 1);
     initial += spare;
     remaining += Math.max(0, spare - (sent.get(hub.id) ?? 0));

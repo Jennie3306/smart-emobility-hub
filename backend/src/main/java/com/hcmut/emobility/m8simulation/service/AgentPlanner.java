@@ -91,7 +91,7 @@ public class AgentPlanner {
     private List<Map<String, Object>> dispatchLimits(Snapshot snapshot, Scenario scenario) {
         return snapshot.hubs().stream().map(hub -> {
             var parked = snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(), hub.id())).toList();
-            int eligible = (int) parked.stream().filter(v -> "AVAILABLE".equals(v.state()) && v.battery() >= 20).count();
+            int eligible = (int) parked.stream().filter(v -> "AVAILABLE".equals(v.state())).count();
             int observedFree = snapshot.capacities().stream().filter(c -> c.hubId() == hub.id())
                     .mapToInt(CapacityState::transferSlots).findFirst().orElse(0);
             var parking = snapshot.capacities().stream().filter(c -> c.hubId() == hub.id()).findFirst();
