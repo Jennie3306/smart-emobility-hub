@@ -1,7 +1,9 @@
 package com.hcmut.emobility.m3vehicle.events;
 
 import com.hcmut.emobility.m3vehicle.domain.RentalVehicle;
+import com.hcmut.emobility.m3vehicle.domain.SessionStatus;
 import com.hcmut.emobility.m3vehicle.domain.VehicleState;
+import com.hcmut.emobility.m3vehicle.repository.RentalSessionRepository;
 import com.hcmut.emobility.m3vehicle.repository.RentalVehicleRepository;
 import com.hcmut.emobility.shared.events.ChargingCompletedEvent;
 import com.hcmut.emobility.shared.events.ChargingStartedEvent;
@@ -22,10 +24,6 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Events M3 consumes (Appendix A v2). M3 owns the RentalVehicle state, so it runs at @Order(0), before M1
- * (@Order(100)) recounts the Hub.
- */
 @Component
 public class VehicleEventHandler {
 
@@ -33,26 +31,23 @@ public class VehicleEventHandler {
     private static final String RENTAL = "RENTAL";
 
     private final RentalVehicleRepository repository;
+    private final RentalSessionRepository sessions;
     private final ProcessedEventStore processed;
     private final EventPublisher publisher;
     private final int lowBatteryThreshold;
 
-    public VehicleEventHandler(RentalVehicleRepository repository, ProcessedEventStore processed,
+    public VehicleEventHandler(RentalVehicleRepository repository,
+                               RentalSessionRepository sessions,
+                               ProcessedEventStore processed,
                                EventPublisher publisher,
                                @Value("${app.charging.low-battery-threshold}") int lowBatteryThreshold) {
         this.repository = repository;
+        this.sessions = sessions;
         this.processed = processed;
         this.publisher = publisher;
         this.lowBatteryThreshold = lowBatteryThreshold;
     }
 
-    /**
-     * FR-M3 non-interactive (Appendix B, trigger: battery data): M6 reports a vehicle's battery level.
-     * M3 records it; an AVAILABLE vehicle at a Hub that falls below the rental threshold becomes LOW_BATTERY and
-     * VehicleLowBatteryEvent is published so M5 queues it for charging. A RESERVED vehicle keeps its state - the
-     * student is told at pick-up (BATTERY_TOO_LOW, UC-M3-01 exception). While CHARGING, M5 owns the level.
-     * M6's observedState is ignored: M3 is the owner of the vehicle's state.
-     */
     @EventListener
     @Order(0)
     @Transactional
@@ -73,7 +68,7 @@ public class VehicleEventHandler {
         });
     }
 
-    /** M5 started charging a rental vehicle: LOW_BATTERY -> CHARGING (state machine 3.3). */
+    /** M5 started charging a rental vehicle: LOW_BATTERY -> CHARGING */
     @EventListener
     @Order(0)
     @Transactional
@@ -107,7 +102,7 @@ public class VehicleEventHandler {
         });
     }
 
-    /** M7 started a redistribution task: the vehicle left its Hub, AVAILABLE -> IN_TRANSIT. */
+    /** M7: the vehicle left its Hub, AVAILABLE -> IN_TRANSIT. */
     @EventListener
     @Order(0)
     @Transactional
@@ -140,12 +135,18 @@ public class VehicleEventHandler {
     }
 
     @EventListener
-    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
+    @Order(0) // M3 so huu trang thai xe
     @Transactional
     public void onVehicleFailed(VehicleFailedEvent event) {
-        if (!processed.markIfNew("M3",event.getEventId())) return;
+        if (!processed.markIfNew("M3", event.getEventId())) return;
         try {
             repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
+                sessions.findByVehicleIdAndStatus(vehicle.getId(), SessionStatus.ACTIVE)
+                        .ifPresent(session -> {
+                            session.complete();
+                            log.info("[M3] VehicleFailed: closed active session {} for vehicle {}",
+                                    session.getId(), vehicle.getId());
+                        });
                 vehicle.changeState(VehicleState.MAINTENANCE);
                 vehicle.clearReservation();
                 log.info("[M3] VehicleFailed: vehicle={} -> MAINTENANCE", event.getVehicleId());
@@ -159,7 +160,7 @@ public class VehicleEventHandler {
     @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
     @Transactional
     public void onReservationExpired(ReservationExpiredEvent event) {
-        if (!processed.markIfNew("M3",event.getEventId())) return;
+        if (!processed.markIfNew("M3", event.getEventId())) return;
         if (!"VEHICLE".equals(event.getResourceType())) return;
         try {
             RentalVehicle vehicle = repository.findById(event.getResourceId()).orElse(null);
@@ -174,10 +175,10 @@ public class VehicleEventHandler {
     }
 
     @EventListener
-    @Order(0) // M3 so huu trang thai xe: cap nhat truoc, M1 dem lai o @Order(100)
+    @Order(0)
     @Transactional
     public void onDispatchCompleted(DispatchCompletedEvent event) {
-        if (!processed.markIfNew("M3",event.getEventId())) return;
+        if (!processed.markIfNew("M3", event.getEventId())) return;
         try {
             repository.findById(event.getVehicleId()).ifPresent(vehicle -> {
                 vehicle.setCurrentHubId(event.getToHubId());
@@ -191,8 +192,4 @@ public class VehicleEventHandler {
             log.error("[M3] Xu ly DispatchCompleted that bai: {}", ex.getMessage(), ex);
         }
     }
-
-    // ReservationConfirmed / ReservationCancelled / ReservationCheckedIn: xu ly tai
-    // ReservationVehicleHandler (fail-fast de M2 rollback khi khong giu duoc xe).
-    // Tranh hai listener cung doi trang thai mot xe.
 }
