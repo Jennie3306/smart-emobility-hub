@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** QA ISSUE-003: a failing AI provider must not leave a run without any recommendation. */
+/** A failing AI provider must not leave a run without any recommendation. */
 class AgentFallbackTest {
     @TempDir Path dir;
     private final Snapshot snapshot = new Snapshot("s", Instant.EPOCH, List.of(new Hub(1, "A", 10, 0), new Hub(2, "B", 10, 0)),

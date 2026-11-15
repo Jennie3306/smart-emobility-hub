@@ -6,7 +6,7 @@ import { DEMO_IOT_SEED, simulationApi } from "./simulationApi";
 const adapter = api.defaults.adapter;
 afterEach(() => { api.defaults.adapter = adapter; });
 
-// QA ISSUE-001: seed 42 reports 15% battery for EB-001 and M3 moves that live vehicle to LOW_BATTERY.
+// Seed 42 reports 15% battery for EB-001 and M3 moves that live vehicle to LOW_BATTERY.
 describe("M8 demo IoT tick", () => {
   it("uses the seed that matches the seeded fleet, not the low-battery seed", async () => {
     let sent: InternalAxiosRequestConfig | undefined;

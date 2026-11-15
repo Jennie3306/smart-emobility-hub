@@ -70,7 +70,7 @@ class DispatchApplyTest {
         verify(m7, times(1)).approve("75", "operator");
     }
 
-    // QA ISSUE-002b: M7 rejected the proposal while M8 still showed PENDING; Apply used to leave it stuck in NEEDS_REVIEW.
+    // M7 rejected the proposal while M8 still showed PENDING: Apply closes it instead of leaving it in NEEDS_REVIEW.
     @Test void applyAfterM7RejectClosesProposalInsteadOfSticking() throws Exception {
         var store = store(withM7Id("PENDING", "75"));
         var apply = new DispatchApplyService(store, m7);
@@ -85,7 +85,7 @@ class DispatchApplyTest {
         verify(m7, never()).propose(any(), any(), anyLong(), anyLong(), anyInt(), any());
     }
 
-    // QA ISSUE-002b: a run already stuck in NEEDS_REVIEW must be recoverable from both Apply and Discard.
+    // A proposal waiting in NEEDS_REVIEW can be resolved from both Apply and Discard.
     @Test void stuckReviewIsResolvedFromM7Decision() throws Exception {
         when(m7.decision("75")).thenReturn(new Decision("75", "REJECTED", List.of(), null));
         var viaApply = new DispatchApplyService(store(withM7Id("NEEDS_REVIEW", "75")), m7).apply("run", "rec", "operator");
@@ -106,7 +106,7 @@ class DispatchApplyTest {
         assertEquals(2, rec.dispatch().tasks().size());
     }
 
-    // QA ISSUE-002a: discarding in M8 used to leave the M7 proposal PENDING and approvable.
+    // Discarding in M8 withdraws the M7 proposal so it can no longer be approved there.
     @Test void discardWithdrawsRegisteredM7Proposal() throws Exception {
         when(m7.withdraw(eq("75"), eq("operator"), any())).thenReturn(new Decision("75", "REJECTED", List.of(), null));
         var apply = new DispatchApplyService(store(withM7Id("PENDING", "75")), m7);
@@ -131,7 +131,7 @@ class DispatchApplyTest {
         verifyNoInteractions(m7);
     }
 
-    // QA ISSUE-002c: M8 stayed APPROVED after the M7 tasks finished.
+    // M8 marks a plan APPLIED once its M7 tasks have finished.
     @Test void syncMarksAppliedWhenAllM7TasksFinished() throws Exception {
         var store = store(withM7Id("APPROVED", "75"));
         var apply = new DispatchApplyService(store, m7);
