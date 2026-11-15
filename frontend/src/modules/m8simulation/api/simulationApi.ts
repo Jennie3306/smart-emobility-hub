@@ -18,6 +18,7 @@ export interface AgentRound {number:number;tool:string;valid:boolean;actions:Pla
 export interface AgentState {totalRounds:number;status:string;message:string;rounds:AgentRound[];best:PlanEvaluation|null}
 export interface Run { id:string;createdAt:string;scenario:Scenario;snapshot:Snapshot;kpi:Kpi;baseline:Kpi;timeline:{minute:number;served:number;waiting:number;failed:number}[];recommendations:Recommendation[];recommendationSource:string;warnings:string[];agent?:AgentState|null }
 export interface Monitor {lastChecked:string|null;warnings:string[];intervalMins:number;demandConnected:boolean;applyEnabled:boolean;aiConfigured:boolean;demandDescription?:string;forecasts?:{hubId:number;hubName:string;recentBookings:number;activeHolds:number;projectedServed:number;projectedFailed:number}[]}
+export const DEMO_IOT_SEED = 100;
 export const simulationApi = {
   snapshot: () => api.get<Snapshot>("/m8/snapshot").then(r=>r.data),
   status: () => api.get<Monitor>("/m8/status").then(r=>r.data),
@@ -28,5 +29,7 @@ export const simulationApi = {
   retry: (runId:string,expectedRounds:number) => api.post<Run>(`/m8/runs/${runId}/agent/retry`,null,{params:{expectedRounds}}).then(r=>r.data),
   discard: (runId:string,id:string) => api.post<Run>(`/m8/runs/${runId}/recommendations/${id}/discard`).then(r=>r.data),
   apply: (runId:string,id:string) => api.post<Run>(`/m8/runs/${runId}/recommendations/${id}/apply`).then(r=>r.data),
-  iot: () => api.post("/m6/simulator/scenarios/NORMAL_TICK",{seed:42}),
+  // Seed 100 reports the same battery levels as the seeded fleet (see app.simulator.seed); seed 42 reports 15%
+  // for EB-001 and M3 would move that live vehicle to LOW_BATTERY. M8 must not change live vehicles.
+  iot: () => api.post("/m6/simulator/scenarios/NORMAL_TICK",{seed:DEMO_IOT_SEED}),
 };

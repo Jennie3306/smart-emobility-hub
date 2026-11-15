@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { safeNext } from "@/modules/m8simulation/pages/text";
 import { login } from "../api/auth";
 
 export function LoginPage() {
@@ -8,13 +9,14 @@ export function LoginPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
+  const [params] = useSearchParams();
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
     try {
       await login(username, password);
-      navigate("/");
+      navigate(safeNext(params.get("next")), { replace: true });
     } catch {
       setError("Invalid username or password");
     } finally {

@@ -74,7 +74,10 @@ export function AppLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    api.get<CurrentUser>("/auth/me").then(r => setUser(r.data)).catch(() => navigate("/login"));
+    api.get<CurrentUser>("/auth/me").then(r => setUser(r.data)).catch(() =>
+      navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`));
+    // Only the first load checks the session; later navigation keeps the user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   const items = user ? NAV.filter(n => n.roles.includes(user.role)) : [];

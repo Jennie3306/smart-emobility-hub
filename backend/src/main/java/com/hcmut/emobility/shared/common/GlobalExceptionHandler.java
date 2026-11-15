@@ -44,6 +44,13 @@ public class GlobalExceptionHandler {
                 .body(ApiError.of("VALIDATION_FAILED", "Invalid request parameters", details));
     }
 
+    /** Body JSON sai cu phap, sai kieu (vd. "abc" cho so) hoac khong doc duoc -> 400 thay vi 500 */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleUnreadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiError.of("VALIDATION_FAILED", "Malformed or unreadable request body", Map.of()));
+    }
+
     /** Duong dan khong ton tai -> 404 (truoc day bi bat nham thanh 500) */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(NoResourceFoundException ex) {

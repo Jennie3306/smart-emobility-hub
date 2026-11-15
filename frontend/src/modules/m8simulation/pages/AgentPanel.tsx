@@ -41,8 +41,9 @@ function donorSupply(run: Run, actions: PlanAction[], targetId: number) {
   return {initial, remaining};
 }
 
-export function AgentPanel({ run, busy, configured, onRetry }: {
-  run: Run; busy: boolean; configured: boolean; onRetry: () => void;
+/** busy: any page action is running; planning: an AI retry is running (only then is "Exploring" shown). */
+export function AgentPanel({ run, busy, planning = false, configured, onRetry }: {
+  run: Run; busy: boolean; planning?: boolean; configured: boolean; onRetry: () => void;
 }) {
   const state = run.agent;
   const best = state?.best;
@@ -59,13 +60,13 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
   const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
   const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW"].includes(item.status));
 
-  return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={busy}>
+  return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={planning}>
     <div className="m8-section-head">
       <h2>AI Plan Exploration</h2>
       <span className="m8-chip">{state ? `${state.totalRounds} total rounds` : "Not started"}</span>
     </div>
     {state && <p role="status" className={failed ? "m8-alert error" : "m8-agent-status"}>{state.message}</p>}
-    {busy && <p role="status" className="m8-agent-status">Testing plans and reading feedback… Each attempt uses up to 3 rounds.</p>}
+    {planning && <p role="status" className="m8-agent-status">Testing plans and reading feedback… Each attempt uses up to 3 rounds.</p>}
     {best?.actions.some(a => a.action === "reroute") && <p className="m8-alert">
       Historical plan. It changed rerouting settings under the previous rules. Run the scenario again for a dispatch plan that preserves your settings.
     </p>}
@@ -100,7 +101,7 @@ export function AgentPanel({ run, busy, configured, onRetry }: {
     {!best?.kpi && latestSummary && <p className="m8-footnote"><strong>AI summary</strong> · {latestSummary}</p>}
     <div className="m8-retry-bar">
       <div><strong>{state ? "Continue on the saved snapshot" : "Explore transfers"}</strong><p>Up to 3 rounds. Run again to include draft edits.</p></div>
-      <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{busy ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
+      <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{planning ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
     </div>
     {!configured && <p className="m8-alert">AI is unavailable until a provider is configured.</p>}
     {dispatchStarted && <p className="m8-footnote">Dispatch has started. Run a new scenario to explore a different plan.</p>}

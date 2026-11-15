@@ -30,6 +30,38 @@ public interface RedistributionRecommendations {
     ApprovalResult approve(String recommendationId, String approvedBy);
 
     /**
+     * Current decision on a proposal, so the proposer can follow what the Operator did in M7.
+     * RECOMMENDATION_NOT_FOUND (404).
+     */
+    Decision decision(String recommendationId);
+
+    /**
+     * Withdraws a proposal the proposer no longer wants. A PENDING proposal becomes REJECTED; a proposal that is
+     * already resolved is left unchanged. Either way the resulting decision is returned.
+     * RECOMMENDATION_NOT_FOUND (404).
+     */
+    Decision withdraw(String recommendationId, String withdrawnBy, String reason);
+
+    /**
+     * @param status  PENDING, PARTIAL, APPROVED or REJECTED
+     * @param taskIds every task created for this proposal so far
+     * @param note    the Operator's or M7's note, or null
+     * @param doneTasks   tasks among taskIds that reached DONE (vehicle docked at the destination)
+     * @param failedTasks tasks among taskIds that ended FAILED
+     */
+    record Decision(String recommendationId, String status, List<Long> taskIds, String note,
+                    int doneTasks, int failedTasks) {
+        public Decision(String recommendationId, String status, List<Long> taskIds, String note) {
+            this(recommendationId, status, taskIds, note, 0, 0);
+        }
+
+        /** Every task created for the proposal has finished, successfully or not. */
+        public boolean tasksFinished() {
+            return !taskIds.isEmpty() && doneTasks + failedTasks >= taskIds.size();
+        }
+    }
+
+    /**
      * @param status  APPROVED (all vehicles got a task), PARTIAL (some did), or PENDING (none could be created yet)
      * @param taskIds tasks created by this call
      * @param message why fewer tasks than requested were created, or null

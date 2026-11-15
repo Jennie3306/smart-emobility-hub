@@ -28,6 +28,8 @@ public interface RedistributionTaskRepository extends JpaRepository<Redistributi
 
     List<RedistributionTask> findAllByOrderByCreatedAtDesc();
 
+    List<RedistributionTask> findByRecommendationIdOrderByTaskIdAsc(String recommendationId);
+
     /** Vehicles promised to leave a source Hub (CREATED tasks; IN_PROGRESS ones have already left). */
     long countBySourceHubIdAndStatusIn(Long sourceHubId, Collection<RedistributionTaskStatus> statuses);
 

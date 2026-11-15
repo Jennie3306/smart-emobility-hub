@@ -51,8 +51,16 @@ public class SimulationService {
         EngineResult result=engine.simulate(snapshot,scenario);
         Kpi baseline=engine.simulate(snapshot,scenario.withSettings(scenario.settings().stream().map(HubSettings::opened).toList())).kpi();
         AgentState agent=assistant.configured()?planner.extend(snapshot,scenario,null):null;
-        var proposals=agent==null?assistant.recommend(snapshot,scenario,result.kpi(),engine)
-            :new ScenarioAssistant.Proposals(List.of(),"TOOL_AGENT",List.of("AI plans call simulate_plan and use actual KPI feedback. Only improving validated plans are retained. No live execution."));
+        ScenarioAssistant.Proposals proposals;
+        if (agent == null) proposals = assistant.recommend(snapshot, scenario, result.kpi(), engine);
+        else if (agent.best() == null && List.of("PROVIDER_ERROR", "INVALID_RESPONSE").contains(agent.status())) {
+            // The AI produced no verified plan because the provider failed: fall back to labeled local rules.
+            var local = assistant.recommend(snapshot, scenario, result.kpi(), engine);
+            var notes = new ArrayList<String>();
+            notes.add("AI planning failed (" + agent.status() + "); showing local-rule recommendations instead.");
+            notes.addAll(local.warnings());
+            proposals = new ScenarioAssistant.Proposals(local.items(), local.source(), List.copyOf(notes));
+        } else proposals = new ScenarioAssistant.Proposals(List.of(),"TOOL_AGENT",List.of("AI plans call simulate_plan and use actual KPI feedback. Only improving validated plans are retained. No live execution."));
         var warnings=new ArrayList<>(proposals.warnings());
         if (repeats) warnings.add("Booking-based demand repeats each selected hub's accepted M2 bookings from the captured 30-minute window.");
         if (manual) warnings.add("Manually entered demand represents hypothetical rental requests.");

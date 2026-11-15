@@ -262,6 +262,29 @@ public class RecommendationService implements RedistributionRecommendations {
         return new ApprovalResult(String.valueOf(rec.getId()), rec.getStatus().name(), created, message);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Decision decision(String recommendationId) {
+        return decisionOf(find(recommendationId));
+    }
+
+    @Override
+    @Transactional
+    public Decision withdraw(String recommendationId, String withdrawnBy, String reason) {
+        RedistributionRecommendation rec = find(recommendationId);
+        if (rec.getStatus() == RecommendationStatus.PENDING) rec = reject(recommendationId, withdrawnBy, reason);
+        return decisionOf(rec);
+    }
+
+    private Decision decisionOf(RedistributionRecommendation rec) {
+        String id = String.valueOf(rec.getId());
+        List<RedistributionTask> created = tasks.findByRecommendationIdOrderByTaskIdAsc(id);
+        List<Long> taskIds = created.stream().map(RedistributionTask::getTaskId).toList();
+        int done = (int) created.stream().filter(t -> t.getStatus() == RedistributionTaskStatus.DONE).count();
+        int failed = (int) created.stream().filter(t -> t.getStatus() == RedistributionTaskStatus.FAILED).count();
+        return new Decision(id, rec.getStatus().name(), taskIds, rec.getNote(), done, failed);
+    }
+
     // ------------------------------------------------------------------ Operator screen
 
     /** FR-M7-02: the Operator rejects a proposal; no task is created. */

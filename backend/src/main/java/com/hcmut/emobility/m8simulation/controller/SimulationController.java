@@ -23,11 +23,11 @@ public class SimulationController {
         return status;
     }
     @PostMapping("/parse") public ParseResult parse(@Valid @RequestBody ParseRequest request) { return service.parse(request.text()); }
-    @GetMapping("/runs") public List<Run> runs() { return service.list(); }
+    @GetMapping("/runs") public List<Run> runs() { return dispatch.sync(service.list()); }
     @PostMapping("/runs") public Run run(@Valid @RequestBody Scenario scenario,@RequestParam(required=false) String snapshotRunId,@RequestParam(defaultValue="false") boolean repeatRecentBookings, @RequestParam(required=false) String startingVehicles) throws IOException { return service.run(scenario,snapshotRunId,repeatRecentBookings,startingVehicles); }
     @PostMapping("/monitor/check") public Map<String,Object> check() { monitor.check(); return status(); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/discard")
-    public Run discard(@PathVariable String id,@PathVariable String recommendationId) throws IOException { return service.discard(id,recommendationId); }
+    public Run discard(@PathVariable String id,@PathVariable String recommendationId, Principal operator) throws IOException { return dispatch.discard(id,recommendationId,operator.getName()); }
     @PostMapping("/runs/{id}/recommendations/{recommendationId}/apply")
     public Run apply(@PathVariable String id, @PathVariable String recommendationId, Principal operator) throws IOException {
         return dispatch.apply(id, recommendationId, operator.getName());
