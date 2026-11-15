@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { monitoringApi } from "@/modules/m1monitoring/api/monitoringApi";
 import type { HubSummary } from "@/modules/m1monitoring/api/types";
 import { vehicleApi, type Vehicle } from "@/modules/m3vehicle/api/vehicleApi";
@@ -32,6 +33,8 @@ export default function RedistributionPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [params] = useSearchParams();
+  const focus = params.get("recommendation");
   const [form, setForm] = useState({ source: "", vehicle: "", destination: "" });
 
   const load = useCallback(async () => {
@@ -60,7 +63,9 @@ export default function RedistributionPage() {
   }, [vehicles]);
   const movable = vehicles.filter(v => v.state === "AVAILABLE" && String(v.hubId) === form.source);
   const open = recs.filter(r => r.status === "PENDING" || r.status === "PARTIAL");
-  const decided = recs.filter(r => r.status !== "PENDING" && r.status !== "PARTIAL").slice(0, 5);
+  const allDecided = recs.filter(r => r.status !== "PENDING" && r.status !== "PARTIAL");
+  const focused = allDecided.find(r => String(r.id) === focus);
+  const decided = focused && !allDecided.slice(0, 5).includes(focused) ? [...allDecided.slice(0, 5), focused] : allDecided.slice(0, 5);
 
   async function run(key: string, action: () => Promise<string | null>) {
     setBusy(key); setNotice(null);
@@ -98,6 +103,10 @@ export default function RedistributionPage() {
     });
   }
 
+  useEffect(() => {
+    if (loaded && focus) document.getElementById(`m7-rec-${focus}`)?.scrollIntoView({ block: "center" });
+  }, [loaded, focus]);
+
   if (!loaded) return <PageSkeleton />;
 
   const counts = (st: TaskStatus) => tasks.filter(t => t.status === st).length;
@@ -126,7 +135,7 @@ export default function RedistributionPage() {
               <thead><tr>
                 <th>Move</th><th>Vehicles</th><th>Source</th>
                 <th>Why</th><th>Status</th><th /></tr></thead>
-              <tbody>{open.map(r => <tr key={r.id} className="align-top">
+              <tbody>{open.map(r => <tr key={r.id} id={`m7-rec-${r.id}`} className={`align-top ${String(r.id) === focus ? "bg-amber-50" : ""}`}>
                 <td className="font-medium">{hubName(r.sourceHubId)} → {hubName(r.destinationHubId)}</td>
                 <td className="tabular-nums">{r.taskCount} / {r.amount}</td>
                 <td className="text-xs">{sourceLabel[r.source] ?? r.source}</td>
@@ -137,8 +146,8 @@ export default function RedistributionPage() {
                   {r.status === "PENDING" && <button disabled={busy !== null} onClick={() => reject(r)} className="btn btn-secondary btn-sm">Reject</button>}
                 </div></td>
               </tr>)}</tbody></table></div>}
-        {decided.length > 0 && <details className="mt-3 text-sm"><summary className="cursor-pointer text-slate-600">Recently decided ({decided.length})</summary>
-          <ul className="mt-2 space-y-1 text-xs text-slate-600">{decided.map(r => <li key={r.id}>
+        {decided.length > 0 && <details className="mt-3 text-sm" open={focused ? true : undefined}><summary className="cursor-pointer text-slate-600">Recently decided ({decided.length})</summary>
+          <ul className="mt-2 space-y-1 text-xs text-slate-600">{decided.map(r => <li key={r.id} id={`m7-rec-${r.id}`} className={String(r.id) === focus ? "rounded bg-amber-50 px-1" : undefined}>
             <Badge value={r.status} /> {hubName(r.sourceHubId)} → {hubName(r.destinationHubId)}, {r.taskCount}/{r.amount} vehicle(s){r.resolvedBy && ` · ${r.resolvedBy}`}{r.note && ` · ${r.note}`}</li>)}</ul></details>}
       </section>
 

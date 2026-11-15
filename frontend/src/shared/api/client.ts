@@ -14,7 +14,9 @@ export const api = axios.create({
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) window.location.href = "/login";
+    if (err.response?.status === 401 && !window.location.pathname.startsWith("/login")) {
+      window.location.href = `/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`;
+    }
     return Promise.reject(err);
   }
 );

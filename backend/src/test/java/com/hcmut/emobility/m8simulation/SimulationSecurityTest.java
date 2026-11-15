@@ -21,9 +21,24 @@ class SimulationSecurityTest {
     @MockBean SnapshotProvider snapshots;
     @Test void anonymousIsRejected() throws Exception { mvc.perform(get("/api/m8/snapshot")).andExpect(status().isUnauthorized()); }
     @Test @WithMockUser(roles="STUDENT") void studentIsRejected() throws Exception { mvc.perform(get("/api/m8/snapshot")).andExpect(status().isForbidden()); }
+    @Test @WithMockUser(roles="STUDENT") void studentCannotExtendPlanning() throws Exception {mvc.perform(post("/api/m8/runs/run/agent/retry?expectedRounds=0")).andExpect(status().isForbidden());}
+    @Test @WithMockUser(roles="STUDENT") void studentCannotApplyDispatch() throws Exception {
+        mvc.perform(post("/api/m8/runs/run/recommendations/rec/apply")).andExpect(status().isForbidden());
+    }
+    @Test @WithMockUser(roles="OPERATOR") void operatorCanSeeApplyEnabled() throws Exception {
+        mvc.perform(get("/api/m8/status")).andExpect(status().isOk()).andExpect(jsonPath("$.applyEnabled").value(true));
+    }
+    @Test void anonymousCannotExtendPlanning() throws Exception {mvc.perform(post("/api/m8/runs/run/agent/retry?expectedRounds=0")).andExpect(status().isUnauthorized());}
     @Test @WithMockUser(roles="OPERATOR") void operatorCanReadSnapshot() throws Exception {
         when(snapshots.capture()).thenReturn(new Snapshot("fixture",Instant.EPOCH,List.of(new Hub(1,"A",10,2)),List.of(),List.of(),"test"));
         mvc.perform(get("/api/m8/snapshot")).andExpect(status().isOk()).andExpect(jsonPath("$.id").value("fixture"));
+    }
+    // Wrong JSON types and unreadable bodies are client errors (400), not 500.
+    @Test @WithMockUser(roles="OPERATOR") void malformedScenarioBodyIsBadRequest() throws Exception {
+        mvc.perform(post("/api/m8/runs").contentType("application/json").content("{\"name\":\"bad\",\"hubId\":1,\"injectedRequests\":\"abc\",\"durationMins\":60,\"arrivalWindowMins\":1,\"tripMins\":30}"))
+            .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+        mvc.perform(post("/api/m8/runs").contentType("application/json").content("{not json"))
+            .andExpect(status().isBadRequest());
     }
     @Test @WithMockUser(roles="OPERATOR") void rejectsOutOfBoundsScenario() throws Exception {
         mvc.perform(post("/api/m8/runs").contentType("application/json").content("{\"name\":\"bad\",\"hubId\":1,\"injectedRequests\":10001,\"durationMins\":60,\"arrivalWindowMins\":1,\"tripMins\":30}"))

@@ -6,6 +6,7 @@ import com.hcmut.emobility.m7dispatch.client.VehicleClient;
 import com.hcmut.emobility.m7dispatch.domain.RecommendationStatus;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionRecommendation;
 import com.hcmut.emobility.m7dispatch.domain.RedistributionTask;
+import com.hcmut.emobility.m7dispatch.domain.RedistributionTaskStatus;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionRecommendationRepository;
 import com.hcmut.emobility.m7dispatch.repository.RedistributionTaskRepository;
 import com.hcmut.emobility.shared.common.BusinessException;
@@ -213,5 +214,56 @@ class RecommendationServiceTest {
 
         String id = service.propose("M8_SIMULATION", "R-3", DORM, METRO, 2, "new");
         assertEquals("101", id);
+    }
+
+    @Test
+    @DisplayName("M8 withdraw rejects a pending proposal and reports its tasks")
+    void withdrawRejectsPendingProposal() {
+        RedistributionRecommendation r = stored(RecommendationStatus.PENDING, 2, 0);
+
+        var decision = service.withdraw("7", "operator", "Discarded in M8");
+
+        assertEquals("REJECTED", decision.status());
+        assertEquals(RecommendationStatus.REJECTED, r.getStatus());
+        assertEquals(List.of(), decision.taskIds());
+    }
+
+    @Test
+    @DisplayName("M8 withdraw leaves an approved proposal and returns its tasks")
+    void withdrawKeepsApprovedProposal() {
+        RedistributionRecommendation r = stored(RecommendationStatus.APPROVED, 1, 1);
+        RedistributionTask t = new RedistributionTask();
+        t.setTaskId(55L);
+        when(tasks.findByRecommendationIdOrderByTaskIdAsc("7")).thenReturn(List.of(t));
+
+        var decision = service.withdraw("7", "operator", "Discarded in M8");
+
+        assertEquals("APPROVED", decision.status());
+        assertEquals(RecommendationStatus.APPROVED, r.getStatus());
+        assertEquals(List.of(55L), decision.taskIds());
+        verify(recommendations, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("M8 decision counts finished tasks so M8 can mark the plan APPLIED")
+    void decisionCountsDoneAndFailedTasks() {
+        stored(RecommendationStatus.APPROVED, 3, 3);
+        var tasksOfRec = new java.util.ArrayList<RedistributionTask>();
+        long id = 60;
+        for (RedistributionTaskStatus st : List.of(RedistributionTaskStatus.DONE, RedistributionTaskStatus.FAILED,
+                RedistributionTaskStatus.IN_PROGRESS)) {
+            RedistributionTask t = new RedistributionTask();
+            t.setTaskId(id++);
+            t.setStatus(st);
+            tasksOfRec.add(t);
+        }
+        when(tasks.findByRecommendationIdOrderByTaskIdAsc("7")).thenReturn(tasksOfRec);
+
+        var decision = service.decision("7");
+
+        assertEquals(List.of(60L, 61L, 62L), decision.taskIds());
+        assertEquals(1, decision.doneTasks());
+        assertEquals(1, decision.failedTasks());
+        assertFalse(decision.tasksFinished());
     }
 }

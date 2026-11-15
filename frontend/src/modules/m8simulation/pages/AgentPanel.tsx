@@ -1,0 +1,120 @@
+import type { Run, PlanAction } from "../api/simulationApi";
+
+const count = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 });
+const wait = new Intl.NumberFormat("en-GB", { maximumFractionDigits: 1 });
+
+function parkingLimitedDestinations(run: Run, actions: PlanAction[]) {
+  const inbound = new Map<number, number>();
+  const outbound = new Map<number, number>();
+  for (const action of actions) {
+    if (action.action !== "dispatch") continue;
+    inbound.set(action.toHubId, (inbound.get(action.toHubId) ?? 0) + action.amount);
+    outbound.set(action.fromHubId, (outbound.get(action.fromHubId) ?? 0) + action.amount);
+  }
+  return run.snapshot.hubs.filter(hub => {
+    const arrivals = inbound.get(hub.id);
+    const parking = run.snapshot.capacities?.find(item => item.hubId === hub.id);
+    if (!arrivals || parking?.rentalFreeSlots == null) return false;
+    const observedFree = Math.max(0, parking.rentalFreeSlots - (parking.incomingRentalTasks ?? 0));
+    const parked = run.snapshot.vehicles.filter(vehicle => vehicle.hubId === hub.id).length;
+    const remaining = Math.min(observedFree - arrivals, hub.capacity - parked - arrivals + (outbound.get(hub.id) ?? 0));
+    return remaining <= 0;
+  });
+}
+
+function donorSupply(run: Run, actions: PlanAction[], targetId: number) {
+  const sent = new Map<number, number>();
+  for (const action of actions) {
+    if (action.action === "dispatch") sent.set(action.fromHubId, (sent.get(action.fromHubId) ?? 0) + action.amount);
+  }
+  let initial = 0;
+  let remaining = 0;
+  const settings = run.scenario.affectedHubs ?? [{...run.scenario, closeFromMins: 0}];
+  for (const hub of run.snapshot.hubs) {
+    if (hub.id === targetId) continue;
+    if (settings.some(item => item.hubId === hub.id && item.disabled && item.closeFromMins === 0)) continue;
+    const available = run.snapshot.vehicles.filter(v => v.hubId === hub.id && v.state === "AVAILABLE").length;
+    const spare = Math.max(0, available - 1);
+    initial += spare;
+    remaining += Math.max(0, spare - (sent.get(hub.id) ?? 0));
+  }
+  return {initial, remaining};
+}
+
+/** busy: any page action is running; planning: an AI retry is running (only then is "Exploring" shown). */
+export function AgentPanel({ run, busy, planning = false, configured, onRetry }: {
+  run: Run; busy: boolean; planning?: boolean; configured: boolean; onRetry: () => void;
+}) {
+  const state = run.agent;
+  const best = state?.best;
+  const parkingLimited = best?.valid && best.kpi ? parkingLimitedDestinations(run, best.actions) : [];
+  const hub = (id: number) => run.snapshot.hubs.find(h => h.id === id)?.name ?? `Hub ${id}`;
+  const action = (a: PlanAction) => a.action === "reroute"
+    ? `Serve requests from ${hub(a.fromHubId)} at other open hubs`
+    : `Move ${count.format(a.amount)} vehicles from ${hub(a.fromHubId)} to ${hub(a.toHubId)}`;
+  const exhaustedDonors = (best?.valid ? best.kpi : run.kpi)?.hubs
+    .filter(row => row.failed > 0)
+    .map(row => ({hubId: row.hubId, ...donorSupply(run, best?.actions ?? [], row.hubId)}))
+    .filter(supply => supply.remaining === 0) ?? [];
+  const latestSummary = state?.rounds.filter(round => round.valid && round.summary).at(-1)?.summary;
+  const failed = state?.status === "PROVIDER_ERROR" || state?.status === "INVALID_RESPONSE";
+  const dispatchStarted = run.recommendations.some(item => ["PARTIAL", "APPLIED", "APPROVED", "NEEDS_REVIEW"].includes(item.status));
+
+  return <section className="m8-panel m8-agent" aria-label="AI planning session" aria-busy={planning}>
+    <div className="m8-section-head">
+      <h2>AI Plan Exploration</h2>
+      <span className="m8-chip">{state ? `${state.totalRounds} total rounds` : "Not started"}</span>
+    </div>
+    {state && <p role="status" className={failed ? "m8-alert error" : "m8-agent-status"}>{state.message}</p>}
+    {planning && <p role="status" className="m8-agent-status">Testing plans and reading feedback… Each attempt uses up to 3 rounds.</p>}
+    {best?.actions.some(a => a.action === "reroute") && <p className="m8-alert">
+      Historical plan. It changed rerouting settings under the previous rules. Run the scenario again for a dispatch plan that preserves your settings.
+    </p>}
+    {best?.kpi ? <div className="m8-agent-best">
+      <div className="m8-outcome-title"><h3 className="m8-tested-title">Best Tested Plan</h3><span className="m8-chip success">{count.format(run.kpi.failed - best.kpi.failed)} fewer unserved requests</span></div>
+      <dl className="m8-plan-outcome">
+        <div><dt>Unserved requests</dt><dd><s>{count.format(run.kpi.failed)}</s><span aria-hidden="true"> → </span><span className="m8-sr-only"> reduced to </span>{count.format(best.kpi.failed)}</dd></div>
+        <div><dt>Rentals served</dt><dd>{count.format(best.kpi.served)} <small>of {count.format(best.kpi.requests)}</small></dd></div>
+        <div><dt>Average wait <small>(served only)</small></dt><dd>{best.kpi.served ? <>{wait.format(best.kpi.meanWaitMins)} <small>min</small></> : "—"}</dd></div>
+      </dl>
+      {best.summary && <p className="m8-footnote"><strong>AI summary</strong> · {best.summary}</p>}
+      <ol className="m8-plan-actions">{best.actions.map((a, i) => <li key={i}>
+        <strong>{action(a)}</strong><p>{a.reason}</p>
+      </li>)}</ol>
+      {best.actions.some(a => a.action === "reroute") && <p className="m8-footnote">Rerouting changes where requests are served. It does not relocate vehicles.</p>}
+    </div> : <div className="m8-agent-empty"><h3>{state ? "No Improved Plan Yet" : "Explore a Better Plan"}</h3><p>{state
+      ? "No valid tool result has improved this scenario. You can give AI another attempt."
+      : "Test vehicle transfers on this saved snapshot."}</p></div>}
+    {(parkingLimited.length > 0 || exhaustedDonors.length > 0) && (
+      <section className={(best?.kpi?.failed ?? run.kpi.failed) > 0 ? "m8-alert" : "m8-footnote"} aria-label="Dispatch limits">
+        <strong>Dispatch limits</strong>
+        <ul>
+          {parkingLimited.map(destination => <li key={destination.id}>
+            {destination.name}: 0 rental-bike slots left for additional transfers after this simulated plan.
+          </li>)}
+          {exhaustedDonors.map(supply => <li key={supply.hubId}>
+            {hub(supply.hubId)}: {count.format(supply.initial)} spare vehicles at other open hubs before the plan, with one kept at each donor. None remain available to transfer.
+          </li>)}
+        </ul>
+      </section>
+    )}
+    {!best?.kpi && latestSummary && <p className="m8-footnote"><strong>AI summary</strong> · {latestSummary}</p>}
+    <div className="m8-retry-bar">
+      <div><strong>{state ? "Continue on the saved snapshot" : "Explore transfers"}</strong><p>Up to 3 rounds. Run again to include draft edits.</p></div>
+      <button className="m8-button primary" disabled={busy || !configured || dispatchStarted} onClick={onRetry}>{planning ? "Exploring…" : state ? "Retry · +3 Rounds" : "Start AI Planning"}</button>
+    </div>
+    {!configured && <p className="m8-alert">AI is unavailable until a provider is configured.</p>}
+    {dispatchStarted && <p className="m8-footnote">Dispatch has started. Run a new scenario to explore a different plan.</p>}
+    {state?.rounds.length ? <details className="m8-planning-history"><summary>Review Planning History <span>{state.totalRounds} rounds{state.totalRounds > state.rounds.length ? " · latest 60 shown" : ""}</span></summary>
+      <ol className="m8-agent-rounds">{state.rounds.map(r => <li key={r.number}><details>
+        <summary><span>Round {r.number}</span><span className={`m8-round-status ${r.valid ? "tested" : ""}`}>{r.valid ? "Simulated" : r.tool ? "Rejected" : "No tool call"}</span>{r.valid && r.kpi && <span className="m8-round-kpi">{count.format(r.kpi.served)} served · {count.format(r.kpi.failed)} unserved</span>}</summary>
+        {r.actions.map((a, i) => <p key={i}><strong>{action(a)}</strong> — {a.reason}</p>)}
+        {r.valid && r.kpi && <p>Average wait for served requests: {r.kpi.served ? `${wait.format(r.kpi.meanWaitMins)} min` : "not applicable"}.</p>}
+        {r.summary && <p><strong>AI summary</strong> · {r.summary}</p>}
+        <p className="m8-footnote">{r.feedback}</p>
+      </details></li>)}</ol>
+    </details> : null}
+    <details className="m8-agent-limits"><summary>Simulation Limits</summary><p>Every candidate uses the same snapshot, demand, seed and time settings. Dispatch uses captured rental-bike parking minus incoming M7 tasks. M7 checks current parking through M4 when creating and completing dispatch tasks.</p>{best && <p>{best.feedback}</p>}</details>
+    <p className="m8-preview-note">Preview only. Exploring or retrying a plan never changes live vehicles.</p>
+  </section>;
+}

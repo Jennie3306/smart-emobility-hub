@@ -39,14 +39,16 @@ public class JdbcSnapshotProvider implements SnapshotProvider {
             from hub h order by h.id
             """,(rs,n)->new HubDemand(rs.getLong(1),rs.getInt(2),rs.getInt(3)),java.sql.Timestamp.from(from),java.sql.Timestamp.from(capturedAt),java.sql.Timestamp.from(capturedAt));
         var capacities=jdbc.query("""
-            select hub_id,
+            select h.id,
               sum(case when resource_type='PARKING_SPACE' then 1 else 0 end),
               sum(case when resource_type='PARKING_SPACE' and state in ('OCCUPIED','RESERVED') then 1 else 0 end),
               sum(case when resource_type='PARKING_SPACE' and state='FREE' then 1 else 0 end),
               sum(case when resource_type='CHARGING_POINT' and state not in ('FAULTY','UNDER_REPAIR') then 1 else 0 end),
               sum(case when resource_type='CHARGING_POINT' and state='IN_USE' then 1 else 0 end)
-            from m1_resource_state group by hub_id order by hub_id
-            """,(rs,n)->new CapacityState(rs.getLong(1),rs.getInt(2),rs.getInt(3),rs.getInt(4),rs.getInt(5),rs.getInt(6)));
+              ,(select count(*) from parking_space p where p.hub_id=h.id and p.type='BIKE' and p.status='FREE')
+              ,(select count(*) from redistribution_tasks t where t.destination_hub_id=h.id and t.status in ('CREATED','IN_PROGRESS'))
+            from hub h left join m1_resource_state m on m.hub_id=h.id group by h.id order by h.id
+            """,(rs,n)->new CapacityState(rs.getLong(1),rs.getInt(2),rs.getInt(3),rs.getInt(4),rs.getInt(5),rs.getInt(6),rs.getInt(7),rs.getInt(8)));
         return new Snapshot(UUID.randomUUID().toString(),capturedAt,hubs,vehicles,deviceCopy(),
                 "MANUAL_SCENARIO",new BookingWindow(from,capturedAt,30,demand),capacities);
     }
