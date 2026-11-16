@@ -30,6 +30,9 @@ alt AI provider configured
 else no AI provider
   S->>A: recommend(snapshot, scenario, kpi, engine) with local rules
 end
+S->>A: chargingAdvice(snapshot, scenario, kpi, engine)
+A->>E: re-simulate with charging requests moved to another hub
+A-->>S: charging_redirect advice (display only, never applied)
 S->>R: save(run)
 S-->>OP: Run (KPI, baseline, proposals, warnings)
 OP->>C: POST /runs/:id/recommendations/:recId/apply
@@ -41,6 +44,6 @@ D->>R: save(run) as PENDING, PARTIAL or APPROVED
 OP->>C: GET /api/m8/runs (later)
 C->>D: sync(runs)
 D->>M7: decision(m7Id)
-M7-->>D: status, done and failed tasks
-D->>R: save(run) only if changed (APPLIED or DISCARDED)
+M7-->>D: status, done and failed tasks (also when the Operator decided in M7)
+D->>R: save(run) only if changed (APPROVED, PARTIAL, APPLIED or DISCARDED)
 Note over S,D: M8 never writes operational tables. M7 creates and runs the tasks

@@ -61,6 +61,8 @@ cd ../frontend && npm install && npm run dev
 # http://localhost:5173   → đăng nhập student1 / 123456
 ```
 
+Muốn chạy riêng M8 (What-if Simulation) thì xem [docs/runbooks/m8-local.md](docs/runbooks/m8-local.md).
+
 Kiểm tra nhanh: `java -version` (21), `node -v` (20), `docker -v`.
 Chưa cài được gì thì xem [INSTALL.md](INSTALL.md).
 

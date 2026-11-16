@@ -11,6 +11,7 @@ __init -> "PENDING";
 "APPROVED" [];
 "APPLIED" [];
 "DISCARDED" [];
+"M7decision" [shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=12, label="M7\ndecision"];
 __fin0 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
 "APPLIED" -> __fin0;
 __fin1 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15];
@@ -26,6 +27,15 @@ __fin1 [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.15]
 "PARTIAL" -> "PARTIAL" [label="apply again / more tasks" ];
 "PARTIAL" -> "APPROVED" [label="apply again /\nremaining tasks created" ];
 "APPROVED" -> "APPLIED" [label="list runs / every M7 task finished,\nat least one vehicle arrived" ];
+"PENDING" -> "M7decision" [label="list runs (sync): Operator\ndecided directly in M7" ];
+"PARTIAL" -> "M7decision" [label="list runs (sync)" ];
+"NEEDS_REVIEW" -> "M7decision" [label="list runs (sync)" ];
+"M7decision" -> "APPROVED" [label="approved" ];
+"M7decision" -> "PARTIAL" [label="partly approved" ];
+"M7decision" -> "APPLIED" [label="approved,\ntasks done" ];
+"M7decision" -> "DISCARDED" [label="rejected" ];
 note [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=11, label="Created with the run, always PENDING.\nApply registers it with M7 (propose + approve);\nM8 then follows M7 when runs are listed.\nOnly dispatch proposals can be applied,\nand not on an edited (hypothetical) fleet."];
 note -> PENDING [style=dashed, arrowhead=none, color="#c9a227"];
+note2 [shape=note, style=filled, fillcolor="#fff6d5", color="#c9a227", fontname="DejaVu Sans", fontsize=11, label="charging_redirect advice is display-only:\nit never goes through Apply and M7 is not called.\nIt stays PENDING until the Operator discards it\n(PENDING -> DISCARDED)."];
+note2 -> DISCARDED [style=dashed, arrowhead=none, color="#c9a227"];
 }

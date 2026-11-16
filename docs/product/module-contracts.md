@@ -90,8 +90,9 @@ room, M7 turns it into `DESTINATION_FULL`; `HUB_NOT_FOUND` (404).
 
 ## A.6 Not implemented yet (tracked in the review)
 
-- M8 reads parking occupancy per Hub from the snapshot's `capacities`; its engine still estimates occupancy from
-  rental vehicles only.
+- M8 reads parking occupancy per Hub from the snapshot's `capacities`. Its parking scenario takes spaces from that
+  captured pool, but rental trips do not change the pool, and its charging scenario does not change vehicle batteries
+  or M5 schedules.
 - M8's runs are stored in a JSON file (latest 200), not in the database. Only the proposals inside a run have a
   state; the run itself has none.
 - M6 incidents (since 13/11): stored, API `/api/m6/incidents`, created automatically from failure readings
