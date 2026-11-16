@@ -61,7 +61,15 @@ public class SimulationService {
             notes.addAll(local.warnings());
             proposals = new ScenarioAssistant.Proposals(local.items(), local.source(), List.copyOf(notes));
         } else proposals = new ScenarioAssistant.Proposals(List.of(),"TOOL_AGENT",List.of("AI plans call simulate_plan and use actual KPI feedback. Only improving validated plans are retained. No live execution."));
+        var advice = assistant.chargingAdvice(snapshot, scenario, result.kpi(), engine);
+        if (advice != null && !advice.isEmpty()) {
+            var items = new ArrayList<>(proposals.items());
+            items.addAll(advice);
+            proposals = new ScenarioAssistant.Proposals(List.copyOf(items), proposals.source(), proposals.warnings());
+        }
         var warnings=new ArrayList<>(proposals.warnings());
+        if (settings.stream().anyMatch(h -> h.parkingArrivals() > 0 || h.chargingRequests() > 0))
+            warnings.add("Parking and charging demand are hypothetical; rental trips do not change the parking pool and charging does not change vehicle batteries.");
         if (repeats) warnings.add("Booking-based demand repeats each selected hub's accepted M2 bookings from the captured 30-minute window.");
         if (manual) warnings.add("Manually entered demand represents hypothetical rental requests.");
         warnings.add("Trips return to origin; charging, battery depletion and travel times are not modeled.");

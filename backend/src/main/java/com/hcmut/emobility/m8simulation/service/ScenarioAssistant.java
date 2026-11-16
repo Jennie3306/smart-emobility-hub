@@ -155,10 +155,12 @@ public class ScenarioAssistant {
         if(configured()) try {
             Scenario scenario = mapper.treeToValue(ask("""
                     Extract a simulation scenario as {name, durationMins, seed, affectedHubs: [
-                    {hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, closeFromMins, reopenAtMins}]}.
+                    {hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, closeFromMins, reopenAtMins,
+                    parkingArrivals, parkingStayMins, chargingRequests, chargeMins, failedChargers}]}.
                     Include each explicitly affected hub once. Use only supplied hub IDs.
                     Defaults: durationMins 120, seed 42, injectedRequests 100 per hub, arrivalWindowMins min(60,durationMins),
-                    tripMins 30, reroute false, repeatBookings false, closeFromMins 0, reopenAtMins null.
+                    tripMins 30, reroute false, repeatBookings false, closeFromMins 0, reopenAtMins null,
+                    parkingArrivals 0, parkingStayMins 0, chargingRequests 0, chargeMins 0, failedChargers 0.
                     Times are minutes from the simulation start. Null reopening means closed until the horizon.
                     Do not invent a hub if ambiguous.
                     """, Map.of("text", text, "hubs", snapshot.hubs())), Scenario.class);
@@ -209,7 +211,7 @@ public class ScenarioAssistant {
             var checked = verifyProposal(tool, snapshot, scenario, kpi, candidate, warnings);
             if (checked != null) accepted.add(checked);
         }
-        if (kpi.failed() > 0) for (var hub : scenario.settings()) {
+        if (kpi.totalUnserved() > 0) for (var hub : scenario.settings()) {
             int failed = kpi.hubs().stream().filter(h -> h.hubId() == hub.hubId()).mapToInt(HubKpi::failed).findFirst().orElse(0);
             if (failed == 0) continue;
             if (localDispatch && accepted.stream().noneMatch(r -> r.action().equals("dispatch"))) {
@@ -230,9 +232,65 @@ public class ScenarioAssistant {
                 }
             }
         }
-        if(kpi.failed()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Check donor vehicles, destination parking and hub closures.");
-        if(kpi.failed()>0) warnings.add("Dispatch projections use captured M1 parking observations. M7 checks the current M4 parking pool when tasks are created and completed.");
+        if (localDispatch && kpi.parkingTurnedAway() > 0) for (var hubKpi : kpi.hubs()) {
+            if (hubKpi.parkingTurnedAway() == 0 || scenario.closedAtStart(hubKpi.hubId())) continue;
+            if (accepted.stream().anyMatch(r -> r.action().equals("dispatch") && r.fromHubId() == hubKpi.hubId())) continue;
+            var target = snapshot.hubs().stream().filter(h -> h.id() != hubKpi.hubId() && !scenario.closedAtStart(h.id()))
+                    .max(Comparator.comparingInt((Hub h) -> snapshot.capacities().stream().filter(c -> c.hubId() == h.id())
+                            .mapToInt(CapacityState::transferSlots).findFirst().orElse(0))).orElse(null);
+            if (target == null) continue;
+            int spare = (int) snapshot.vehicles().stream().filter(v -> Objects.equals(v.hubId(), hubKpi.hubId())
+                    && "AVAILABLE".equals(v.state())).count() - 1;
+            int amount = Math.min(Math.min(hubKpi.parkingTurnedAway(), spare), parkingRoom(snapshot, target.id()));
+            if (amount <= 0) continue;
+            var checked = verifyProposal(tool, snapshot, scenario, kpi, proposal("dispatch", hubKpi.hubId(), target.id(), amount,
+                    "Free parking at the saturated hub by moving rental vehicles out."), warnings);
+            if (checked != null) accepted.add(checked);
+        }
+        if(kpi.totalUnserved()>0 && accepted.isEmpty()) warnings.add("No feasible dispatch improves this scenario. Check donor vehicles, destination parking and hub closures.");
+        if(kpi.totalUnserved()>0) warnings.add("Dispatch projections use captured M1 parking observations. M7 checks the current M4 parking pool when tasks are created and completed.");
         return new Proposals(List.copyOf(accepted),source,List.copyOf(warnings));
+    }
+    /** Display-only: shifting charging sessions to a hub with free chargers. M5 scheduling is never changed. */
+    public List<Recommendation> chargingAdvice(Snapshot snapshot,Scenario scenario,Kpi kpi,SimulationEngine engine) {
+        List<Recommendation> advice=new ArrayList<>();
+        if (kpi.chargingUnserved()==0) return advice;
+        Map<Long,HubSettings> settings=new HashMap<>();
+        scenario.settings().forEach(h -> settings.put(h.hubId(),h));
+        for (var source : kpi.hubs()) {
+            var from=settings.get(source.hubId());
+            if (from==null || source.chargingUnserved()==0) continue;
+            var targets=kpi.hubs().stream().filter(h -> h.hubId()!=source.hubId() && !scenario.closedAtStart(h.hubId())
+                    && h.chargingUnserved()==0 && h.usableChargers()>0)
+                    .sorted(Comparator.comparingInt(HubKpi::usableChargers).reversed()).toList();
+            if (targets.isEmpty()) continue;
+            var target=targets.getFirst();
+            Recommendation best=null; int bestUnserved=kpi.totalUnserved();
+            int unserved=Math.min(source.chargingUnserved(),200);
+            for (int amount : new LinkedHashSet<>(List.of(unserved,(unserved+1)/2,(unserved+3)/4))) {
+                var existing=settings.get(target.hubId());
+                int mins=existing!=null && existing.chargingRequests()>0 ? existing.chargeMins() : from.chargeMins();
+                var shifted=new ArrayList<HubSettings>();
+                for (var h : scenario.settings()) {
+                    if (h.hubId()==source.hubId()) shifted.add(h.withCharging(h.chargingRequests()-amount,h.chargeMins()));
+                    else if (h.hubId()==target.hubId()) shifted.add(h.withCharging(h.chargingRequests()+amount,mins));
+                    else shifted.add(h);
+                }
+                if (existing==null) shifted.add(new HubSettings(target.hubId(),false,0,from.arrivalWindowMins(),from.tripMins(),false,false,
+                        0,null,0,0,amount,mins,0));
+                try {
+                    var result=engine.simulate(snapshot,scenario.withSettings(shifted)).kpi();
+                    if (result.totalUnserved()<bestUnserved) {
+                        bestUnserved=result.totalUnserved();
+                        best=new Recommendation(UUID.randomUUID().toString(),"charging_redirect",source.hubId(),target.hubId(),amount,
+                                "Direct charging requests to a hub with free chargers. Display only: M5 scheduling is not changed.",
+                                "PENDING",result.failurePercent());
+                    }
+                } catch (IllegalArgumentException invalid) { /* candidate not simulatable on this snapshot */ }
+            }
+            if (best!=null) advice.add(best);
+        }
+        return advice;
     }
     private Recommendation proposal(String action, long from, long to, int amount, String reason) {
         return new Recommendation(UUID.randomUUID().toString(), action, from, to, amount, reason, "PENDING", 0);
@@ -242,7 +300,7 @@ public class ScenarioAssistant {
         var result = tool.evaluate(snapshot, scenario, List.of(new PlanAction(candidate.action(), candidate.fromHubId(),
                 candidate.toHubId(), candidate.amount(), candidate.reason())));
         if (!result.valid()) { warnings.add("An infeasible recommendation was rejected."); return null; }
-        if (result.kpi().failed() >= original.failed()) return null;
+        if (result.kpi().totalUnserved() >= original.totalUnserved()) return null;
         String reason = candidate.reason();
         if ("dispatch".equals(candidate.action())) {
             reason += " Parking uses captured rental-bike parking and incoming tasks and requires M4/M7 live revalidation.";

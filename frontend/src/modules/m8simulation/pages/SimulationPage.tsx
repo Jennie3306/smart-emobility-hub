@@ -7,7 +7,7 @@ import { AgentPanel } from "./AgentPanel";
 import { dispatchSummary, plural } from "./text";
 import { StudioIcon } from "./StudioIcon";
 import { refreshActiveRun, acceptPlanningResult } from "./planningState";
-import { effectiveScenario, draftFromPlan, numericFields, hubNumberFields, validateHubSettings, validateDraft, draftDiffers, hubSettings, withHubSettings } from "./scenarioDraft";
+import { effectiveScenario, draftFromPlan, numericFields, hubNumberFields, validateHubSettings, parkingChargingFields, parkingChargingDefaults, validateDraft, draftDiffers, hubSettings, withHubSettings } from "./scenarioDraft";
 
 const defaults:Scenario={name:"Peak-hour hub closure",hubId:1,disabled:true,injectedRequests:100,durationMins:120,arrivalWindowMins:60,tripMins:30,reroute:false,seed:42};
 const number=(n:number)=>n.toLocaleString("en-GB",{maximumFractionDigits:1});
@@ -61,6 +61,7 @@ export default function SimulationPage() {
   });
   const baselineDelta = active ? Math.round((active.kpi.failurePercent - active.baseline.failurePercent) * 10) / 10 : 0;
   const selected=runs.filter(r=>compare.includes(r.id));
+  const parkingRun=(active?.kpi.parkingRequests??0)>0; const chargingRun=(active?.kpi.chargingRequests??0)>0;
   const hubs=active?.snapshot.hubs || snapshot?.hubs || [];
   const rentalParking = (id:number) => active?.snapshot.capacities?.find(c => c.hubId===id)?.rentalFreeSlots != null;
   const hubName=(id:number)=>hubs.find(h=>h.id===id)?.name || `Hub ${id}`;
@@ -102,7 +103,7 @@ export default function SimulationPage() {
                   <summary><strong>{(inputSnapshot ?? snapshot).hubs.find(item => item.id === hub.hubId)?.name ?? `Hub ${hub.hubId}`}</strong>
                     <span>{Number.isFinite(effectiveHubs[index].injectedRequests) ? number(effectiveHubs[index].injectedRequests) : "—"} {plural(effectiveHubs[index].injectedRequests, "request")} · {
                       hub.disabled ? `Closed ${Number.isFinite(hub.closeFromMins) ? hub.closeFromMins : "—"}–${hub.reopenAtMins ?? "end"} min` : "Open"
-                    }{Object.keys(hubErrors[index]).length > 0 && " · Check settings"}</span>
+                    }{(effectiveHubs[index].parkingArrivals ?? 0) > 0 && ` · ${number(effectiveHubs[index].parkingArrivals!)} parking`}{(effectiveHubs[index].chargingRequests ?? 0) > 0 && ` · ${number(effectiveHubs[index].chargingRequests!)} charging`}{(effectiveHubs[index].failedChargers ?? 0) > 0 && ` · ${number(effectiveHubs[index].failedChargers!)} ${plural(effectiveHubs[index].failedChargers!, "charger")} failed`}{Object.keys(hubErrors[index]).length > 0 && " · Check settings"}</span>
                   </summary>
                   <label>Hub<select value={hub.hubId} aria-invalid={!!hubErrors[index].hubId} onChange={e=>updateHub(index,{hubId:Number(e.target.value)})}>
                     {(inputSnapshot ?? snapshot).hubs.filter(h=>h.id===hub.hubId || !settings.some(item=>item.hubId===h.id))
@@ -124,6 +125,23 @@ export default function SimulationPage() {
                         onChange={e=>updateHub(index,{[key]:e.target.valueAsNumber})}/>
                     </label>)}
                   </div>
+                  <details className="m8-hub-extra">
+                    <summary>Parking and charging at this hub</summary>
+                    {(() => {
+                      const source = inputSnapshot ?? snapshot;
+                      const parking = parkingAt(source, hub.hubId);
+                      const chargers = source.capacities?.find(c => c.hubId === hub.hubId);
+                      return <p className="m8-field-hint">{parking ? `${parking.freeSlots} of ${parking.totalSlots} parking spaces free` : "Parking data unavailable"}{chargers && ` · ${chargers.operationalChargers} operational ${plural(chargers.operationalChargers, "charger")}, ${chargers.busyChargers} busy`}</p>;
+                    })()}
+                    <div className="m8-field-grid">
+                      {parkingChargingFields.map(([key,label,min,max]) => <label key={key}>{label}
+                        <input type="number" min={min} max={max} step={1} aria-invalid={!!hubErrors[index][key]}
+                          value={Number.isFinite(effectiveHubs[index][key]) ? effectiveHubs[index][key] : ""}
+                          onChange={e=>updateHub(index,{[key]:e.target.valueAsNumber})}/>
+                      </label>)}
+                    </div>
+                    <p className="m8-field-hint">Hypothetical demand. Leave at 0 to leave parking or charging out of the run.</p>
+                  </details>
                   <label className="m8-toggle"><input type="checkbox" checked={hub.disabled} onChange={e=>updateHub(index,{disabled:e.target.checked})}/>
                     <span><strong>Simulate this hub being closed</strong><small>Set when rentals pause and resume at this hub.</small></span></label>
                   {hub.disabled && <div className="m8-field-grid">
@@ -149,12 +167,12 @@ export default function SimulationPage() {
                     edit();
                     setScenario(withHubSettings(scenario, [...settings, {hubId: next.id, disabled: false,
                       injectedRequests: 0, arrivalWindowMins: Math.min(60, scenario.durationMins || 60), tripMins: 30,
-                      reroute: false, repeatBookings: false, closeFromMins: 0, reopenAtMins: null}]));
+                      reroute: false, repeatBookings: false, closeFromMins: 0, reopenAtMins: null, ...parkingChargingDefaults}]));
                   }}>Add affected hub</button>;
                 })()}
               </div>
               <details className="m8-advanced"><summary>Snapshot & Repeatability</summary><p>Use the same snapshot and seed to compare scenarios fairly.</p><label>Snapshot source<select name="snapshotSource" value={reuse} onChange={e=>{edit();setStartingVehicles({});setReuse(e.target.value);}}><option value="">Capture the live network</option>{runs.map(r=><option key={r.id} value={r.id}>{r.scenario.name} · {time(r.createdAt)}</option>)}</select></label>{numericFields.filter(([key])=>key==="seed").map(renderNumericField)}</details>
-              <p className="m8-input-summary">{settings.length} affected {settings.length === 1 ? "hub" : "hubs"} · {number(effectiveHubs.reduce((total,hub)=>total+(hub.injectedRequests || 0),0))} rental requests · {scenario.durationMins || "—"} min</p>
+              <p className="m8-input-summary">{settings.length} affected {settings.length === 1 ? "hub" : "hubs"} · {number(effectiveHubs.reduce((total,hub)=>total+(hub.injectedRequests || 0),0))} rental requests{(() => {const sum=(key:"parkingArrivals"|"chargingRequests")=>effectiveHubs.reduce((total,hub)=>total+(hub[key] || 0),0);const p=sum("parkingArrivals"),c=sum("chargingRequests");return <>{p>0&&` · ${number(p)} parking`}{c>0&&` · ${number(c)} charging`}</>;})()} · {scenario.durationMins || "—"} min</p>
               {invalid && <p id="scenario-errors" className="m8-alert error" role="alert">Correct the highlighted fields before running.</p>}
               <button className="m8-button primary m8-run" disabled={busy||invalid} aria-describedby={invalid?"scenario-errors":undefined} onClick={()=>task(async()=>{if(invalid)return;const run=await api.run(effective,reuse||undefined,false,Object.entries(startingVehicles).map(([id,count])=>`${id}:${count}`).join(",")||undefined);setStartingVehicles({});setScenario(run.scenario);setReuse(run.id);setRepeatBookings(run.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT");setActive(run);setRuns(await api.list());setNotice("Results and planning history saved. Live vehicle data was not changed.");})}>{busy?"Processing…":"Save & Run Simulation"}</button>
               {active && <a className="m8-result-jump" href="#m8-scenario-results">View results</a>}
@@ -203,13 +221,17 @@ export default function SimulationPage() {
                   {fleetEdited && <button className="m8-button secondary" type="button" disabled={busy}
                     onClick={() => {edit();setStartingVehicles({});}}>Reset vehicle edits</button>}
                 </div>
-                {active?<>{dirty&&<div className="m8-alert" role="status">Results and recommendations below are from the previous run. Your draft changes have not been simulated.</div>}<div className="m8-kpis"><Metric label="Requests served" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Unserved" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Avg. wait · served only" value={active.kpi.served?number(active.kpi.meanWaitMins):"—"} unit={active.kpi.served?"min":""}/><Metric label="Peak queue" value={number(active.kpi.peakQueue)} unit={plural(active.kpi.peakQueue, "request")}/></div>
+                {active?<>{dirty&&<div className="m8-alert" role="status">Results and recommendations below are from the previous run. Your draft changes have not been simulated.</div>}<div className="m8-kpis"><Metric label="Requests served" value={number(active.kpi.served)} unit={`/ ${active.kpi.requests}`} /><Metric label="Unserved" value={number(active.kpi.failurePercent)} unit="%" danger={active.kpi.failurePercent>0}/><Metric label="Avg. wait · served only" value={active.kpi.served?number(active.kpi.meanWaitMins):"—"} unit={active.kpi.served?"min":""}/><Metric label="Peak queue" value={number(active.kpi.peakQueue)} unit={plural(active.kpi.peakQueue, "request")}/>
+                  {parkingRun&&<Metric label="Parking turned away" value={number(active.kpi.parkingTurnedAway??0)} unit={`/ ${number(active.kpi.parkingRequests!)}`} danger={(active.kpi.parkingTurnedAway??0)>0}/>}
+                  {chargingRun&&<><Metric label="Charging unserved" value={number(active.kpi.chargingUnserved??0)} unit={`/ ${number(active.kpi.chargingRequests!)}`} danger={(active.kpi.chargingUnserved??0)>0}/>
+                  <Metric label="Avg. charging wait · served only" value={active.kpi.chargingServed?number(active.kpi.meanChargingWaitMins??0):"—"} unit={active.kpi.chargingServed?"min":""}/>
+                  <Metric label="Peak charging queue" value={number(active.kpi.peakChargingQueue??0)} unit={plural(active.kpi.peakChargingQueue??0, "request")}/></>}</div>
                   <div className="m8-baseline">Same network with all hubs open: <strong>{number(active.baseline.failurePercent)}% unserved</strong><span>{baselineDelta === 0
                     ? "Same unserved rate"
                     : `${number(Math.abs(baselineDelta))} percentage points ${baselineDelta > 0 ? "higher" : "lower"} in this scenario`}</span></div>
                   <div className="m8-chart"><ResponsiveContainer width="100%" height={240}><LineChart accessibilityLayer data={active.timeline}><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="minute" tick={{fontSize:11}} minTickGap={30} unit="′"/><YAxis tick={{fontSize:11}}/><Tooltip/><Legend/><Line name="Served" type="monotone" dataKey="served" stroke="#1F4E79" strokeWidth={2.5} dot={false}/><Line name="Waiting" type="monotone" dataKey="waiting" stroke="#a15c07" strokeDasharray="5 3" strokeWidth={2.5} dot={false}/></LineChart></ResponsiveContainer></div>
                   <p className="m8-footnote">Mean wait includes served requests only. Requests still waiting at the end count as unserved.</p>
-                  <div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Results by hub"><table><thead><tr><th>Hub</th><th>Served here</th><th>Unserved from here</th><th>Vehicles available at horizon</th></tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td></tr>)}</tbody></table></div>
+                  <div className="m8-table-wrap" tabIndex={0} role="region" aria-label="Results by hub"><table><thead><tr><th>Hub</th><th>Served here</th><th>Unserved from here</th><th>Vehicles available at horizon</th>{parkingRun&&<><th>Parking turned away</th><th>Peak parking</th></>}{chargingRun&&<><th>Charging unserved</th><th>Charger use</th></>}</tr></thead><tbody>{active.kpi.hubs.map(h=><tr key={h.hubId}><td>{h.name}</td><td>{h.served}</td><td>{h.failed}</td><td>{h.availableVehicles}</td>{parkingRun&&<><td>{h.parkingTurnedAway??0}</td><td>{number(h.parkingPeakPercent??0)}%</td></>}{chargingRun&&<><td>{h.chargingUnserved??0}</td><td>{h.chargerUtilizationPercent==null?"—":`${number(h.chargerUtilizationPercent)}% of ${h.usableChargers??0}`}</td></>}</tr>)}</tbody></table></div>
                 </>:null}
 
               </div>
@@ -220,11 +242,12 @@ export default function SimulationPage() {
                   <div className="m8-recommendation" key={r.id}>
                     <div className="m8-rec-icon"><StudioIcon kind="network"/></div>
                     <div>
-                      <h3>{r.action === "reroute" ? "Route requests to available hubs" : `Dispatch ${r.amount} ${plural(r.amount, "vehicle")}`}</h3>
-                      {r.action === "dispatch" && <p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}
+                      <h3>{r.action === "reroute" ? "Route requests to available hubs" : r.action === "charging_redirect" ? `Redirect ${number(r.amount)} charging ${plural(r.amount, "request")}` : `Dispatch ${r.amount} ${plural(r.amount, "vehicle")}`}</h3>
+                      {(r.action === "dispatch" || r.action === "charging_redirect") && <p>{hubName(r.fromHubId)} → {hubName(r.toHubId)}</p>}
                       <p className="m8-footnote">{r.reason}</p>
                       {r.action === "dispatch" && !rentalParking(r.toHubId) && <p className="m8-footnote">Capture a new snapshot to verify rental-bike parking before applying.</p>}
-                      {!r.id.startsWith("agent-") && <strong className="m8-benefit">Projected unserved rate {number(r.projectedFailurePercent)}%</strong>}
+                      {r.action === "charging_redirect" && <p className="m8-footnote">Advice only. Charging schedules are not changed.</p>}
+                      {!r.id.startsWith("agent-") && r.action !== "charging_redirect" && <strong className="m8-benefit">Projected unserved rate {number(r.projectedFailurePercent)}%</strong>}
                       {r.dispatch && <>
                         <p role="status">{r.dispatch.tasks.length}/{r.amount} {plural(r.amount, "task")} created{r.status === "NEEDS_REVIEW" ? " · Needs review" : r.status === "APPLIED" ? " · Completed in M7" : ""}</p>
                         {r.dispatch.tasks.length > 0 && <ul>{r.dispatch.tasks.map(task => <li key={task.taskId}>Task #{task.taskId}{task.vehicleId != null && ` · Vehicle #${task.vehicleId}`}</li>)}</ul>}
@@ -233,7 +256,7 @@ export default function SimulationPage() {
                         {r.dispatch.unconfirmedVehicleId != null && <p className="m8-footnote">Review vehicle #{r.dispatch.unconfirmedVehicleId}.</p>}
                       </>}
                       <div className="m8-actions">
-                        {r.action === "reroute" ? (
+                        {r.action === "charging_redirect" ? null : r.action === "reroute" ? (
                           <button className="m8-button primary" disabled={busy || r.status !== "PENDING"} onClick={() => {
                             const plan = draftFromPlan(active, r.fromHubId);
                             edit(); setScenario(plan.scenario); setReuse(plan.reuse); setRepeatBookings(plan.repeatBookings);
@@ -277,6 +300,7 @@ export default function SimulationPage() {
                 <summary>Model assumptions & limitations</summary>
                 <ul>
                   <li>Only hubs configured in this scenario generate requests. Other hubs have no demand of their own in this run, so rerouting or moving vehicles may look more effective than it would in practice.</li>
+                  <li>Parking and charging demand are hypothetical. Rental trips do not change the parking pool and charging does not change vehicle batteries.</li>
                   {active.warnings.map((w,i)=><li key={i}>{w}</li>)}
                 </ul>
                 <p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":active.snapshot.demandSource==="MIXED_SCENARIO"?"Manual requests and repeated bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="TOOL_AGENT"?"AI tool exploration":active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Charging and battery depletion are not modeled.</p>

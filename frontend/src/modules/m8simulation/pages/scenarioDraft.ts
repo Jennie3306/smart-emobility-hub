@@ -1,10 +1,24 @@
 import type { HubSettings, Run, Scenario, Snapshot } from "../api/simulationApi";
+import { plural } from "./text";
 
-export function hubSettings(scenario: Scenario, repeatBookings = false): HubSettings[] {
-  if (scenario.affectedHubs) return scenario.affectedHubs;
+export const parkingChargingDefaults = {parkingArrivals: 0, parkingStayMins: 60, chargingRequests: 0, chargeMins: 45, failedChargers: 0};
+
+/** Old saved runs lack the parking and charging fields; fill them so drafts and API calls always carry numbers. */
+type FilledHub = HubSettings & Required<Pick<HubSettings, "parkingArrivals" | "parkingStayMins" | "chargingRequests" | "chargeMins" | "failedChargers">>;
+export function withParkingChargingDefaults(hub: HubSettings): FilledHub {
+  return {...hub,
+    parkingArrivals: hub.parkingArrivals ?? parkingChargingDefaults.parkingArrivals,
+    parkingStayMins: hub.parkingStayMins ?? parkingChargingDefaults.parkingStayMins,
+    chargingRequests: hub.chargingRequests ?? parkingChargingDefaults.chargingRequests,
+    chargeMins: hub.chargeMins ?? parkingChargingDefaults.chargeMins,
+    failedChargers: hub.failedChargers ?? parkingChargingDefaults.failedChargers};
+}
+
+export function hubSettings(scenario: Scenario, repeatBookings = false): FilledHub[] {
+  if (scenario.affectedHubs) return scenario.affectedHubs.map(withParkingChargingDefaults);
   const {hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute} = scenario;
   return [{hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute,
-    repeatBookings, closeFromMins: 0, reopenAtMins: null}];
+    repeatBookings, closeFromMins: 0, reopenAtMins: null, ...parkingChargingDefaults}];
 }
 
 export function withHubSettings(scenario: Scenario, settings: HubSettings[]): Scenario {
@@ -14,7 +28,7 @@ export function withHubSettings(scenario: Scenario, settings: HubSettings[]): Sc
 }
 
 export function effectiveScenario(draft: Scenario, repeatBookings: boolean, snapshot?: Snapshot): Scenario {
-  if (draft.affectedHubs) return withHubSettings(draft, draft.affectedHubs.map(hub => hub.repeatBookings
+  if (draft.affectedHubs) return withHubSettings(draft, hubSettings(draft).map(hub => hub.repeatBookings
     ? {...hub, injectedRequests: snapshot?.bookingWindow?.hubs.find(h => h.hubId === hub.hubId)?.bookings ?? 0}
     : hub));
   if (!repeatBookings) return draft;
@@ -44,11 +58,34 @@ export const numericFields = [
 
 export const hubNumberFields = [numericFields[0], numericFields[2], numericFields[3]] as const;
 
-export function validateHubSettings(hub: HubSettings, horizon: number, snapshot?: Snapshot) {
+export const parkingChargingFields = [
+  ["parkingArrivals", "Private vehicles arriving to park", 0, 10000],
+  ["parkingStayMins", "Parking stay (min)", 0, 1440],
+  ["chargingRequests", "Charging requests", 0, 10000],
+  ["chargeMins", "Charging time (min)", 0, 480],
+  ["failedChargers", "Failed chargers", 0, 1000],
+] as const;
+
+export function validateHubSettings(input: HubSettings, horizon: number, snapshot?: Snapshot) {
+  const hub = withParkingChargingDefaults(input);
   const errors: Partial<Record<keyof HubSettings, string>> = {};
   for (const [key, label, min, max] of hubNumberFields) {
     if (!Number.isInteger(hub[key]) || hub[key] < min || hub[key] > max)
       errors[key] = `${label} must be a whole number from ${min} to ${max}.`;
+  }
+  for (const [key, label, min, max] of parkingChargingFields) {
+    const value = hub[key] as number;
+    if (!Number.isInteger(value) || value < min || value > max)
+      errors[key] = `${label} must be a whole number from ${min} to ${max}.`;
+  }
+  if (!errors.parkingStayMins && hub.parkingArrivals > 0 && hub.parkingStayMins < 1)
+    errors.parkingStayMins = "Parking stay must be at least 1 minute when vehicles arrive to park.";
+  if (!errors.chargeMins && hub.chargingRequests > 0 && hub.chargeMins < 1)
+    errors.chargeMins = "Charging time must be at least 1 minute when there are charging requests.";
+  if (snapshot && !errors.failedChargers) {
+    const operational = snapshot.capacities?.find(c => c.hubId === hub.hubId)?.operationalChargers ?? 0;
+    if (hub.failedChargers > operational)
+      errors.failedChargers = `Failed chargers cannot exceed the ${operational} operational ${plural(operational, "charger")} at this hub.`;
   }
   if (!errors.arrivalWindowMins && hub.arrivalWindowMins > horizon)
     errors.arrivalWindowMins = "Arrival window must fit within the simulation horizon.";
