@@ -91,4 +91,4 @@ Chép các file sau vào `images/ui/` của report, đổi sang tên ở cột p
 - **Đăng nhập lỗi:** thường do sai cổng (phải là 5173) hoặc backend chưa chạy. Cổng khác thì dùng `BASE=http://localhost:5174 node capture.mjs mockup`, nhưng phải thêm cổng đó vào CORS của backend.
 - **Khổ ảnh khác:** dùng `WIDTH=1280 HEIGHT=800 npm run mockup`.
 - **Chụp tay không dùng script:** mở Chrome DevTools, bật Device toolbar, đặt khổ 1440×900, rồi Ctrl+Shift+P → *Capture screenshot*. Đặt tên và để vào đúng thư mục như bảng trên.
-- **Màn M8:** chụp lại sau khi TV8 merge phần nối M7, để nút *Approve & execute* không còn bị khoá.
+- **Màn M8:** ảnh `real` cần dữ liệu có sẵn (một run đã lưu, một đề xuất điều xe). Muốn chụp lại thì chạy kịch bản ở bước 10 của `docs/demo/kich-ban-demo.md` trước.

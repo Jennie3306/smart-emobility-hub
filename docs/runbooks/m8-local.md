@@ -1,7 +1,6 @@
 # M8 — local setup and integration
 
-Branch: feature/m8-UI_whatif. Includes M1 1656510, M2 5e59464, M3 6ed46b4
-and M6 5583c1c, with local integration fixes. These changes have not been pushed.
+M8 is merged into main and runs against the shared PostgreSQL database with the other modules.
 
 ## Start and sign in
 
@@ -17,13 +16,17 @@ Stop with ./scripts/stop-m8.ps1; PostgreSQL and its data remain intact.
 The startup script reads .local/m8-openai-key.dpapi, encrypted with Windows DPAPI
 for the current Windows user. Git ignores this file. It decrypts the key only for
 the backend launch; credentials never become Java command-line arguments or frontend configuration.
-Default endpoint: https://api.openai.com/v1/chat/completions. Model: gpt-4.1-mini.
+Default model: gpt-6.1-sol through https://api.openai.com/v1/responses; other models use
+https://api.openai.com/v1/chat/completions.
 Override using M8_LLM_URL, M8_LLM_KEY and M8_LLM_MODEL. Never use VITE_* for keys.
 
 The provider receives descriptions and, for recommendations, the snapshot and KPIs.
 Requests use JSON mode, bounded output and a 35-second timeout. Parameters are validated.
 Recommendations must pass resource/capacity checks and improve deterministic simulation results.
-Only dispatch and rerouting proposals are recognized. AI cannot execute operational actions.
+Only dispatch proposals are recognized; rerouting stays an operator setting. AI cannot execute
+operational actions. When AI is configured, each run lets it test up to three dispatch plans with the
+simulate_plan tool on the saved snapshot; Retry adds three more rounds. Only plans that reduce
+unserved requests are kept.
 Provider failures show sanitized status/error codes and fall back to labeled local rules.
 AI configured means credentials are loaded; it does not prove a call succeeded.
 A parser result marked AI confirms an actual successful provider response.
@@ -36,11 +39,16 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
 - Immutable Hub/vehicle snapshot from PostgreSQL in a REPEATABLE_READ transaction.
 - One-minute deterministic engine with seeded arrivals; no LLM or live writes.
 - KPIs, open-hub baseline on the same snapshot, chart, history, editing and comparison.
-- M6 ResourceStateUpdatedEvent observations displayed separately with receive timestamps.
+- ResourceStateUpdated events from M4 (parking spaces) and M5 (chargers) displayed separately
+  as "Device state updates" with receive timestamps.
   These RAM observations are not transactionally synchronized with the database snapshot
   and do not overwrite authoritative M3 vehicle state in the engine.
 - Independently verified proposals and persistent Discard.
-- Apply returns 409 DISPATCH_NOT_CONNECTED until M7 provides execution and revalidation.
+- Apply sends a dispatch proposal to M7 through `RedistributionRecommendations` (propose + approve).
+  M7 picks the vehicles, checks parking and creates the tasks. Discard withdraws a pending M7 proposal.
+  When runs are listed, M8 follows M7: a rejected proposal becomes DISCARDED, and an approved one
+  becomes APPLIED once all its tasks have finished with at least one vehicle delivered.
+- Runs on an edited (hypothetical) fleet can be simulated but not applied.
 - Accepted M2 bookings from the captured 30-minute window can supply the scenario volume.
   The saved snapshot retains that window, so editing an old run repeats its original volume.
 - A 30-minute network check repeats recent accepted bookings against current resources,
@@ -61,7 +69,8 @@ Reference: [OpenAI Structured Outputs](https://developers.openai.com/api/docs/gu
 - Accepted bookings are not total demand: rejected attempts and searches are excluded.
   Cancelled or completed bookings still count as historical accepted arrivals.
 - Each trip holds a vehicle for tripMins, then returns to its origin; no charging or battery depletion.
-- Hub closure lasts the horizon. Rerouting picks available hubs by ID without travel time.
+- A hub can be closed from a given minute and optionally reopened. Rerouting (only during a
+  closure) picks available hubs by ID without travel time.
 - Requests still waiting at the horizon count as failed. Mean wait includes served requests only.
 - Parking reservations, charging schedules, dispatch travel and ongoing-trip arrivals are not modeled.
 - The baseline holds demand, seed and rerouting fixed and reopens the affected hub.
@@ -77,10 +86,10 @@ English display labels for seeded hubs do not change live Hub rows.
   total attempted demand remains unavailable.
 - TV3: review the local rental lifecycle/event and snapshot contract changes.
 - TV4: review V20 M2 persistence migration already applied locally; approve the separate
-  M8 schema, operational hub state and M4 parking validation contract. M4 remains a stub.
-- TV7: Apply contract with live revalidation, deduplication and execution status.
-  RecommendationApprovedEvent currently lacks dispatch details; M8 does not alter it.
-- M1: booking-risk warnings are integrated; dispatch execution status awaits M7.
+  M8 schema and operational hub state.
+- TV7: Apply uses `RedistributionRecommendations` (propose, approve, decision, withdraw).
+  The donor keep-back differs: M8 keeps 1 vehicle, M7 keeps 4, M1 warns at 2. Needs one agreed value.
+- M1: booking-risk warnings are integrated.
 
 ## Verify
 
@@ -108,8 +117,8 @@ restart persistence, bounds, M8 roles, recommendation feasibility and M3 user-ID
 
 For a demo, open History & comparison and View & edit on
 Integration demo - repeat recent bookings. Compare it with another saved run, or use
-Try this plan to preview rerouting. Saving a new run can call the configured LLM.
-M7 Apply is unavailable, M4 parking validation is pending, and M8 history is file-backed.
+Review dispatch to send a proposal to M7. Saving a new run can call the configured LLM.
+M8 history is file-backed.
 
 ## Exploratory QA fixes — 27 October 2026
 
