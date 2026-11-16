@@ -69,17 +69,6 @@ public class SimulationService {
         Run run=new Run(UUID.randomUUID().toString(),Instant.now(),scenario,snapshot,result.kpi(),baseline,result.timeline(),proposals.items(),proposals.source(),List.copyOf(warnings),agent);
         store.save(run); return run;
     }
-    public Run discard(String runId,String recommendationId) throws IOException {
-        synchronized (store) { return discardLocked(runId, recommendationId); }
-    }
-    private Run discardLocked(String runId,String recommendationId) throws IOException {
-        Run r=store.get(runId);
-        Recommendation item=r.recommendations().stream().filter(a -> a.id().equals(recommendationId)).findFirst().orElseThrow();
-        if(!item.status().equals("PENDING")) throw new BusinessException("ALREADY_RESOLVED","This proposal has already been resolved");
-        var items=r.recommendations().stream().map(a -> a.id().equals(recommendationId)?new Recommendation(a.id(),a.action(),a.fromHubId(),a.toHubId(),a.amount(),a.reason(),"DISCARDED",a.projectedFailurePercent()):a).toList();
-        Run updated=new Run(r.id(),r.createdAt(),r.scenario(),r.snapshot(),r.kpi(),r.baseline(),r.timeline(),items,r.recommendationSource(),r.warnings(),r.agent());
-        store.save(updated); return updated;
-    }
     public ParseResult parse(String text) { return assistant.parse(text,snapshots.capture()); }
     public boolean aiConfigured() { return assistant.configured(); }
     public Run retry(String runId,int expectedRounds) throws IOException {

@@ -14,9 +14,3 @@ export function dispatchSummary(statuses: string[]): string {
   const top = order.find(status => statuses.includes(status)) ?? statuses[0];
   return label[top] ?? top;
 }
-
-/** Only same-site paths are accepted as a post-login destination. */
-export function safeNext(next: string | null | undefined): string {
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/login")) return "/";
-  return next;
-}

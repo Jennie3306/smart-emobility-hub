@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { safeNext } from "@/modules/m8simulation/pages/text";
+import { safeNext } from "../api/safeNext";
 import { login } from "../api/auth";
 
 export function LoginPage() {
