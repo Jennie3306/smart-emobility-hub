@@ -86,11 +86,11 @@ const REAL = [
   { m: "m7", name: "m7_task_done", role: "operator", path: "/m7/redistribution",
     todo: "Bấm Start rồi Mark done ở một task. Chụp khi task chuyển sang DONE." },
   { m: "m8", name: "m8_extracted", role: "operator", path: "/m8/simulation",
-    todo: "Ô 'Fill parameters from a description' gõ đúng: Close Dormitory A Hub for 120 minutes, 40 students need a ride → bấm ✧ Extract parameters. Chụp khi hiện 'Local rules filled the form…', Affected hub = Dormitory A Hub, ô Close the hub đã tick." },
+    todo: "Mở 'Fill from a description', gõ: Close Dormitory A Hub for 60 minutes, 40 students need rides → bấm Fill form. Chụp khi hiện thông báo 'AI filled the form…' (hoặc 'Local rules filled the form…') và form đã điền: Scenario name, Affected hubs = Dormitory A Hub, 40 requests, Closed 0–60 min." },
   { m: "m8", name: "m8_run_result", role: "operator", path: "/m8/simulation",
-    todo: "Trang được mở lại: gõ lại mô tả trên, Extract, đổi Scenario name thành 'Close Dormitory A Hub - peak hour', bấm ▶ Save & run simulation. Chụp khi hiện 4 ô KPI, biểu đồ và Recommended plans (gõ f để chụp cả trang)." },
+    todo: "Trang được mở lại. Scenario name = 'Science Hub - peak demand'; mở Affected hubs, chọn Hub = Science Hub (ít xe), Rental requests = 30, bỏ tick 'Simulate this hub being closed'; mở 'Parking and charging at this hub': Private vehicles arriving to park = 8, Charging requests = 10, Failed chargers = 2. Bấm Save & Run Simulation, đợi AI Plan Exploration xong (tối đa ~2 phút). Cuộn tới các KPI (Requests served, Parking turned away, Charging unserved, Avg. charging wait, Peak charging queue) rồi chụp; dùng f để chụp cả trang nếu muốn thấy thêm AI Plan Exploration và Recommended plans (không bấm Review dispatch / Discard)." },
   { m: "m8", name: "m8_compare", role: "operator", path: "/m8/simulation",
-    todo: "Mở History & comparison → View & edit ở run vừa chạy. Ở form: đổi tên 'Close Dormitory A Hub - reroute', tick Allow requests to use other hubs, giữ Snapshot source là run cũ → Save & run. Mở lại History & comparison, tick ô Select của hai run này. Chụp khi hiện KPI comparison." },
+    todo: "Mở History & comparison → View & edit ở run vừa chạy (form tự dùng lại snapshot đã lưu). Đổi tên 'Science Hub - peak demand, no charger faults', mở Science Hub → 'Parking and charging at this hub', đặt Failed chargers = 0 → Save & Run Simulation, đợi chạy xong. Mở lại History & comparison, tick ô Select của hai run vừa chạy. Chụp khi hiện bảng KPI comparison (cuộn xuống nếu cần, hoặc dùng f)." },
 ];
 
 // ---------------------------------------------------------------- helpers

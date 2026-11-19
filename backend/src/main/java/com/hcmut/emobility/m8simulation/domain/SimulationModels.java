@@ -1,5 +1,6 @@
 package com.hcmut.emobility.m8simulation.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.nio.charset.StandardCharsets;
@@ -37,19 +38,33 @@ public final class SimulationModels {
     public record HubSettings(@Positive long hubId, boolean disabled, @Min(0) @Max(10000) int injectedRequests,
                               @Min(1) @Max(1440) int arrivalWindowMins, @Min(1) @Max(240) int tripMins,
                               boolean reroute, boolean repeatBookings,
-                              @Min(0) int closeFromMins, @Min(1) Integer reopenAtMins) {
+                              @Min(0) int closeFromMins, @Min(1) Integer reopenAtMins,
+                              @Min(0) @Max(10000) int parkingArrivals, @Min(0) @Max(1440) int parkingStayMins,
+                              @Min(0) @Max(10000) int chargingRequests, @Min(0) @Max(480) int chargeMins,
+                              @Min(0) @Max(1000) int failedChargers) {
+        public HubSettings(long hubId, boolean disabled, int injectedRequests, int arrivalWindowMins, int tripMins,
+                           boolean reroute, boolean repeatBookings, int closeFromMins, Integer reopenAtMins) {
+            this(hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, closeFromMins, reopenAtMins, 0, 0, 0, 0, 0);
+        }
         public HubSettings(long hubId, boolean disabled, int injectedRequests, int arrivalWindowMins, int tripMins,
                            boolean reroute, boolean repeatBookings) {
             this(hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, 0, null);
         }
         public HubSettings withRequests(int requests, boolean repeat) {
-            return new HubSettings(hubId, disabled, requests, arrivalWindowMins, tripMins, reroute, repeat, closeFromMins, reopenAtMins);
+            return new HubSettings(hubId, disabled, requests, arrivalWindowMins, tripMins, reroute, repeat, closeFromMins, reopenAtMins,
+                    parkingArrivals, parkingStayMins, chargingRequests, chargeMins, failedChargers);
         }
         public HubSettings withReroute() {
-            return new HubSettings(hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, true, repeatBookings, closeFromMins, reopenAtMins);
+            return new HubSettings(hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, true, repeatBookings, closeFromMins, reopenAtMins,
+                    parkingArrivals, parkingStayMins, chargingRequests, chargeMins, failedChargers);
+        }
+        public HubSettings withCharging(int requests, int mins) {
+            return new HubSettings(hubId, disabled, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, closeFromMins, reopenAtMins,
+                    parkingArrivals, parkingStayMins, requests, mins, failedChargers);
         }
         public HubSettings opened() {
-            return new HubSettings(hubId, false, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings);
+            return new HubSettings(hubId, false, injectedRequests, arrivalWindowMins, tripMins, reroute, repeatBookings, 0, null,
+                    parkingArrivals, parkingStayMins, chargingRequests, chargeMins, failedChargers);
         }
         public boolean closedAt(int minute) {
             return disabled && minute >= closeFromMins && (reopenAtMins == null || minute < reopenAtMins);
@@ -91,9 +106,27 @@ public final class SimulationModels {
         }
     }
     public record HubKpi(long hubId, String name, int requests, int served, int failed, double meanWaitMins,
-                         int availableVehicles, double peakParkingPercent) {}
+                         int availableVehicles, double peakParkingPercent,
+                         int parkingRequests, int parkingTurnedAway, double parkingPeakPercent,
+                         int chargingRequests, int chargingServed, int chargingUnserved,
+                         int usableChargers, Double chargerUtilizationPercent) {
+        public HubKpi(long hubId, String name, int requests, int served, int failed, double meanWaitMins,
+                      int availableVehicles, double peakParkingPercent) {
+            this(hubId, name, requests, served, failed, meanWaitMins, availableVehicles, peakParkingPercent, 0, 0, 0, 0, 0, 0, 0, null);
+        }
+    }
     public record Kpi(int requests, int served, int failed, double failurePercent, double meanWaitMins,
-                      int peakQueue, List<HubKpi> hubs) {}
+                      int peakQueue, List<HubKpi> hubs,
+                      int parkingRequests, int parkingServed, int parkingTurnedAway,
+                      int chargingRequests, int chargingServed, int chargingUnserved,
+                      double meanChargingWaitMins, int peakChargingQueue) {
+        public Kpi(int requests, int served, int failed, double failurePercent, double meanWaitMins,
+                   int peakQueue, List<HubKpi> hubs) {
+            this(requests, served, failed, failurePercent, meanWaitMins, peakQueue, hubs, 0, 0, 0, 0, 0, 0, 0, 0);
+        }
+        /** Everything turned away: failed rentals, parking refusals and unserved charging sessions. */
+        @JsonIgnore public int totalUnserved() { return failed + parkingTurnedAway + chargingUnserved; }
+    }
     public record Point(int minute, int served, int waiting, int failed) {}
     public record EngineResult(Kpi kpi, List<Point> timeline) {}
     public record DispatchTask(Long vehicleId, long taskId) {}

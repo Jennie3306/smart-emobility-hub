@@ -33,7 +33,7 @@ Mechanism: level 2 of the original Appendix A.3 — Spring's in-process event bu
 | ChargingSession | M5 | REQUESTED, QUEUED, SCHEDULED, CHARGING, COMPLETED, INTERRUPTED, CANCELLED | — |
 | Device reading, Incident | M6 | Incident: REPORTED, ASSIGNED, IN_PROGRESS, RESOLVED, CLOSED | — |
 | RedistributionTask | M7 | CREATED, IN_PROGRESS, DONE, FAILED | — |
-| SimulationRun | M8 | DRAFT, RUNNING, COMPLETED, APPLIED, DISCARDED | — |
+| What-if proposal (inside a saved run) | M8 | PENDING, NEEDS_REVIEW, PARTIAL, APPROVED, APPLIED, DISCARDED | — |
 
 **Shared parking pool (BR-M4-08).** A Hub has one pool of parking spaces. A rental vehicle standing at a Hub
 occupies a space in that pool, just like a personal vehicle. "Hub full" therefore means the same thing when a
@@ -71,7 +71,7 @@ on the dashboard (M1) and in the What-if snapshot (M8).
 |---|---|---|---|---|
 | `ReservationCore` | `m2reservation.service` (only allowed cross-module service import) | M2 | M4 | Booking a parking space must hold the reservation in the same transaction |
 | `ParkingDock` | `shared.contracts` | M4 (`RentalDockService`) | M3 (return, pick-up), M7 (task start / done / failed) | Return or delivery needs an immediate "is there a space"; the space row is locked so two vehicles cannot take the last space |
-| `RedistributionRecommendations` | `shared.contracts` | M7 (`RecommendationService`) | M8 (What-if proposals) | `propose` returns M7's recommendation id at once; `approve` (button in M8) answers with the tasks created. M7 picks the vehicles and checks BR-M7-01..03 |
+| `RedistributionRecommendations` | `shared.contracts` | M7 (`RecommendationService`) | M8 (What-if proposals) | `propose` returns M7's recommendation id at once; `approve` (button in M8) answers with the tasks created. M7 picks the vehicles and checks BR-M7-01..03. `decision` lets M8 follow the Operator's decision and task progress in M7; `withdraw` rejects a still-pending proposal when it is discarded in M8 |
 | Snapshot reads | read-only JDBC | each owner's tables | M8 (`JdbcSnapshotProvider`), M1, M5, M7 lookups | Consistent read of current state; never written back |
 
 `ParkingDock` errors: `HUB_FULL` (409) when no free space is left — M3 returns it with the Hubs that still have
@@ -90,10 +90,10 @@ room, M7 turns it into `DESTINATION_FULL`; `HUB_NOT_FOUND` (404).
 
 ## A.6 Not implemented yet (tracked in the review)
 
-- M8 does not call `RedistributionRecommendations` yet (its branch still creates M7 tasks over REST).
-- M8 reads parking occupancy per Hub from the snapshot's `capacities`; its engine still estimates occupancy from
-  rental vehicles only.
-- M8's runs have no state field yet (SimulationRun states above are the design) and are stored in a JSON file,
-  not in the database.
+- M8 reads parking occupancy per Hub from the snapshot's `capacities`. Its parking scenario takes spaces from that
+  captured pool, but rental trips do not change the pool, and its charging scenario does not change vehicle batteries
+  or M5 schedules.
+- M8's runs are stored in a JSON file (latest 200), not in the database. Only the proposals inside a run have a
+  state; the run itself has none.
 - M6 incidents (since 13/11): stored, API `/api/m6/incidents`, created automatically from failure readings
   (BR-M6-06/10), screen in M6. Publication after commit uses a separate transaction, not an outbox.

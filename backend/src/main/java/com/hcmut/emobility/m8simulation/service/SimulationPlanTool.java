@@ -16,6 +16,8 @@ public class SimulationPlanTool {
         Map<Long,Integer> remaining=new HashMap<>();
         for(CapacityState c:snapshot.capacities()) remaining.put(c.hubId(),c.transferSlots());
         Set<Long> moved=new HashSet<>();
+        Map<Long,CapacityState> capacities=new LinkedHashMap<>();
+        for(CapacityState c:snapshot.capacities()) capacities.putIfAbsent(c.hubId(),c);
         for(PlanAction a:actions) {
             if(a==null || a.reason()==null || a.reason().length()>500) return rejected("Each action needs a reason of at most 500 characters.");
             if (!"dispatch".equals(a.action()))
@@ -35,11 +37,18 @@ public class SimulationPlanTool {
             Set<Long> ids=new HashSet<>();eligible.stream().limit(a.amount()).forEach(v->ids.add(v.id()));moved.addAll(ids);
             vehicles=vehicles.stream().map(v->ids.contains(v.id())?new Vehicle(v.id(),a.toHubId(),v.battery(),v.state()):v).toList();
             remaining.compute(a.toHubId(),(id,n)->n-a.amount());
+            capacities.computeIfPresent(a.fromHubId(),(id,c)->shifted(c,-a.amount()));
+            capacities.computeIfPresent(a.toHubId(),(id,c)->shifted(c,a.amount()));
             // Released donor space is not treated as authoritative parking availability.
         }
-        Snapshot copy=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),snapshot.capacities());
+        Snapshot copy=new Snapshot(snapshot.id(),snapshot.capturedAt(),snapshot.hubs(),vehicles,snapshot.deviceStates(),snapshot.demandSource(),snapshot.bookingWindow(),List.copyOf(capacities.values()),snapshot.hypotheticalFleet());
         return new PlanEvaluation(true,List.copyOf(actions),engine.simulate(copy,scenario).kpi(),
             "Simulation only. Demand, rerouting, seed and time parameters are unchanged. Rental-bike parking excludes incoming M7 tasks; M4/M7 must revalidate before execution.");
+    }
+    /** Parking after n rental vehicles arrive (n>0) or leave (n<0); the input record is never changed. */
+    private static CapacityState shifted(CapacityState c,int n) {
+        return new CapacityState(c.hubId(),c.totalSlots(),Math.max(0,c.usedSlots()+n),Math.max(0,c.freeSlots()-n),
+                c.operationalChargers(),c.busyChargers(),c.rentalFreeSlots()==null?null:Math.max(0,c.rentalFreeSlots()-n),c.incomingRentalTasks());
     }
     private PlanEvaluation rejected(String reason) {return new PlanEvaluation(false,List.of(),null,reason);}
 }

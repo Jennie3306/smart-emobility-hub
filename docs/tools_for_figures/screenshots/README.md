@@ -91,4 +91,4 @@ Chép các file sau vào `images/ui/` của report, đổi sang tên ở cột p
 - **Đăng nhập lỗi:** thường do sai cổng (phải là 5173) hoặc backend chưa chạy. Cổng khác thì dùng `BASE=http://localhost:5174 node capture.mjs mockup`, nhưng phải thêm cổng đó vào CORS của backend.
 - **Khổ ảnh khác:** dùng `WIDTH=1280 HEIGHT=800 npm run mockup`.
 - **Chụp tay không dùng script:** mở Chrome DevTools, bật Device toolbar, đặt khổ 1440×900, rồi Ctrl+Shift+P → *Capture screenshot*. Đặt tên và để vào đúng thư mục như bảng trên.
-- **Màn M8:** chụp lại sau khi TV8 merge phần nối M7, để nút *Approve & execute* không còn bị khoá.
+- **Màn M8:** ba ảnh `mockup` (`m8_whatif`, `m8_history`, `m8_network`) chụp từ giao diện, không cần dữ liệu riêng. Ba ảnh `real` cần dữ liệu có sẵn: `m8_extracted` (mô tả đã được AI hoặc luật cục bộ tách thành form), `m8_run_result` (một run đã lưu có nhu cầu đỗ xe, yêu cầu sạc và trụ sạc hỏng, AI đã cấu hình để có kế hoạch gợi ý), `m8_compare` (ít nhất hai run đã lưu). Chạy bước 10 của `docs/demo/kich-ban-demo.md` trước khi chụp; muốn có đề xuất điều xe thì để Hub Ga Metro mở.

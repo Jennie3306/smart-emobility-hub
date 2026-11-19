@@ -4,21 +4,46 @@ actor OP as Operator
 participant C as SimulationController
 participant S as SimulationService
 participant P as JdbcSnapshotProvider
+participant G as AgentPlanner
 participant A as ScenarioAssistant
 participant E as SimulationEngine
 participant R as RunStore
-OP->>C: POST /api/m8/runs (scenario, seed 42)
-C->>S: run(scenario, null, false)
-S->>P: capture()
-P-->>S: Snapshot (hubs, vehicles, bookings of last 30 min, M1 capacities)
+participant D as DispatchApplyService
+participant M7 as M7 RecommendationService
+OP->>C: POST /api/m8/runs (scenario)
+C->>S: run(scenario, snapshotRunId, repeatRecentBookings, startingVehicles)
+S->>P: capture() (or the snapshot of a saved run)
+P-->>S: Snapshot (hubs, vehicles, M2 bookings of last 30 min, M1/M4 capacities, incoming M7 tasks)
 S->>A: validate(scenario, snapshot)
-S->>E: simulate(snapshot, scenario)
-E-->>S: KPI and timeline
-S->>E: simulate(snapshot, same scenario with hub open)
-E-->>S: baseline KPI
-S->>A: recommend(snapshot, scenario, kpi, engine)
-A->>E: simulate each candidate on a copy
-A-->>S: proposals that reduce failed requests
+S->>E: simulate(snapshot, scenario) and the baseline with hubs open
+E-->>S: KPI, timeline, baseline KPI
+alt AI provider configured
+  S->>G: extend(snapshot, scenario)
+  loop at most 3 rounds
+    G->>E: simulate_plan(actions) on the same snapshot
+    E-->>G: KPI or validation feedback
+  end
+  G-->>S: AgentState (best tested plan)
+  opt provider failed and no tested plan
+    S->>A: recommend(...) with local rules
+  end
+else no AI provider
+  S->>A: recommend(snapshot, scenario, kpi, engine) with local rules
+end
+S->>A: chargingAdvice(snapshot, scenario, kpi, engine)
+A->>E: re-simulate with charging requests moved to another hub
+A-->>S: charging_redirect advice (display only, never applied)
 S->>R: save(run)
 S-->>OP: Run (KPI, baseline, proposals, warnings)
-Note over S,R: no INSERT or UPDATE on any operational table
+OP->>C: POST /runs/:id/recommendations/:recId/apply
+C->>D: apply(runId, recId, operator)
+D->>M7: propose("M8_SIMULATION", recId, from, to, amount)
+D->>M7: approve(m7Id, operator)
+M7-->>D: ApprovalResult (status, task ids)
+D->>R: save(run) as PENDING, PARTIAL or APPROVED
+OP->>C: GET /api/m8/runs (later)
+C->>D: sync(runs)
+D->>M7: decision(m7Id)
+M7-->>D: status, done and failed tasks (also when the Operator decided in M7)
+D->>R: save(run) only if changed (APPROVED, PARTIAL, APPLIED or DISCARDED)
+Note over S,D: M8 never writes operational tables. M7 creates and runs the tasks

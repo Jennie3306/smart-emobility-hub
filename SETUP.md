@@ -61,6 +61,8 @@ cd ../frontend && npm install && npm run dev
 # http://localhost:5173   → đăng nhập student1 / 123456
 ```
 
+Muốn chạy riêng M8 (What-if Simulation) thì xem [docs/runbooks/m8-local.md](docs/runbooks/m8-local.md).
+
 Kiểm tra nhanh: `java -version` (21), `node -v` (20), `docker -v`.
 Chưa cài được gì thì xem [INSTALL.md](INSTALL.md).
 
@@ -141,7 +143,6 @@ Cả tám module đã có nghiệp vụ, API, màn hình và test; các việc �
 
 | Việc | Ai |
 |---|---|
-| M8 gọi hợp đồng `RedistributionRecommendations` của M7 (propose / approve), bật *Approve & execute* | TV8 |
 | Quay video demo khoảng 3 phút theo `docs/demo/kich-ban-demo.md` | Cả nhóm |
 
 Sơ đồ của report và ảnh chụp giao diện: `docs/tools_for_figures` (xem README trong đó).

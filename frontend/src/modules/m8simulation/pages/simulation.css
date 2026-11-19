@@ -195,3 +195,7 @@
 @media (max-width: 560px), (min-width: 951px) and (max-width: 1200px) {
   .m8-mini-network { grid-template-columns: 1fr; }
 }
+.m8-hub-extra { min-width: 0; margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--line, #dce4ec); border-radius: 8px; }
+.m8-hub-extra > summary { font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+.m8-hub-extra > .m8-field-hint { margin: 8px 0 12px; overflow-wrap: anywhere; }
+.m8-hub-extra > .m8-field-hint:last-child { margin: -6px 0 0; }

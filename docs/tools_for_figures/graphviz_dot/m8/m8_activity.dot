@@ -3,25 +3,36 @@ s [shape=circle, style=filled, fillcolor=black, label="", width=0.25];
 
 d1 [label="Describe\nin words?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
 p [label="Parse: LLM if configured,\notherwise local rules", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
-f [label="Pre-filled editable form", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+f [label="Editable form: affected hubs, closing time,\nrental demand, rerouting, parking arrivals,\ncharging requests, failed chargers", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
 d2 [label="Fields valid?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
 d3 [label="Snapshot\nsource?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
 c [label="Capture snapshot in one\nREPEATABLE_READ read", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
 r [label="Reuse the snapshot\nof a saved run", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
 m [shape=diamond, label="", width=0.3, height=0.3, style=filled, fillcolor="#ffffff"];
-sim [label="Simulate scenario and baseline\nminute by minute", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
-pr [label="Propose dispatch or reroute;\nkeep only proposals that\nreduce failed requests", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+fl [label="Apply edited vehicle counts\n(optional, hypothetical fleet)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+sim [label="Simulate scenario and baseline minute by\nminute: rentals, parking, charging queue", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d5 [label="AI provider\nconfigured?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+ai [label="AI tests up to 3 dispatch plans\nwith simulate_plan; keeps only\nplans that reduce unserved requests", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+pr [label="Local rules: dispatch from a donor hub\nthat keeps one vehicle and fits rental-bike\nparking; move rental vehicles out of a\nparking-saturated hub", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+ca [label="Charging advice (display only): move charging\nrequests to a hub with free chargers;\nre-simulated, never applied", shape=box, style="rounded,filled", fillcolor="#fff1c9", color="#c9a227", penwidth=1.4];
 sv [label="Save the run (RunStore)", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
-sh [label="Show KPIs, timeline, per-hub table,\nproposals and assumptions", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+sh [label="Show KPIs (rentals, parking turned away,\ncharging unserved, mean charging wait, peak\ncharging queue), timeline, per-hub table,\nproposals and assumptions", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
 d4 [label="Next step?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
 cmp [label="History: select two runs,\ncompare KPIs", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
-dis [label="Proposal DISCARDED;\nlive state unchanged", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
-ap [label="Refused: DISPATCH_NOT_CONNECTED;\nnothing executed", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+dis [label="Proposal DISCARDED; M7 proposal\nwithdrawn if any. Charging advice\ncan only be discarded", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
+d6 [label="Live fleet?", shape=diamond, style=filled, fillcolor="#fff1c9", color="#c9a227", fontsize=10, width=1.6, height=0.8];
+ap [label="Send to M7: propose + approve;\nM7 picks vehicles, creates tasks", shape=box, style="rounded,filled", fillcolor="#e1f3e8", color="#3a7d44"];
+no [label="Refused: run again\nwith the live fleet", shape=box, style="rounded,filled", fillcolor="#f9dcdc", color="#c0504d"];
+fw [label="M8 follows M7:\nAPPLIED when tasks finish,\nDISCARDED if rejected", shape=box, style="rounded,filled", fillcolor="#eef2fb", color="#4a6fa5", penwidth=1.4];
 e [shape=doublecircle, style=filled, fillcolor=black, label="", width=0.18];
 s -> d1; d1 -> p [label="yes"]; d1 -> f [label="no"]; p -> f; f -> d2; d2 -> f [label="no: field errors", constraint=false];
-d2 -> d3 [label="yes"]; d3 -> c [label="live"]; d3 -> r [label="saved run"]; c -> m; r -> m; m -> sim -> pr -> sv -> sh -> d4;
+d2 -> d3 [label="yes"]; d3 -> c [label="live"]; d3 -> r [label="saved run"]; c -> m; r -> m; m -> fl -> sim -> d5;
+d5 -> ai [label="yes"]; d5 -> pr [label="no"]; ai -> pr [label="provider failed,\nno tested plan", style=dashed];
+ai -> ca; pr -> ca; ca -> sv; sv -> sh -> d4;
 d4 -> f [label="edit and run again", constraint=false, style=dashed];
-d4 -> cmp [label="compare"]; d4 -> dis [label="discard"]; d4 -> ap [label="apply"];
-cmp -> e; dis -> e; ap -> e;
-{rank=same; c; r} {rank=same; cmp; dis; ap}
+d4 -> ai [label="retry AI: +3 rounds", constraint=false, style=dashed];
+d4 -> cmp [label="compare"]; d4 -> dis [label="discard"]; d4 -> d6 [label="apply (dispatch only)"];
+d6 -> ap [label="yes"]; d6 -> no [label="no"]; ap -> fw;
+cmp -> e; dis -> e; fw -> e; no -> e;
+{rank=same; c; r} {rank=same; ai; pr} {rank=same; cmp; dis; d6}
 }
