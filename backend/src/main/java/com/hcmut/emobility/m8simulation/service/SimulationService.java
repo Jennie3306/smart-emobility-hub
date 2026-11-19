@@ -72,7 +72,7 @@ public class SimulationService {
             warnings.add("Parking and charging demand are hypothetical; rental trips do not change the parking pool and charging does not change vehicle batteries.");
         if (repeats) warnings.add("Booking-based demand repeats each selected hub's accepted M2 bookings from the captured 30-minute window.");
         if (manual) warnings.add("Manually entered demand represents hypothetical rental requests.");
-        warnings.add("Trips return to origin; charging, battery depletion and travel times are not modeled.");
+        warnings.add("Trips return to origin; vehicle battery levels and travel times are not modeled.");
         if(snapshot.deviceStates().size()>0) warnings.add("M6 device observations are displayed separately; database vehicle state is authoritative for the engine.");
         Run run=new Run(UUID.randomUUID().toString(),Instant.now(),scenario,snapshot,result.kpi(),baseline,result.timeline(),proposals.items(),proposals.source(),List.copyOf(warnings),agent);
         store.save(run); return run;

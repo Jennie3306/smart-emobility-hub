@@ -303,7 +303,7 @@ export default function SimulationPage() {
                   <li>Parking and charging demand are hypothetical. Rental trips do not change the parking pool and charging does not change vehicle batteries.</li>
                   {active.warnings.map((w,i)=><li key={i}>{w}</li>)}
                 </ul>
-                <p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":active.snapshot.demandSource==="MIXED_SCENARIO"?"Manual requests and repeated bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="TOOL_AGENT"?"AI tool exploration":active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Charging and battery depletion are not modeled.</p>
+                <p>Request source: {active.snapshot.demandSource==="M2_BOOKING_VOLUME_REPEAT"?"Repeated accepted bookings":active.snapshot.demandSource==="MIXED_SCENARIO"?"Manual requests and repeated bookings":"Manual scenario"}. Recommendation source: {active.recommendationSource==="TOOL_AGENT"?"AI tool exploration":active.recommendationSource==="LLM"?"OpenAI":active.recommendationSource==="LLM_AND_LOCAL_RULES"?"OpenAI + local rules":"Local rules"}. AVAILABLE vehicles with battery ≥20%; trips return to their origin. Vehicle battery levels are not modeled.</p>
               </details>}
             </section>
           </div>
