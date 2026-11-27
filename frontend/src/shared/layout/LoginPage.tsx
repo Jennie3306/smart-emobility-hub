@@ -2,11 +2,15 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { safeNext } from "../api/safeNext";
 import { login } from "../api/auth";
+import { isNativeApp, serverUrl, setServerUrl } from "../api/server";
 
 export function LoginPage() {
   const [username, setUsername] = useState("operator1");
   const [password, setPassword] = useState("123456");
   const [error, setError] = useState("");
+  // Only the Android app asks for the backend address; the browser uses its own origin.
+  const native = isNativeApp();
+  const [server, setServer] = useState(() => serverUrl());
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -14,11 +18,16 @@ export function LoginPage() {
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setBusy(true);
+    setError("");
+    if (native) setServerUrl(server);
     try {
       await login(username, password);
       navigate(safeNext(params.get("next")), { replace: true });
-    } catch {
-      setError("Invalid username or password");
+    } catch (e) {
+      const unreachable = !(e as { response?: unknown }).response;
+      setError(unreachable
+        ? native ? `Cannot reach the server at ${serverUrl() || "(no address)"}. Check the address and that the phone is on the same Wi-Fi.` : "Cannot reach the server. Is the backend running?"
+        : "Invalid username or password");
     } finally {
       setBusy(false);
     }
@@ -42,12 +51,26 @@ export function LoginPage() {
         <p className="text-xs text-white/40">Demo environment · data are seeded and devices are simulated.</p>
       </section>
 
-      <section className="flex items-center justify-center p-6">
-        <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-5 p-8">
+      <section className="flex flex-col items-center justify-center gap-6 p-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
+        <div className="flex items-center gap-3 lg:hidden">
+          <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-brand text-xl font-bold text-white">↗</span>
+          <div className="leading-tight">
+            <p className="text-lg font-bold text-slate-900">e-Mobility Hub</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Smart campus network</p>
+          </div>
+        </div>
+        <form onSubmit={handleSubmit} className="card w-full max-w-sm space-y-5 p-6 sm:p-8">
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Sign in</h2>
             <p className="mt-1 text-sm text-slate-500">Use a demo account to continue.</p>
           </div>
+          {native && (
+            <label className="label">Server address
+              <input className="input" value={server} inputMode="url" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                     required placeholder="http://192.168.1.20:8080" onChange={(e) => setServer(e.target.value)} />
+              <span className="hint mt-1 block">The laptop that runs the backend, on the same Wi-Fi as this phone.</span>
+            </label>
+          )}
           <label className="label">Username
             <input className="input" value={username} autoComplete="username"
                    onChange={(e) => setUsername(e.target.value)} placeholder="Username" />

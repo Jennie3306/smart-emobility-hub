@@ -5,13 +5,13 @@
 /* Design system (TV5): shared look for every module. Pages use these classes and the
    components in src/shared/ui instead of styling each screen by hand. */
 @layer base {
-  html { -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
   body { @apply bg-canvas font-sans text-slate-800 antialiased; }
   :focus-visible { @apply outline outline-2 outline-offset-2 outline-brand-light; }
 }
 
 @layer components {
-  .card { @apply rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]; }
+  .card { @apply min-w-0 rounded-xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.05)]; }
 
   .btn { @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50; }
   .btn-primary { @apply bg-brand text-white hover:bg-brand-light; }
@@ -41,3 +41,33 @@
 .app-shell .m8-mobile-nav button { background: white; border: 1px solid #dce3ea; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; color: #1F4E79; }
 .app-shell .m8-mobile-nav button[aria-current=page] { background: #1F4E79; color: white; border-color: #1F4E79; }
 .app-shell .m8-content { padding: 0; }
+
+/* ------------------------------------------------------------------ Phones (< 640 px)
+   The same pages work on a phone: no page-wide horizontal scrolling, form fields large
+   enough that iOS does not zoom in, buttons big enough to tap, and data tables shown as
+   one card per row. Labels for the cards come from the table header (responsiveTables.ts). */
+@media (max-width: 639px) {
+  .input, .app-shell select, .app-shell textarea,
+  .app-shell input:not([type=checkbox]):not([type=radio]):not([type=range]) { font-size: 16px; }
+  .btn { min-height: 2.5rem; }
+  .btn-sm { min-height: 2.25rem; padding-left: 0.75rem; padding-right: 0.75rem; }
+
+  .table-ui thead { display: none; }
+  .table-ui, .table-ui tbody, .table-ui tr { display: block; width: 100%; }
+  .table-ui tbody tr { padding: 0.75rem 1rem; border-top: 1px solid rgb(226 232 240); }
+  .table-ui tbody tr:first-child { border-top: 0; }
+  /* flow-root keeps the floated label inside the cell, so a two-line label never overlaps the next row */
+  .table-ui tbody td { display: flow-root; border: 0; padding: 0.3rem 0 0.3rem 7.5rem; text-align: left; overflow-wrap: anywhere; }
+  .table-ui tbody td::before {
+    content: attr(data-label); float: left; width: 7rem; margin-left: -7.5rem; padding-top: 0.15rem;
+    font-size: 11px; font-weight: 600; line-height: 1.3; letter-spacing: 0.04em; text-transform: uppercase; color: rgb(100 116 139);
+  }
+  /* The first cell names the row (hub, space, session …), so it becomes the card title. */
+  .table-ui tbody td:first-child { padding-left: 0; padding-bottom: 0.4rem; font-weight: 600; font-size: 0.95rem; }
+  .table-ui tbody td:first-child::before, .table-ui tbody td[colspan]::before { content: none; }
+  .table-ui tbody td[colspan] { padding-left: 0; text-align: center; }
+  .table-ui tbody td:empty { display: none; }
+}
+
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }

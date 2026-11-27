@@ -19,6 +19,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.io.IOException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -30,6 +32,10 @@ public class SecurityConfig {
 
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
+
+    /** Origins of the Android/iOS app built with Capacitor (mobile/README.md). */
+    @Value("${app.cors.app-origins:https://localhost,capacitor://localhost}")
+    private String[] appOrigins;
 
     /** Chua dang nhap ma goi API -> tra JSON 401 (frontend tu chuyen sang trang dang nhap). */
     private final AuthenticationEntryPoint apiEntryPoint = (req, res, e) ->
@@ -96,7 +102,9 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
-        cfg.setAllowedOrigins(List.of(allowedOrigin));
+        List<String> origins = new ArrayList<>(List.of(allowedOrigin));
+        origins.addAll(Arrays.asList(appOrigins));
+        cfg.setAllowedOrigins(origins);
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         cfg.setAllowedHeaders(List.of("*"));
         cfg.setAllowCredentials(true);   // bat buoc de trinh duyet gui kem JSESSIONID

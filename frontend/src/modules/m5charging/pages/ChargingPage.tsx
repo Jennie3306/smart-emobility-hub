@@ -251,7 +251,7 @@ export default function ChargingPage() {
       </div>
       <section className="space-y-3"><div><h2 className="text-[15px] font-semibold text-slate-900">Your charging sessions</h2><p className="text-xs text-slate-500">Queue status refreshes automatically every 15 seconds.</p></div><SessionList sessions={sessions} onStart={id => actOnSession(id, "start")} onCancel={id => actOnSession(id, "cancel")} busyId={busyId} /></section>
     </> : <>
-      {selectedHub && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {selectedHub && <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <Metric label="Points in use" value={`${selectedHub.chargingPoints} / ${selectedHub.totalPoints}`} detail="Currently charging" icon="⚡" />
         <Metric label="Available points" value={selectedHub.availablePoints} detail="Ready for allocation" icon="✓" tone="green" />
         <Metric label="Queued sessions" value={selectedHub.queuedSessions} detail="Waiting for a port" icon="◷" tone="amber" />

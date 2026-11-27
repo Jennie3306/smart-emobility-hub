@@ -468,7 +468,7 @@ function OperatorView({ hubs, hubId, setHubId, spaces, selectedHub, busy, setBus
       <label className="text-sm">Hub <select className="input ml-2 mt-0 inline-block w-auto" value={hubId ?? ""} onChange={e => setHubId(Number(e.target.value))}>{hubs.map(h => <option key={h.hubId} value={h.hubId}>{h.hubName}</option>)}</select></label>
       <button className="btn btn-secondary" disabled={busy || hubId == null} onClick={() => hubId != null && Promise.all([loadHubData(hubId), loadBookings(hubId)]).catch(e => setError(parkingErrorMessage(e)))}>Refresh</button>
     </div>
-    {selectedHub && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+    {selectedHub && <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
       <Metric label="Capacity" value={selectedHub.capacity} detail="Parking spaces at this Hub" icon="▦" />
       <Metric label="Free" value={selectedHub.free} detail={`${selectedHub.freeWithCharger} with a charger`} icon="✓" tone="green" />
       <Metric label="Reserved" value={selectedHub.reserved} detail="Waiting for check-in" icon="◷" tone="amber" />

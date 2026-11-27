@@ -120,7 +120,7 @@ export default function RedistributionPage() {
       {error && <Notice kind="error" action={<button className="btn btn-secondary btn-sm" onClick={load}>Retry</button>}>{error}</Notice>}
       {notice && <Notice kind="success" onClose={() => setNotice(null)}>{notice}</Notice>}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Pending recommendations" value={open.length} detail="Approval required" icon="⇄" tone="amber" />
         <StatCard label="Tasks in progress" value={counts("IN_PROGRESS")} detail="Vehicles on their way" icon="↔" />
         <StatCard label="Completed tasks" value={counts("DONE")} detail="Vehicle docked at the destination" icon="✓" tone="green" />

@@ -19,6 +19,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${app.cors.allowed-origin}")
     private String allowedOrigin;
 
+    /** Origins of the Android/iOS app built with Capacitor (mobile/README.md). */
+    @Value("${app.cors.app-origins:https://localhost,capacitor://localhost}")
+    private String[] appOrigins;
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         config.enableSimpleBroker("/topic");
@@ -28,7 +32,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOrigins(allowedOrigin)
+                .setAllowedOrigins(java.util.stream.Stream.concat(
+                        java.util.stream.Stream.of(allowedOrigin), java.util.Arrays.stream(appOrigins))
+                        .toArray(String[]::new))
                 .withSockJS();
     }
 }

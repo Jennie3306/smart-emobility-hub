@@ -1,0 +1,22 @@
+{
+  "name": "Smart E-Mobility Hub",
+  "short_name": "E-Mobility",
+  "description": "Rent, park and charge e-vehicles at the VNU-HCM mobility hubs.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F6FA",
+  "theme_color": "#163A5C",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Find a vehicle", "url": "/m2/search" },
+    { "name": "My reservation", "url": "/m2/my-reservation" },
+    { "name": "Parking", "url": "/m4/parking" }
+  ]
+}
