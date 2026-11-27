@@ -1,12 +1,13 @@
 import axios from 'axios';
 import { englishHubLabels } from '@/shared/api/hubLabels';
-import { apiUrl } from '@/shared/api/server';
+import { isHtmlPage, resolveApiBase } from '@/shared/api/server';
 import type { Alert, Dashboard, HubDetail, HubSummary } from './types';
 
 // withCredentials: xac thuc bang session cookie (JSESSIONID), khong dung JWT.
 const http = axios.create({ baseURL: '/api/m1', withCredentials: true });
 // The Android app talks to the backend by its full address (see shared/api/server.ts).
-http.interceptors.request.use(config => { config.baseURL = apiUrl('/api/m1'); return config; });
+http.interceptors.request.use(config => { config.baseURL = resolveApiBase('/api/m1'); return config; });
+http.interceptors.response.use(res => isHtmlPage(res.data) ? Promise.reject(new Error('Expected JSON from the API, got a web page')) : res);
 
 export const monitoringApi = {
   getHubs: (filter?: { hasVehicle?: boolean; hasFreeSlot?: boolean }) =>
