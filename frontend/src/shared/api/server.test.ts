@@ -2,9 +2,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { apiUrl, isNativeApp, serverUrl, setServerUrl } from "./server";
 
-const win = window as unknown as { Capacitor?: { isNativePlatform: () => boolean } };
+const win = window as unknown as { Capacitor?: object; androidBridge?: object };
 
-afterEach(() => { delete win.Capacitor; localStorage.clear(); });
+afterEach(() => { delete win.Capacitor; delete win.androidBridge; localStorage.clear(); });
 
 describe("server address", () => {
   it("keeps relative URLs in the browser, even if an address was stored", () => {
@@ -18,6 +18,12 @@ describe("server address", () => {
     setServerUrl(" 192.168.1.20:8080/ ");
     expect(serverUrl()).toBe("http://192.168.1.20:8080");
     expect(apiUrl("/ws")).toBe("http://192.168.1.20:8080/ws");
+  });
+
+  it("recognises the app from the bare Android bridge (no @capacitor/core in the bundle)", () => {
+    win.androidBridge = {};
+    setServerUrl("10.0.0.5:8080");
+    expect(apiUrl("/api")).toBe("http://10.0.0.5:8080/api");
   });
 
   it("keeps an explicit https address", () => {

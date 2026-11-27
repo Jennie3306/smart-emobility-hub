@@ -10,13 +10,25 @@
  */
 const KEY = "emh.serverUrl";
 
-interface CapacitorGlobal { isNativePlatform?: () => boolean }
+interface CapacitorGlobal { isNativePlatform?: () => boolean; getPlatform?: () => string; platform?: string }
+interface NativeWindow {
+  Capacitor?: CapacitorGlobal;
+  androidBridge?: unknown;                                 // Capacitor's Android bridge
+  webkit?: { messageHandlers?: { bridge?: unknown } };     // Capacitor's iOS bridge
+}
 
-/** True only inside the installed app (the Capacitor runtime injects window.Capacitor). */
+/**
+ * True only inside the installed app. The web bundle does not include @capacitor/core, so
+ * window.Capacitor may be only the bare native bridge; the bridge objects are checked too.
+ */
 export function isNativeApp(): boolean {
   if (typeof window === "undefined") return false; // Node (unit tests): no browser, no app
-  const cap = (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
-  return cap?.isNativePlatform?.() === true;
+  const w = window as unknown as NativeWindow;
+  const cap = w.Capacitor;
+  if (cap?.isNativePlatform?.() === true) return true;
+  const platform = cap?.getPlatform?.() ?? cap?.platform;
+  if (platform === "android" || platform === "ios") return true;
+  return w.androidBridge !== undefined || w.webkit?.messageHandlers?.bridge !== undefined;
 }
 
 function normalise(url: string): string {
