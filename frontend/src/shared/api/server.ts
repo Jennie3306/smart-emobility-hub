@@ -14,6 +14,7 @@ interface CapacitorGlobal { isNativePlatform?: () => boolean }
 
 /** True only inside the installed app (the Capacitor runtime injects window.Capacitor). */
 export function isNativeApp(): boolean {
+  if (typeof window === "undefined") return false; // Node (unit tests): no browser, no app
   const cap = (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
   return cap?.isNativePlatform?.() === true;
 }
