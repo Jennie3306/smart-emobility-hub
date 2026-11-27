@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it } from "vitest";
-import { apiUrl, isNativeApp, serverUrl, setServerUrl } from "./server";
+import { apiUrl, isHtmlPage, isNativeApp, resolveApiBase, serverUrl, setServerUrl } from "./server";
 
 const win = window as unknown as { Capacitor?: object; androidBridge?: object };
 
@@ -30,5 +30,19 @@ describe("server address", () => {
     win.Capacitor = { isNativePlatform: () => true };
     setServerUrl("https://hub.example.edu");
     expect(apiUrl("/api")).toBe("https://hub.example.edu/api");
+  });
+
+  it("refuses to call the API from the app before an address is set", () => {
+    win.androidBridge = {};
+    expect(() => resolveApiBase("/api")).toThrow();
+    setServerUrl("10.0.0.5:8080");
+    expect(resolveApiBase("/api")).toBe("http://10.0.0.5:8080/api");
+  });
+
+  it("recognises an HTML page returned instead of JSON", () => {
+    expect(isHtmlPage("<!doctype html><html>")).toBe(true);
+    expect(isHtmlPage("  <html lang=en>")).toBe(true);
+    expect(isHtmlPage([{ id: 1 }])).toBe(false);
+    expect(isHtmlPage("plain text")).toBe(false);
   });
 });

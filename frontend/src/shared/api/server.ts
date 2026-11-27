@@ -53,3 +53,22 @@ export function setServerUrl(url: string): void {
 export function apiUrl(path: string): string {
   return serverUrl() + path;
 }
+
+/**
+ * Inside the app, every API call needs a backend address. Without one the request would
+ * reach the WebView's own file server and come back as index.html, which pages would then
+ * try to read as data. So: no address yet -> go to the sign-in screen, where it is entered.
+ * Returns the base URL to use for `path`; throws when the request must not be sent.
+ */
+export function resolveApiBase(path: string): string {
+  if (isNativeApp() && !serverUrl()) {
+    if (!window.location.pathname.startsWith("/login")) window.location.href = "/login";
+    throw new Error("No server address set in the app");
+  }
+  return apiUrl(path);
+}
+
+/** An HTML page where JSON was expected means the request never reached the backend. */
+export function isHtmlPage(data: unknown): boolean {
+  return typeof data === "string" && /^\s*<(!doctype html|html)/i.test(data);
+}
