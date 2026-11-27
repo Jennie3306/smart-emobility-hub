@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiUrl } from "./server";
 
 /**
  * Client goi API duy nhat cua he thong.
@@ -9,6 +10,12 @@ export const api = axios.create({
   baseURL: "/api",
   withCredentials: true,
   headers: { "Content-Type": "application/json" },
+});
+
+// In the Android app the backend address can change on the sign-in screen, so it is read per request.
+api.interceptors.request.use((config) => {
+  config.baseURL = apiUrl("/api");
+  return config;
 });
 
 api.interceptors.response.use(

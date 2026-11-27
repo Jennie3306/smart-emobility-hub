@@ -2,6 +2,7 @@ import { englishHubLabels } from "@/shared/api/hubLabels";
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { apiUrl } from '@/shared/api/server';
 import type { Alert, HubStatus } from './types';
 
 /**
@@ -19,7 +20,7 @@ export function useHubStream(onHub: (s: HubStatus) => void,
 
   useEffect(() => {
     const client = new Client({
-      webSocketFactory: () => new SockJS('/ws'),
+      webSocketFactory: () => new SockJS(apiUrl('/ws')),
       reconnectDelay: 5000,
       onConnect: () => {
         setLive(true);

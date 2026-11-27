@@ -1,0 +1,22 @@
+{
+  "name": "smart-emobility-hub-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Android app of the Smart E-Mobility Hub: the React frontend packaged with Capacitor.",
+  "scripts": {
+    "build:web": "npm --prefix ../frontend run build",
+    "add:android": "npm run build:web && cap add android",
+    "icons": "capacitor-assets generate --android",
+    "sync": "npm run build:web && cap sync android",
+    "open": "cap open android",
+    "device": "cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^7.0.0"
+  }
+}

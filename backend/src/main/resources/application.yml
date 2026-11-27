@@ -29,6 +29,8 @@ app:
     seed-parking: true # M4: 31 luot dat that o Hub Ga Metro (77%) de M1/M2/M4/M8 cung so lieu; tat = false
   cors:
     allowed-origin: http://localhost:5173
+    # Mobile app (Capacitor WebView): Android uses https://localhost, iOS capacitor://localhost
+    app-origins: https://localhost,capacitor://localhost
   reservation:
     hold-minutes: 15          # BR-M2-02
   parking:

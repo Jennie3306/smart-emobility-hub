@@ -1,5 +1,6 @@
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
+import { apiUrl } from "../api/server";
 
 /**
  * Ket noi STOMP cho dashboard realtime cua M1.
@@ -8,7 +9,7 @@ import SockJS from "sockjs-client";
  */
 export function connectStomp(): Client {
   const client = new Client({
-    webSocketFactory: () => new SockJS("/ws"),
+    webSocketFactory: () => new SockJS(apiUrl("/ws")),
     reconnectDelay: 5000,
   });
   client.activate();

@@ -1,0 +1,20 @@
+{
+  "appId": "vn.edu.hcmut.emobilityhub",
+  "appName": "E-Mobility Hub",
+  "webDir": "../frontend/dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "CapacitorCookies": {
+      "enabled": true
+    }
+  }
+}
