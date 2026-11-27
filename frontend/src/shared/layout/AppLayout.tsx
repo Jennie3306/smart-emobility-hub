@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { logout } from "../api/auth";
+import { BrandMark } from "../ui/BrandMark";
 
 export type Role = "STUDENT" | "OPERATOR";
 export interface CurrentUser { username: string; role: Role }
@@ -62,7 +63,7 @@ function Icon({ name, className = "h-5 w-5" }: { name: IconName; className?: str
 function Brand() {
   return (
     <div className="flex items-center gap-3 px-5 py-6">
-      <span aria-hidden className="grid h-10 w-10 place-items-center rounded-xl bg-brand-light text-lg font-bold text-white shadow-inner">↗</span>
+      <BrandMark className="h-10 w-10 drop-shadow" />
       <div className="leading-tight">
         <p className="text-[15px] font-bold text-white">e-Mobility Hub</p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">Smart campus network</p>

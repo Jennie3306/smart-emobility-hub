@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { safeNext } from "../api/safeNext";
 import { login } from "../api/auth";
 import { isNativeApp, serverUrl, setServerUrl } from "../api/server";
+import { BrandMark } from "../ui/BrandMark";
 
 export function LoginPage() {
   const [username, setUsername] = useState("operator1");
@@ -37,7 +38,7 @@ export function LoginPage() {
     <div className="grid min-h-screen bg-canvas lg:grid-cols-[1.1fr_1fr]">
       <section className="relative hidden flex-col justify-between overflow-hidden bg-brand-dark p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
-          <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-brand-light text-xl font-bold">↗</span>
+          <BrandMark className="h-11 w-11 drop-shadow" />
           <div className="leading-tight">
             <p className="text-lg font-bold">e-Mobility Hub</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">Smart campus network</p>
@@ -53,7 +54,7 @@ export function LoginPage() {
 
       <section className="flex flex-col items-center justify-center gap-6 p-6 pt-[max(1.5rem,env(safe-area-inset-top))]">
         <div className="flex items-center gap-3 lg:hidden">
-          <span aria-hidden className="grid h-11 w-11 place-items-center rounded-xl bg-brand text-xl font-bold text-white">↗</span>
+          <BrandMark className="h-12 w-12 drop-shadow-sm" />
           <div className="leading-tight">
             <p className="text-lg font-bold text-slate-900">e-Mobility Hub</p>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">Smart campus network</p>
