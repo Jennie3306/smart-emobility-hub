@@ -25,7 +25,7 @@ export default function VehicleListPage() {
     <div className="space-y-6">
       <PageHeader module="M3" eyebrow="Rental lifecycle" title="Rental fleet"
         description="Every rental vehicle with its current state, battery level and hub. M3 owns these states; other modules change them only through events." />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Fleet size" value={vehicles.length} icon="↗" />
         <StatCard label="Available" value={count("AVAILABLE")} detail="Battery ≥ 20 % at a hub" icon="✓" tone="green" />
         <StatCard label="On a trip or moving" value={count("IN_USE") + count("IN_TRANSIT")} detail="IN_USE or IN_TRANSIT" icon="⇄" tone="slate" />

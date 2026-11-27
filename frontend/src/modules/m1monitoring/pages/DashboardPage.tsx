@@ -81,7 +81,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard label="Mobility hubs" value={data.totalHubs} detail="Across the campus network" icon="⌂" />
         <StatCard label="Available vehicles" value={data.vehicleCountByState.AVAILABLE ?? 0} detail={`of ${fleet} vehicles in the fleet`} icon="↗" tone="green" />
         <StatCard label="Parking utilisation" value={avgParking === null ? '—' : `${avgParking}%`} detail="Average over all hubs" icon="▦" tone="amber" />

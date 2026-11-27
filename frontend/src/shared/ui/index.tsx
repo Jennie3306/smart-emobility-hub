@@ -72,13 +72,14 @@ export function StatCard({ label, value, detail, icon, tone = "brand" }: {
   tone?: Tone;
 }) {
   return (
-    <div className="card flex items-start justify-between gap-3 p-4">
+    <div className="card flex items-start justify-between gap-3 p-3.5 sm:p-4">
       <div className="min-w-0">
         <p className="text-xs font-medium text-slate-500">{label}</p>
-        <p className="mt-1.5 text-[26px] font-bold leading-none tabular-nums text-slate-900">{value}</p>
+        <p className="mt-1.5 text-[22px] font-bold leading-none tabular-nums text-slate-900 sm:text-[26px]">{value}</p>
         {detail && <p className="mt-2 text-xs text-slate-500">{detail}</p>}
       </div>
-      {icon && <span aria-hidden className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg text-base font-semibold ${iconTone[tone]}`}>{icon}</span>}
+      {/* On a phone two cards share a row, so the decorative icon is left out. */}
+      {icon && <span aria-hidden className={`hidden h-9 w-9 shrink-0 place-items-center rounded-lg text-base font-semibold sm:grid ${iconTone[tone]}`}>{icon}</span>}
     </div>
   );
 }
@@ -116,10 +117,10 @@ export function Tabs<T extends string>({ tabs, value, onChange, label }: {
   label?: string;
 }) {
   return (
-    <nav aria-label={label} className="mb-5 inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+    <nav aria-label={label} className="scrollbar-none mb-5 flex max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm sm:inline-flex sm:flex-wrap">
       {tabs.map(t => (
         <button key={t.id} type="button" aria-pressed={value === t.id} onClick={() => onChange(t.id)}
-          className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition-colors ${value === t.id ? "bg-brand-100 text-brand" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors sm:py-1.5 ${value === t.id ? "bg-brand-100 text-brand" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}>
           {t.label}
         </button>
       ))}
@@ -177,7 +178,7 @@ export function PageSkeleton({ blocks = 3 }: { blocks?: number }) {
     <div className="space-y-4" aria-busy="true">
       <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
       <div className="h-8 w-72 animate-pulse rounded bg-slate-200" />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => <div key={i} className="card h-24 animate-pulse bg-slate-100" />)}
       </div>
       {Array.from({ length: blocks - 1 }).map((_, i) => <div key={i} className="card h-48 animate-pulse bg-slate-100" />)}
